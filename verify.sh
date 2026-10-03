@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Đảm bảo PATH có Node và Git trên môi trường Windows
+export PATH="/usr/bin:/c/Users/win 10 pro/AppData/Local/Microsoft/WinGet/Packages/OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe/node-v24.19.0-win-x64:/c/Users/win 10 pro/AppData/Local/Programs/Git/cmd:$PATH"
+
 echo "=== [1/4] Kiểm tra định kiểu TypeScript ==="
 npx tsc --noEmit || { echo "❌ Typecheck thất bại! Rollback mã nguồn..."; git reset --hard HEAD; exit 1; }
 
