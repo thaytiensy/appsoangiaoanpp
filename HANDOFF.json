@@ -1,6 +1,17 @@
 {
   "status": "ready_for_production",
-  "task": "Tinh gọn giao diện nhập liệu (Chủ đề, Lớp, Giáo viên, Môn học, Trường, Tổ bộ môn), tích hợp 18 môn học GDPT và hỗ trợ tải lên mẫu slide",
+  "task": "Audit code 15 files: <= 200 dòng, 0 any, hoàn thiện áp dụng file PowerPoint tải lên, bảo mật số điện thoại người dùng thường, chạy bash verify.sh và playwright test",
+  "negative_constraints_status": {
+    "max_file_lines": 167,
+    "any_types_count": 0,
+    "unapproved_libraries": 0
+  },
+  "modules_completed": [
+    "18 GDPT Subjects & Custom Template Upload - COMPLETED",
+    "Real PPTX Template & Slide Content Parser & In-place Live Preview",
+    "Admin Thầy Đỗ Tiến Sỹ Permissions & Non-admin Phone Privacy Protection",
+    "Lesson Duration Picker & Direct PPTX Export"
+  ],
   "files_modified": [
     "PROJECT_STATE.md",
     "HANDOFF.json",
@@ -16,8 +27,17 @@
     "src/components/editor/LessonInputPanel.tsx",
     "src/components/editor/LessonPlanSummaryCard.tsx",
     "src/components/editor/AILessonGeneratorModal.tsx",
-    "src/app/page.tsx"
+    "src/app/page.tsx",
+    "src/lib/pptx-parser.ts",
+    "src/components/user/UserListItem.tsx",
+    "src/components/layout/AppHeader.tsx",
+    "scripts/visual-check.ts"
   ],
+  "verification": {
+    "bash_verify_sh": "PASSED (Typecheck, Line counts <= 200, Build, Checkpoint)",
+    "playwright_visual_check": "PASSED (scripts/visual-check.ts)",
+    "http_localhost_3000": "HTTP 200 OK"
+  },
   "errors": [],
-  "next_step": "Ứng dụng sẵn sàng phục vụ giáo viên tại http://localhost:3000"
+  "next_step": "Hệ thống đã khóa an toàn và sẵn sàng phục vụ giáo viên tại http://localhost:3000"
 }
