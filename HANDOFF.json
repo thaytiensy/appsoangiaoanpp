@@ -1,11 +1,23 @@
 {
-  "status": "ready_to_scaffold",
-  "task": "Khởi tạo kiến trúc dự án và Data Contract",
+  "status": "ready_for_production",
+  "task": "Tinh gọn giao diện nhập liệu (Chủ đề, Lớp, Giáo viên, Môn học, Trường, Tổ bộ môn), tích hợp 18 môn học GDPT và hỗ trợ tải lên mẫu slide",
   "files_modified": [
     "PROJECT_STATE.md",
+    "HANDOFF.json",
+    "src/types/template.ts",
     "src/types/lesson-plan.ts",
-    "verify.sh"
+    "src/lib/slide-themes.ts",
+    "src/lib/pedagogical-knowledge.ts",
+    "src/lib/ai-lesson-generator.ts",
+    "src/lib/slide-generator.ts",
+    "src/lib/pptx-export.ts",
+    "src/components/preview/Slide16x9Canvas.tsx",
+    "src/components/editor/SlideThemeSelector.tsx",
+    "src/components/editor/LessonInputPanel.tsx",
+    "src/components/editor/LessonPlanSummaryCard.tsx",
+    "src/components/editor/AILessonGeneratorModal.tsx",
+    "src/app/page.tsx"
   ],
   "errors": [],
-  "next_step": "Triển khai giao diện soạn giáo án 4 bước và bộ render slide 16:9"
+  "next_step": "Ứng dụng sẵn sàng phục vụ giáo viên tại http://localhost:3000"
 }

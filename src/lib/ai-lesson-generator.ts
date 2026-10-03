@@ -16,6 +16,7 @@ export interface LessonGeneratorParams {
   schoolName?: string;
   departmentName?: string;
   themeId?: string;
+  customBackgroundUrl?: string;
   duration?: number;
 }
 
@@ -106,10 +107,11 @@ export function generatePedagogicalLessonPlan(
     gradeLevel: cleanGrade,
     lessonName: cleanName,
     durationPeriod,
-    teacherName: params.teacherName || 'Thầy Nguyễn Văn An',
-    schoolName: params.schoolName || 'Trường THPT',
+    teacherName: params.teacherName || 'Thầy Đỗ Tiến Sỹ',
+    schoolName: params.schoolName || 'THPT Chuyên Lê Hồng Phong',
     departmentName: params.departmentName || `Tổ ${cleanSubject}`,
     themeId: params.themeId || 'TECH_DARK',
+    customBackgroundUrl: params.customBackgroundUrl,
     objectives,
     activities: activities as [PedagogicalActivity, PedagogicalActivity, PedagogicalActivity, PedagogicalActivity],
     slides: [],

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Phone, Trash2 } from 'lucide-react';
+import { Phone, Trash2, ShieldCheck } from 'lucide-react';
 import { User } from '@/types/user';
 
 interface UserListItemProps {
@@ -13,6 +13,8 @@ interface UserListItemProps {
 }
 
 export function UserListItem({ user, isSelected, canDelete, onSelect, onDelete }: UserListItemProps) {
+  const isAdmin = user.role === 'ADMIN';
+
   return (
     <div
       className={`p-3 rounded-xl border flex items-center justify-between transition ${
@@ -20,14 +22,26 @@ export function UserListItem({ user, isSelected, canDelete, onSelect, onDelete }
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold">
-          {user.name.slice(0, 1).toUpperCase()}
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+          isAdmin ? 'bg-amber-600 shadow-xs' : 'bg-indigo-600'
+        }`}>
+          {isAdmin ? '★' : user.name.slice(0, 1).toUpperCase()}
         </div>
         <div>
-          <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-            {user.name}
-            {isSelected && <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-700 rounded-full font-bold">Đang dùng</span>}
-          </h4>
+          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+            <span>{user.name}</span>
+            {isAdmin && (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.2 bg-amber-100 text-amber-800 border border-amber-300 rounded-full text-[10px] font-extrabold">
+                <ShieldCheck className="w-3 h-3 text-amber-600" />
+                ADMIN
+              </span>
+            )}
+            {isSelected && (
+              <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-700 rounded-full font-bold">
+                Đang dùng
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-slate-500">{user.subject} • {user.school}</p>
           <p className="text-[10px] text-indigo-600 flex items-center gap-1">
             <Phone className="w-3 h-3" /> SĐT/ZL: {user.phone}
@@ -45,7 +59,7 @@ export function UserListItem({ user, isSelected, canDelete, onSelect, onDelete }
             Chọn
           </button>
         )}
-        {canDelete && (
+        {canDelete && !isAdmin && (
           <button
             type="button"
             onClick={() => onDelete(user.id)}

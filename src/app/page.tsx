@@ -19,18 +19,23 @@ import { SupportContactBar } from '@/components/layout/SupportContactBar';
 import { AppFooter } from '@/components/layout/AppFooter';
 
 const DEFAULT_USER: User = {
-  id: '11111111-2222-3333-4444-555555555555',
-  name: 'Thầy Nguyễn Văn An',
-  email: 'nguyenvanan.edu@gmail.com',
+  id: '00000000-0000-0000-0000-000000000001',
+  name: 'Thầy Đỗ Tiến Sỹ',
+  email: 'dotiensy.admin@gmail.com',
   phone: '0353205414',
-  role: 'HEAD_OF_DEPARTMENT',
+  role: 'ADMIN',
   school: 'THPT Chuyên Lê Hồng Phong',
-  subject: 'Toán học',
+  subject: 'Toán học & Tin học',
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
 export default function LessonPlannerPage() {
-  const [project, setProject] = useState<LessonPlanProject>(INITIAL_LESSON_PLAN);
+  const [project, setProject] = useState<LessonPlanProject>({
+    ...INITIAL_LESSON_PLAN,
+    teacherName: 'Thầy Đỗ Tiến Sỹ',
+    schoolName: 'THPT Chuyên Lê Hồng Phong',
+    departmentName: 'Tổ Toán - Tin',
+  });
   const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -62,7 +67,7 @@ export default function LessonPlannerPage() {
       slideNumber: nextNum,
       layout: 'CONCEPT_BREAKDOWN',
       title: `Slide ${nextNum}: Tiêu Đề Mới`,
-      bullets: ['Nội dung trọng tâm 1', 'Nội dung trọng tâm 2'],
+      bullets: ['Nội dung trọng tâm 1 (bấm để sửa)', 'Nội dung trọng tâm 2 (bấm để sửa)'],
       teacherScript: 'Giáo viên phân tích chi tiết điểm này cho học sinh.',
       visualSuggestion: 'Bố cục 2 khối thông tin trực quan.',
     };
@@ -118,7 +123,6 @@ export default function LessonPlannerPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          {/* Cột trái: Form nhập liệu tinh gọn & Kế hoạch bài dạy đã sinh */}
           <div className="xl:col-span-7 space-y-4">
             <LessonInputPanel
               onGenerate={handleGenerateLesson}
@@ -130,7 +134,6 @@ export default function LessonPlannerPage() {
             <LessonPlanSummaryCard plan={project} />
           </div>
 
-          {/* Cột phải: Live Preview Slide 16:9 & Xuất PPTX */}
           <div className="xl:col-span-5 space-y-4">
             <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4 xl:sticky xl:top-20">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -142,6 +145,8 @@ export default function LessonPlannerPage() {
                   slide={activeSlide}
                   totalSlides={project.slides.length}
                   themeId={project.themeId}
+                  customBackgroundUrl={project.customBackgroundUrl}
+                  onUpdateSlide={handleUpdateCurrentSlide}
                 />
               )}
               <SlideDeckNavigation

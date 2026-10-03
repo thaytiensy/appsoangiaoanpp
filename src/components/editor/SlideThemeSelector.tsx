@@ -7,7 +7,7 @@ import { BUILTIN_THEMES } from '@/lib/slide-themes';
 interface SlideThemeSelectorProps {
   selectedThemeId: string;
   onSelectTheme: (themeId: string) => void;
-  onUploadCustomTheme?: (fileName: string) => void;
+  onUploadCustomTheme?: (fileName: string, dataUrl: string) => void;
 }
 
 export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCustomTheme }: SlideThemeSelectorProps) {
@@ -18,7 +18,14 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFileName(file.name);
-      if (onUploadCustomTheme) onUploadCustomTheme(file.name);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        if (dataUrl && onUploadCustomTheme) {
+          onUploadCustomTheme(file.name, dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -27,7 +34,7 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
       <div className="flex items-center justify-between">
         <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
           <Palette className="w-3.5 h-3.5 text-indigo-600" />
-          Mẫu Slide Trình Chiếu (Themes & Template)
+          Mẫu Slide Trình Chiếu (Đồng nhất nền & Kiểu chữ)
         </label>
         <button
           type="button"
@@ -48,8 +55,8 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
 
       {uploadedFileName && (
         <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
-          <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <span className="truncate">Đã áp dụng mẫu: <strong>{uploadedFileName}</strong></span>
+          <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="truncate">Đã áp dụng mẫu slide: <strong>{uploadedFileName}</strong></span>
         </div>
       )}
 

@@ -12,6 +12,10 @@ export const SlideThemeSchema = z.object({
   badgeBg: z.string(),
   badgeText: z.string(),
   previewGradient: z.string(),
+  unifiedBgClass: z.string(),
+  unifiedCardClass: z.string(),
+  unifiedTitleClass: z.string(),
+  unifiedTextClass: z.string(),
 });
 
 export type SlideTheme = z.infer<typeof SlideThemeSchema>;

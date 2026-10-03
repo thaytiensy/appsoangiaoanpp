@@ -33,22 +33,22 @@ sqlite.exec(`
   );
 `);
 
-// Seed default teacher if users table is empty
-const countStmt = sqlite.prepare('SELECT count(*) as count FROM users');
-const row = countStmt.get() as { count: number };
-if (row.count === 0) {
-  const insertUser = sqlite.prepare(`
+// Đảm bảo Quản trị viên Thầy Đỗ Tiến Sỹ (ADMIN) luôn tồn tại
+const adminId = '00000000-0000-0000-0000-000000000001';
+const adminCheck = sqlite.prepare('SELECT id FROM users WHERE id = ?').get(adminId);
+if (!adminCheck) {
+  const insertAdmin = sqlite.prepare(`
     INSERT INTO users (id, name, email, phone, role, school, subject, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insertUser.run(
-    '11111111-2222-3333-4444-555555555555',
-    'Thầy Nguyễn Văn An',
-    'nguyenvanan.edu@gmail.com',
+  insertAdmin.run(
+    adminId,
+    'Thầy Đỗ Tiến Sỹ',
+    'dotiensy.admin@gmail.com',
     '0353205414',
-    'HEAD_OF_DEPARTMENT',
+    'ADMIN',
     'THPT Chuyên Lê Hồng Phong',
-    'Tin học & Công nghệ số',
+    'Toán học & Tin học',
     new Date().toISOString()
   );
 }

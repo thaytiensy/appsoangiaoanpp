@@ -68,6 +68,7 @@ export const LessonPlanProjectSchema = z.object({
   schoolName: z.string().optional(),
   departmentName: z.string().optional(),
   themeId: z.string().optional(),
+  customBackgroundUrl: z.string().optional(),
   objectives: z.array(LessonObjectiveSchema).min(1),
   activities: z.array(PedagogicalActivitySchema).length(4),
   slides: z.array(SlideItemSchema).min(4),

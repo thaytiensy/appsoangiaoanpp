@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Wand2, Sparkles, BookOpen, GraduationCap, User, School, Briefcase } from 'lucide-react';
+import { Wand2, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 import { ALL_GDPT_SUBJECTS, ALL_GRADES } from '@/lib/pedagogical-knowledge';
 import { SlideThemeSelector } from './SlideThemeSelector';
+import { TeacherSchoolFields } from './TeacherSchoolFields';
 import { LessonGeneratorParams } from '@/lib/ai-lesson-generator';
 
 interface LessonInputPanelProps {
@@ -24,10 +25,11 @@ export function LessonInputPanel({
   const [topic, setTopic] = useState('Phương trình bậc hai và Ứng dụng thực tế');
   const [subject, setSubject] = useState(defaultSubject || 'Toán học');
   const [grade, setGrade] = useState('Lớp 10');
-  const [teacherName, setTeacherName] = useState(defaultTeacherName || 'Thầy Nguyễn Văn An');
+  const [teacherName, setTeacherName] = useState(defaultTeacherName || 'Thầy Đỗ Tiến Sỹ');
   const [schoolName, setSchoolName] = useState(defaultSchoolName || 'THPT Chuyên Lê Hồng Phong');
-  const [departmentName, setDepartmentName] = useState('Tổ Toán - Tin');
+  const [departmentName, setDepartmentName] = useState('Tổ Toán học');
   const [themeId, setThemeId] = useState('TECH_DARK');
+  const [customBgUrl, setCustomBgUrl] = useState<string | undefined>(undefined);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +42,7 @@ export function LessonInputPanel({
       schoolName,
       departmentName,
       themeId,
+      customBackgroundUrl: customBgUrl,
       duration: 45,
     });
   };
@@ -83,7 +86,7 @@ export function LessonInputPanel({
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
-              Môn Học (Đầy đủ GDPT)
+              Môn Học (18 Môn GDPT)
             </label>
             <select
               value={subject}
@@ -117,52 +120,21 @@ export function LessonInputPanel({
         </div>
 
         {/* Tên giáo viên, Trường, Tổ chuyên môn */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-blue-500" />
-              Tên Giáo Viên
-            </label>
-            <input
-              type="text"
-              value={teacherName}
-              onChange={(e) => setTeacherName(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-              <School className="w-3.5 h-3.5 text-purple-500" />
-              Tên Trường
-            </label>
-            <input
-              type="text"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-              <Briefcase className="w-3.5 h-3.5 text-amber-500" />
-              Tổ Chuyên Môn
-            </label>
-            <input
-              type="text"
-              value={departmentName}
-              onChange={(e) => setDepartmentName(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
-            />
-          </div>
-        </div>
+        <TeacherSchoolFields
+          teacherName={teacherName}
+          onChangeTeacherName={setTeacherName}
+          schoolName={schoolName}
+          onChangeSchoolName={setSchoolName}
+          departmentName={departmentName}
+          onChangeDepartmentName={setDepartmentName}
+        />
 
         {/* Mẫu Slide & Tải lên */}
         <SlideThemeSelector
           selectedThemeId={themeId}
           onSelectTheme={setThemeId}
-          onUploadCustomTheme={(name) => {
+          onUploadCustomTheme={(_name, dataUrl) => {
+            setCustomBgUrl(dataUrl);
             setThemeId('MINIMAL_SLATE');
           }}
         />
