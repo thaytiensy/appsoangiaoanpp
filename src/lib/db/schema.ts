@@ -12,5 +12,18 @@ export const lessonPlans = sqliteTable('lesson_plans', {
   updatedAt: text('updated_at').notNull(),
 });
 
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull().default('0353205414'),
+  role: text('role').notNull().default('TEACHER'),
+  school: text('school').notNull(),
+  subject: text('subject').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
 export type LessonPlanDbRow = typeof lessonPlans.$inferSelect;
 export type NewLessonPlanDbRow = typeof lessonPlans.$inferInsert;
+export type UserDbRow = typeof users.$inferSelect;
+export type NewUserDbRow = typeof users.$inferInsert;

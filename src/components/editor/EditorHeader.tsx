@@ -1,18 +1,19 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Clock, GraduationCap, Sparkles } from 'lucide-react';
+import { BookOpen, Clock, GraduationCap, Sparkles, Wand2 } from 'lucide-react';
 import { LessonPlanProject } from '@/types/lesson-plan';
 
 interface EditorHeaderProps {
   plan: LessonPlanProject;
   onChange: (updated: Partial<LessonPlanProject>) => void;
+  onOpenAiModal?: () => void;
 }
 
-export function EditorHeader({ plan, onChange }: EditorHeaderProps) {
+export function EditorHeader({ plan, onChange, onOpenAiModal }: EditorHeaderProps) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
             <BookOpen className="w-5 h-5" />
@@ -22,10 +23,22 @@ export function EditorHeader({ plan, onChange }: EditorHeaderProps) {
             <p className="text-xs text-slate-500">Khung kế hoạch bài dạy theo chuẩn GDPT 2026</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <Sparkles className="w-3.5 h-3.5" />
-          GDPT Chuẩn Hóa
-        </span>
+        <div className="flex items-center gap-2">
+          {onOpenAiModal && (
+            <button
+              type="button"
+              onClick={onOpenAiModal}
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-xs transition cursor-pointer"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              Soạn Bài Bằng AI
+            </button>
+          )}
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Sparkles className="w-3.5 h-3.5" />
+            GDPT Chuẩn Hóa
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
