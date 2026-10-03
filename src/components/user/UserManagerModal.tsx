@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, X, Plus, Phone } from 'lucide-react';
+import { Users, X, Plus, Phone, ShieldCheck, Lock } from 'lucide-react';
 import { User } from '@/types/user';
 import { getUsersAction, saveUserAction, deleteUserAction } from '@/lib/user-actions';
 import { UserListItem } from './UserListItem';
@@ -18,6 +18,8 @@ export function UserManagerModal({ isOpen, onClose, currentUser, onSelectUser }:
   const [userList, setUserList] = useState<User[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
+  const isAdmin = currentUser.role === 'ADMIN';
+
   useEffect(() => {
     if (isOpen) {
       getUsersAction().then((data) => {
@@ -29,13 +31,14 @@ export function UserManagerModal({ isOpen, onClose, currentUser, onSelectUser }:
   if (!isOpen) return null;
 
   const handleCreate = async (newUser: User) => {
+    if (!isAdmin) return;
     await saveUserAction(newUser);
     setUserList((prev) => [...prev, newUser]);
     setIsAdding(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (userList.length <= 1) return;
+    if (!isAdmin || userList.length <= 1) return;
     await deleteUserAction(id);
     setUserList((prev) => prev.filter((u) => u.id !== id));
   };
@@ -50,7 +53,9 @@ export function UserManagerModal({ isOpen, onClose, currentUser, onSelectUser }:
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800">Quản Lý Hồ Sơ Giáo Viên</h3>
-              <p className="text-xs text-slate-500">Phân quyền, tổ chuyên môn & thông tin tài khoản</p>
+              <p className="text-xs text-slate-500">
+                {isAdmin ? 'Quyền Quản Trị Viên (Thầy Đỗ Tiến Sỹ)' : 'Quyền Giáo viên bộ môn'}
+              </p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
@@ -64,24 +69,32 @@ export function UserManagerModal({ isOpen, onClose, currentUser, onSelectUser }:
               key={user.id}
               user={user}
               isSelected={user.id === currentUser.id}
-              canDelete={userList.length > 1}
+              canDelete={isAdmin && userList.length > 1}
               onSelect={onSelectUser}
               onDelete={handleDelete}
             />
           ))}
         </div>
 
-        {isAdding ? (
-          <UserFormAdd onCancel={() => setIsAdding(false)} onSubmit={handleCreate} />
+        {/* Chỉ ADMIN mới có quyền thêm người mới */}
+        {isAdmin ? (
+          isAdding ? (
+            <UserFormAdd onCancel={() => setIsAdding(false)} onSubmit={handleCreate} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="w-full py-2 text-xs font-semibold text-indigo-600 border border-dashed border-indigo-300 rounded-xl hover:bg-indigo-50/50 flex items-center justify-center gap-1.5 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm Giáo Viên Mới (Quyền Admin)
+            </button>
+          )
         ) : (
-          <button
-            type="button"
-            onClick={() => setIsAdding(true)}
-            className="w-full py-2 text-xs font-semibold text-indigo-600 border border-dashed border-indigo-300 rounded-xl hover:bg-indigo-50/50 flex items-center justify-center gap-1.5 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm Giáo Viên Mới
-          </button>
+          <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2 text-xs text-slate-500">
+            <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Chỉ Quản trị viên (Thầy Đỗ Tiến Sỹ) mới có quyền tạo và thêm hồ sơ mới.</span>
+          </div>
         )}
 
         <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">

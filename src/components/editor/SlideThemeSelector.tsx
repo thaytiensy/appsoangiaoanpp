@@ -1,31 +1,36 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Palette, Upload, Check, FileCheck } from 'lucide-react';
+import { Palette, Upload, Check, FileCheck, Loader2 } from 'lucide-react';
 import { BUILTIN_THEMES } from '@/lib/slide-themes';
+import { parseUploadedTemplate } from '@/lib/pptx-parser';
 
 interface SlideThemeSelectorProps {
   selectedThemeId: string;
   onSelectTheme: (themeId: string) => void;
-  onUploadCustomTheme?: (fileName: string, dataUrl: string) => void;
+  onUploadCustomTheme?: (fileName: string, dataUrl?: string) => void;
 }
 
 export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCustomTheme }: SlideThemeSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        if (dataUrl && onUploadCustomTheme) {
-          onUploadCustomTheme(file.name, dataUrl);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsParsing(true);
+    try {
+      const parsed = await parseUploadedTemplate(file);
+      setUploadedFileName(parsed.templateName);
+      if (onUploadCustomTheme) {
+        onUploadCustomTheme(parsed.templateName, parsed.backgroundUrl);
+      }
+    } catch (err) {
+      console.error('Error parsing uploaded template:', err);
+    } finally {
+      setIsParsing(false);
     }
   };
 
@@ -38,11 +43,12 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
         </label>
         <button
           type="button"
+          disabled={isParsing}
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition cursor-pointer"
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50"
         >
-          <Upload className="w-3 h-3" />
-          Tải Mẫu Slide Lên
+          {isParsing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+          <span>{isParsing ? 'Đang đọc .pptx...' : 'Tải Mẫu Slide Lên'}</span>
         </button>
         <input
           ref={fileInputRef}
@@ -56,7 +62,7 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
       {uploadedFileName && (
         <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
           <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="truncate">Đã áp dụng mẫu slide: <strong>{uploadedFileName}</strong></span>
+          <span className="truncate">Đã áp dụng mẫu PowerPoint: <strong>{uploadedFileName}</strong></span>
         </div>
       )}
 

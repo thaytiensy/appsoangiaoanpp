@@ -5,6 +5,7 @@ import { Wand2, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 import { ALL_GDPT_SUBJECTS, ALL_GRADES } from '@/lib/pedagogical-knowledge';
 import { SlideThemeSelector } from './SlideThemeSelector';
 import { TeacherSchoolFields } from './TeacherSchoolFields';
+import { LessonDurationPicker } from './LessonDurationPicker';
 import { LessonGeneratorParams } from '@/lib/ai-lesson-generator';
 
 interface LessonInputPanelProps {
@@ -25,6 +26,7 @@ export function LessonInputPanel({
   const [topic, setTopic] = useState('Phương trình bậc hai và Ứng dụng thực tế');
   const [subject, setSubject] = useState(defaultSubject || 'Toán học');
   const [grade, setGrade] = useState('Lớp 10');
+  const [duration, setDuration] = useState(45);
   const [teacherName, setTeacherName] = useState(defaultTeacherName || 'Thầy Đỗ Tiến Sỹ');
   const [schoolName, setSchoolName] = useState(defaultSchoolName || 'THPT Chuyên Lê Hồng Phong');
   const [departmentName, setDepartmentName] = useState('Tổ Toán học');
@@ -43,7 +45,7 @@ export function LessonInputPanel({
       departmentName,
       themeId,
       customBackgroundUrl: customBgUrl,
-      duration: 45,
+      duration,
     });
   };
 
@@ -118,6 +120,9 @@ export function LessonInputPanel({
             </select>
           </div>
         </div>
+
+        {/* Nút Thời gian 1 tiết dạy */}
+        <LessonDurationPicker duration={duration} onChangeDuration={setDuration} />
 
         {/* Tên giáo viên, Trường, Tổ chuyên môn */}
         <TeacherSchoolFields
