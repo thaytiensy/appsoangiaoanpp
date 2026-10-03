@@ -3,17 +3,18 @@
 import React, { useRef, useState } from 'react';
 import { Palette, Upload, Check, FileCheck, Loader2 } from 'lucide-react';
 import { BUILTIN_THEMES } from '@/lib/slide-themes';
-import { parseUploadedTemplate } from '@/lib/pptx-parser';
+import { parseUploadedTemplate, ParsedTemplateResult } from '@/lib/pptx-parser';
 
 interface SlideThemeSelectorProps {
   selectedThemeId: string;
   onSelectTheme: (themeId: string) => void;
-  onUploadCustomTheme?: (fileName: string, dataUrl?: string) => void;
+  onUploadCustomTheme?: (result: ParsedTemplateResult) => void;
 }
 
 export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCustomTheme }: SlideThemeSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [slideCount, setSlideCount] = useState<number>(0);
   const [isParsing, setIsParsing] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,13 +25,15 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
     try {
       const parsed = await parseUploadedTemplate(file);
       setUploadedFileName(parsed.templateName);
+      setSlideCount(parsed.slides.length);
       if (onUploadCustomTheme) {
-        onUploadCustomTheme(parsed.templateName, parsed.backgroundUrl);
+        onUploadCustomTheme(parsed);
       }
     } catch (err) {
       console.error('Error parsing uploaded template:', err);
     } finally {
       setIsParsing(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -62,7 +65,10 @@ export function SlideThemeSelector({ selectedThemeId, onSelectTheme, onUploadCus
       {uploadedFileName && (
         <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
           <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="truncate">Đã áp dụng mẫu PowerPoint: <strong>{uploadedFileName}</strong></span>
+          <span className="truncate">
+            Đã áp dụng mẫu: <strong>{uploadedFileName}</strong>
+            {slideCount > 0 ? ` (${slideCount} slide bài giảng)` : ' (Ảnh nền)'}
+          </span>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { SlideThemeSelector } from './SlideThemeSelector';
 import { TeacherSchoolFields } from './TeacherSchoolFields';
 import { LessonDurationPicker } from './LessonDurationPicker';
 import { LessonGeneratorParams } from '@/lib/ai-lesson-generator';
+import { ParsedTemplateResult } from '@/lib/pptx-parser';
 
 interface LessonInputPanelProps {
   onGenerate: (params: LessonGeneratorParams) => void;
@@ -14,6 +15,9 @@ interface LessonInputPanelProps {
   defaultTeacherName: string;
   defaultSchoolName: string;
   defaultSubject: string;
+  currentThemeId?: string;
+  onSelectTheme?: (themeId: string) => void;
+  onApplyTemplate?: (result: ParsedTemplateResult) => void;
 }
 
 export function LessonInputPanel({
@@ -22,6 +26,9 @@ export function LessonInputPanel({
   defaultTeacherName,
   defaultSchoolName,
   defaultSubject,
+  currentThemeId = 'TECH_DARK',
+  onSelectTheme,
+  onApplyTemplate,
 }: LessonInputPanelProps) {
   const [topic, setTopic] = useState('Phương trình bậc hai và Ứng dụng thực tế');
   const [subject, setSubject] = useState(defaultSubject || 'Toán học');
@@ -30,8 +37,20 @@ export function LessonInputPanel({
   const [teacherName, setTeacherName] = useState(defaultTeacherName || 'Thầy Đỗ Tiến Sỹ');
   const [schoolName, setSchoolName] = useState(defaultSchoolName || 'THPT Chuyên Lê Hồng Phong');
   const [departmentName, setDepartmentName] = useState('Tổ Toán học');
-  const [themeId, setThemeId] = useState('TECH_DARK');
+  const [themeId, setThemeId] = useState(currentThemeId);
   const [customBgUrl, setCustomBgUrl] = useState<string | undefined>(undefined);
+
+  const handleThemeChange = (id: string) => {
+    setThemeId(id);
+    if (onSelectTheme) onSelectTheme(id);
+  };
+
+  const handleUploadTemplate = (parsed: ParsedTemplateResult) => {
+    setCustomBgUrl(parsed.backgroundUrl);
+    setThemeId('MINIMAL_SLATE');
+    if (parsed.lessonTitle) setTopic(parsed.lessonTitle);
+    if (onApplyTemplate) onApplyTemplate(parsed);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +86,6 @@ export function LessonInputPanel({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Chủ đề bài học */}
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -83,7 +101,6 @@ export function LessonInputPanel({
           />
         </div>
 
-        {/* Môn học & Lớp */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
@@ -121,10 +138,8 @@ export function LessonInputPanel({
           </div>
         </div>
 
-        {/* Nút Thời gian 1 tiết dạy */}
         <LessonDurationPicker duration={duration} onChangeDuration={setDuration} />
 
-        {/* Tên giáo viên, Trường, Tổ chuyên môn */}
         <TeacherSchoolFields
           teacherName={teacherName}
           onChangeTeacherName={setTeacherName}
@@ -134,17 +149,12 @@ export function LessonInputPanel({
           onChangeDepartmentName={setDepartmentName}
         />
 
-        {/* Mẫu Slide & Tải lên */}
         <SlideThemeSelector
           selectedThemeId={themeId}
-          onSelectTheme={setThemeId}
-          onUploadCustomTheme={(_name, dataUrl) => {
-            setCustomBgUrl(dataUrl);
-            setThemeId('MINIMAL_SLATE');
-          }}
+          onSelectTheme={handleThemeChange}
+          onUploadCustomTheme={handleUploadTemplate}
         />
 
-        {/* Nút Tạo Giáo Án AI */}
         <button
           type="submit"
           disabled={isGenerating || !topic.trim()}

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Phone, Trash2, ShieldCheck } from 'lucide-react';
+import { Phone, Trash2, ShieldCheck, Lock } from 'lucide-react';
 import { User } from '@/types/user';
 
 interface UserListItemProps {
@@ -43,9 +43,15 @@ export function UserListItem({ user, isSelected, canDelete, onSelect, onDelete }
             )}
           </div>
           <p className="text-[11px] text-slate-500">{user.subject} • {user.school}</p>
-          <p className="text-[10px] text-indigo-600 flex items-center gap-1">
-            <Phone className="w-3 h-3" /> SĐT/ZL: {user.phone}
-          </p>
+          {isAdmin ? (
+            <p className="text-[10px] text-indigo-600 flex items-center gap-1 font-semibold">
+              <Phone className="w-3 h-3" /> SĐT/ZL Admin: {user.phone}
+            </p>
+          ) : (
+            <p className="text-[10px] text-slate-400 flex items-center gap-1 italic">
+              <Lock className="w-2.5 h-2.5" /> SĐT bảo mật riêng tư
+            </p>
+          )}
         </div>
       </div>
 

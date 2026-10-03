@@ -52,7 +52,7 @@ export function Slide16x9Canvas({
     <div
       style={bgStyle}
       className={`w-full relative shadow-xl rounded-xl overflow-hidden border border-slate-300 ${
-        theme.unifiedBgClass
+        customBackgroundUrl ? 'bg-slate-900 text-white' : theme.unifiedBgClass
       } aspect-video flex flex-col justify-between select-none transition-colors duration-300`}
     >
       {/* 16:9 Header */}
