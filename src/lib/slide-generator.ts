@@ -17,6 +17,10 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
   const practice = plan.activities.find((a) => a.phase === 'PRACTICE') ?? plan.activities[2];
   const application = plan.activities.find((a) => a.phase === 'APPLICATION') ?? plan.activities[3];
 
+  const teacher = plan.teacherName || 'Giáo viên bộ môn';
+  const school = plan.schoolName || 'Trường THPT';
+  const dept = plan.departmentName || `Tổ ${plan.subject}`;
+
   const slides: SlideItem[] = [
     {
       id: generateRandomUuid(),
@@ -24,12 +28,12 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
       layout: 'TITLE_HERO' as SlideLayout,
       title: plan.lessonName.toUpperCase(),
       bullets: [
-        `Môn học: ${plan.subject} - ${plan.gradeLevel}`,
-        `Thời lượng giảng dạy: ${plan.durationPeriod} phút`,
-        `Mục tiêu: Đạt chuẩn phẩm chất & năng lực GDPT`,
+        `Môn học: ${plan.subject} - ${plan.gradeLevel} (${plan.durationPeriod} phút)`,
+        `Giáo viên giảng dạy: ${teacher}`,
+        `Đơn vị công tác: ${school} - ${dept}`,
       ],
-      teacherScript: `Nhiệt liệt chào mừng quý thầy cô và các em học sinh đến với bài học ${plan.lessonName}.`,
-      visualSuggestion: 'Hình nền tối ấn tượng, tương phản cao với tiêu đề chữ lớn nổi bật.',
+      teacherScript: `Nhiệt liệt chào mừng quý thầy cô và các em học sinh đến với bài học ${plan.lessonName}. Thầy/Cô ${teacher} sẽ cùng các em khám phá bài học hôm nay.`,
+      visualSuggestion: 'Trang bìa chuyên nghiệp, nổi bật thông tin môn học, giáo viên và đơn vị.',
     },
     {
       id: generateRandomUuid(),
@@ -56,7 +60,7 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
         `Yêu cầu đầu ra: ${knowledge.expectedProduct.slice(0, 100)}`,
       ],
       teacherScript: `Hướng dẫn học sinh phân tích nội dung cốt lõi: ${knowledge.teacherRole}`,
-      visualSuggestion: 'Sơ đồ tư duy dạng thẻ hoặc infographic 3 phần kiến thức nền tảng.',
+      visualSuggestion: 'Sơ đồ tư duy dạng thẻ hoặc infographic kiến thức nền tảng.',
     },
     {
       id: generateRandomUuid(),
@@ -69,8 +73,8 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
         `Học sinh chủ động: ${practice.studentRole.slice(0, 100)}`,
         `Đánh giá sản phẩm: ${practice.expectedProduct.slice(0, 100)}`,
       ],
-      teacherScript: `Tổ chức cho các nhóm học sinh luân chuyển và luyện tập: ${practice.teacherRole}`,
-      visualSuggestion: 'Bảng đối chiếu hoặc hệ thống câu hỏi bài tập rèn luyện kỹ năng.',
+      teacherScript: `Tổ chức cho học sinh luyện tập, củng cố kỹ năng: ${practice.teacherRole}`,
+      visualSuggestion: 'Bảng đối chiếu hoặc hệ thống bài tập rèn luyện kỹ năng phân hóa.',
     },
     {
       id: generateRandomUuid(),
@@ -81,7 +85,7 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
         `Thời lượng: ${application.durationMinutes} phút`,
         `Thực hiện nhiệm vụ: ${application.studentRole.slice(0, 100)}`,
         `Kết quả cần đạt: ${application.expectedProduct.slice(0, 100)}`,
-        'Tổng kết & Giao bài rèn luyện tại nhà',
+        'Tổng kết & Giao bài rèn luyện thực tiễn tại nhà',
       ],
       teacherScript: `Tổng kết bài học và hướng dẫn học sinh vận dụng vào đời sống: ${application.teacherRole}`,
       visualSuggestion: 'Sơ đồ tóm tắt toàn diện và thông điệp hành động truyền cảm hứng.',

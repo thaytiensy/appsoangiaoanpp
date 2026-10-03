@@ -2,39 +2,42 @@
 
 import React from 'react';
 import { SlideItem } from '@/types/lesson-plan';
-import { Layout, CheckSquare, Sparkles, HelpCircle } from 'lucide-react';
+import { CheckSquare, Sparkles, HelpCircle } from 'lucide-react';
+import { getThemeById } from '@/lib/slide-themes';
 
 interface Slide16x9CanvasProps {
   slide: SlideItem;
   totalSlides: number;
+  themeId?: string;
 }
 
-export function Slide16x9Canvas({ slide, totalSlides }: Slide16x9CanvasProps) {
+export function Slide16x9Canvas({ slide, totalSlides, themeId }: Slide16x9CanvasProps) {
   const isHero = slide.layout === 'TITLE_HERO';
+  const theme = getThemeById(themeId);
 
   return (
     <div className="w-full relative shadow-xl rounded-xl overflow-hidden border border-slate-300 bg-slate-900 aspect-video flex flex-col justify-between select-none">
       {/* 16:9 Slide Top Header */}
-      <div className={`p-4 flex items-center justify-between ${isHero ? 'bg-slate-900' : 'bg-white border-b border-slate-200'}`}>
+      <div className={`p-4 flex items-center justify-between ${isHero ? theme.badgeBg : 'bg-white border-b border-slate-200'}`}>
         <div className="flex items-center gap-2">
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
             isHero ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
           }`}>
             Slide {slide.slideNumber} / {totalSlides}
           </span>
-          <span className={`text-xs font-semibold uppercase tracking-wider ${isHero ? 'text-slate-400' : 'text-slate-500'}`}>
+          <span className={`text-xs font-semibold uppercase tracking-wider ${isHero ? 'text-slate-300' : 'text-slate-500'}`}>
             {slide.layout.replace('_', ' ')}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+        <div className="flex items-center gap-1.5 text-xs text-slate-300">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>GDPT 2026 16:9</span>
+          <span>{theme.name} • 16:9</span>
         </div>
       </div>
 
       {/* Slide Body Content */}
       <div className={`flex-1 p-6 sm:p-8 flex flex-col justify-center ${
-        isHero ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white' : 'bg-slate-50 text-slate-900'
+        isHero ? `bg-gradient-to-br ${theme.previewGradient} text-white` : 'bg-slate-50 text-slate-900'
       }`}>
         {isHero ? (
           <div className="space-y-4 max-w-2xl">
@@ -44,7 +47,7 @@ export function Slide16x9Canvas({ slide, totalSlides }: Slide16x9CanvasProps) {
             <div className="w-16 h-1 bg-amber-400 rounded-full" />
             <div className="space-y-2 pt-2">
               {slide.bullets.map((bullet, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-sm sm:text-base text-slate-300">
+                <div key={idx} className="flex items-center gap-2 text-sm sm:text-base text-slate-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                   <span>{bullet}</span>
                 </div>
@@ -85,7 +88,7 @@ export function Slide16x9Canvas({ slide, totalSlides }: Slide16x9CanvasProps) {
 
       {/* Slide Footer */}
       <div className={`px-4 py-2 text-[11px] flex items-center justify-between ${
-        isHero ? 'bg-slate-950 text-slate-400' : 'bg-slate-100 text-slate-500 border-t border-slate-200'
+        isHero ? 'bg-slate-950/80 text-slate-400' : 'bg-slate-100 text-slate-500 border-t border-slate-200'
       }`}>
         <span>Giáo Án Tích Hợp Số Chuẩn 2026</span>
         <span>Tỉ Lệ Màn Chiếu 16:9 HD</span>

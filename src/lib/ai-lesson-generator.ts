@@ -8,34 +8,55 @@ function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 }
 
+export interface LessonGeneratorParams {
+  topic: string;
+  subject: string;
+  grade: string;
+  teacherName?: string;
+  schoolName?: string;
+  departmentName?: string;
+  themeId?: string;
+  duration?: number;
+}
+
 export function generatePedagogicalLessonPlan(
-  lessonName: string,
-  subject: string,
-  gradeLevel: string,
-  durationPeriod: number = 45,
-  focusGoal?: string
+  paramsOrTopic: LessonGeneratorParams | string,
+  subjectStr?: string,
+  gradeStr?: string,
+  durationNum?: number
 ): LessonPlanProject {
-  const cleanName = lessonName.trim() || 'Bài Học Trọng Tâm Mới';
-  const cleanSubject = subject.trim() || 'Tin học & Công nghệ';
-  const cleanGrade = gradeLevel.trim() || 'Lớp 10';
+  const params: LessonGeneratorParams =
+    typeof paramsOrTopic === 'string'
+      ? {
+          topic: paramsOrTopic,
+          subject: subjectStr || 'Toán học',
+          grade: gradeStr || 'Lớp 10',
+          duration: durationNum || 45,
+        }
+      : paramsOrTopic;
+
+  const cleanName = params.topic.trim() || 'Bài Học Trọng Tâm Mới';
+  const cleanSubject = params.subject.trim() || 'Toán học';
+  const cleanGrade = params.grade.trim() || 'Lớp 10';
+  const durationPeriod = params.duration || 45;
 
   const objectives: LessonObjective[] = [
     {
       id: makeId('obj-k'),
       category: 'KNOWLEDGE',
-      description: `Trình bày và phân tích được các khái niệm nền tảng cùng quy luật cốt lõi của chủ đề "${cleanName}".`,
+      description: `Trình bày và phân tích được các khái niệm nền tảng cùng quy luật cốt lõi của bài học "${cleanName}".`,
       bloomLevel: 'UNDERSTAND',
     },
     {
       id: makeId('obj-s'),
       category: 'SKILL',
-      description: `Vận dụng quy trình chuẩn để giải quyết các bài toán, tình huống thực tế liên quan đến "${cleanName}".`,
+      description: `Vận dụng kiến thức bài học để giải quyết các bài tập, tình huống thực tế và rèn luyện kỹ năng của môn ${cleanSubject}.`,
       bloomLevel: 'APPLY',
     },
     {
       id: makeId('obj-a'),
       category: 'ATTITUDE',
-      description: `Hình thành thái độ chủ động nghiên cứu, tư duy phản biện và tinh thần hợp tác tích cực trong học tập.`,
+      description: `Phát triển phẩm chất chăm chỉ, trách nhiệm, tư duy phản biện khoa học và tinh thần hợp tác tích cực.`,
       bloomLevel: 'EVALUATE',
     },
   ];
@@ -46,36 +67,36 @@ export function generatePedagogicalLessonPlan(
       phase: 'WARM_UP',
       title: `Khởi động: Kích hoạt tư duy về "${cleanName}"`,
       durationMinutes: Math.round(durationPeriod * 0.15),
-      teacherRole: `Giáo viên trình chiếu tình huống có vấn đề hoặc video clip ngắn liên quan đến "${cleanName}", đặt câu hỏi dẫn dắt kích thích tò mò.`,
-      studentRole: `Học sinh quan sát, suy nghĩ độc lập trong 2 phút, thảo luận nhanh với bạn cùng bàn và giơ tay chia sẻ phán đoán ban đầu.`,
-      expectedProduct: `Câu trả lời dự đoán của học sinh ghi nhận trên bảng phụ và tâm thế sẵn sàng tiếp cận bài học mới.`,
+      teacherRole: `Giáo viên trình chiếu câu hỏi gợi mở hoặc tình huống thực tế về "${cleanName}", dẫn dắt học sinh vào bài học.`,
+      studentRole: `Học sinh quan sát, suy nghĩ độc lập, thảo luận nhanh với bạn cùng bàn và giơ tay phát biểu ý kiến ban đầu.`,
+      expectedProduct: `Tâm thế hào hứng và các ý tưởng phán đoán ban đầu của học sinh ghi nhận trên bảng phụ.`,
     },
     {
       id: makeId('act-know'),
       phase: 'KNOWLEDGE',
-      title: `Hình thành kiến thức: Khám phá trọng tâm "${cleanName}"`,
+      title: `Hình thành kiến thức: Khám phá cốt lõi "${cleanName}"`,
       durationMinutes: Math.round(durationPeriod * 0.45),
-      teacherRole: `Giáo viên giao phiếu học tập số 1, tổ chức hoạt động nghiên cứu tài liệu/mẫu vật, gợi mở để học sinh tự rút ra kiến thức cốt lõi.`,
-      studentRole: `Học sinh làm việc theo nhóm 4, đọc tài liệu, đối chiếu dữ liệu, hoàn thiện phiếu học tập và cử đại diện báo cáo kết quả.`,
-      expectedProduct: `Phiếu học tập nhóm đã điền đầy đủ các định nghĩa, quy tắc và sơ đồ tư duy tóm lược kiến thức mới.`,
+      teacherRole: `Giáo viên chia nhóm, phát phiếu học tập số 1, dẫn dắt học sinh khám phá kiến thức mới qua các câu hỏi gợi mở.`,
+      studentRole: `Học sinh làm việc nhóm 4, đọc tài liệu, ghi chép vào phiếu học tập và cử đại diện trình bày kết quả.`,
+      expectedProduct: `Phiếu học tập nhóm đã hoàn thành với đầy đủ định nghĩa, công thức và sơ đồ tư duy trọng tâm.`,
     },
     {
       id: makeId('act-prac'),
       phase: 'PRACTICE',
-      title: `Luyện tập: Rèn luyện kỹ năng qua bài tập thực tế`,
+      title: `Luyện tập: Rèn luyện kỹ năng giải quyết bài tập`,
       durationMinutes: Math.round(durationPeriod * 0.25),
-      teacherRole: `Giáo viên giao hệ thống câu hỏi phân hóa từ nhận biết đến vận dụng, quan sát hỗ trợ các nhóm gặp khó khăn và chấm chữa mẫu.`,
-      studentRole: `Học sinh chủ động hoàn thành bài tập cá nhân vào vở, đổi chéo chấm chữa theo barem đáp án do giáo viên cung cấp.`,
-      expectedProduct: `Vở bài tập cá nhân có kết quả giải chi tiết và nhận xét đánh giá chéo giữa các bạn học sinh.`,
+      teacherRole: `Giáo viên giao hệ thống bài tập phân hóa theo mức độ, quan sát hướng dẫn các nhóm và chốt đáp án chuẩn.`,
+      studentRole: `Học sinh thực hiện bài tập cá nhân, đổi chéo vở để chấm điểm và nhận xét lẫn nhau theo barem đáp án.`,
+      expectedProduct: `Vở ghi bài tập của học sinh có lời giải chi tiết và điểm đánh giá nhận xét chéo.`,
     },
     {
       id: makeId('act-app'),
       phase: 'APPLICATION',
-      title: `Vận dụng & Mở rộng: Đưa tri thức vào đời sống`,
+      title: `Vận dụng & Mở rộng: Liên hệ thực tiễn đời sống`,
       durationMinutes: Math.max(5, durationPeriod - Math.round(durationPeriod * 0.85)),
-      teacherRole: `Giáo viên nêu yêu cầu nhiệm vụ dự án mini/bài tập mở rộng về nhà, hướng dẫn các nguồn tài liệu mở để tự học thêm.`,
-      studentRole: `Học sinh ghi chép nhiệm vụ sáng tạo, thảo luận ý tưởng triển khai và cam kết thời gian hoàn thành sản phẩm.`,
-      expectedProduct: `Bản kế hoạch ý tưởng dự án hoặc sơ đồ ứng dụng thực tiễn nộp lại cho giáo viên vào tiết học sau.`,
+      teacherRole: `Giáo viên giao nhiệm vụ sáng tạo/dự án nhỏ liên hệ thực tiễn về nhà, định hướng tiêu chí đánh giá sản phẩm.`,
+      studentRole: `Học sinh tiếp nhận nhiệm vụ, thảo luận ý tưởng triển khai và cam kết thời hạn nộp sản phẩm.`,
+      expectedProduct: `Bản kế hoạch ý tưởng hoặc sản phẩm học tập sáng tạo nộp lại vào tiết học tiếp theo.`,
     },
   ];
 
@@ -85,6 +106,10 @@ export function generatePedagogicalLessonPlan(
     gradeLevel: cleanGrade,
     lessonName: cleanName,
     durationPeriod,
+    teacherName: params.teacherName || 'Thầy Nguyễn Văn An',
+    schoolName: params.schoolName || 'Trường THPT',
+    departmentName: params.departmentName || `Tổ ${cleanSubject}`,
+    themeId: params.themeId || 'TECH_DARK',
     objectives,
     activities: activities as [PedagogicalActivity, PedagogicalActivity, PedagogicalActivity, PedagogicalActivity],
     slides: [],

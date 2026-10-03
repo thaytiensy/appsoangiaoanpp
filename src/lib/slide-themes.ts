@@ -1,0 +1,73 @@
+import { SlideTheme } from '@/types/template';
+
+export const BUILTIN_THEMES: SlideTheme[] = [
+  {
+    id: 'TECH_DARK',
+    name: 'Hiện Đại Công Nghệ',
+    description: 'Tone tối sang trọng, điểm nhấn ánh sáng cyan/amber',
+    bgHeroHex: '0F172A',
+    bgSlideHex: 'F8FAFC',
+    accentHex: '0284C7',
+    textHeroHex: 'F8FAFC',
+    textSlideHex: '0F172A',
+    badgeBg: 'bg-slate-900',
+    badgeText: 'text-cyan-400',
+    previewGradient: 'from-slate-900 via-indigo-950 to-slate-900',
+  },
+  {
+    id: 'PEDAGOGY_BLUE',
+    name: 'Sư Phạm Chuẩn Mực',
+    description: 'Tone xanh dương thanh lịch, trang nhã chuẩn mực giáo dục',
+    bgHeroHex: '1E3A8A',
+    bgSlideHex: 'F0F9FF',
+    accentHex: '2563EB',
+    textHeroHex: 'FFFFFF',
+    textSlideHex: '1E293B',
+    badgeBg: 'bg-blue-900',
+    badgeText: 'text-blue-200',
+    previewGradient: 'from-blue-900 via-blue-800 to-indigo-900',
+  },
+  {
+    id: 'ECO_GREEN',
+    name: 'Sinh Thái & Tự Nhiên',
+    description: 'Tone xanh lục dịu mát, phù hợp Sinh - Địa - KHTN',
+    bgHeroHex: '064E3B',
+    bgSlideHex: 'F0FDF4',
+    accentHex: '059669',
+    textHeroHex: 'FFFFFF',
+    textSlideHex: '064E3B',
+    badgeBg: 'bg-emerald-900',
+    badgeText: 'text-emerald-200',
+    previewGradient: 'from-emerald-900 via-teal-900 to-emerald-950',
+  },
+  {
+    id: 'WARM_AMBER',
+    name: 'Nhân Văn & Lịch Sử',
+    description: 'Tone vàng hổ phách trầm ấm, phù hợp Văn - Sử - GDCD',
+    bgHeroHex: '78350F',
+    bgSlideHex: 'FFFBEB',
+    accentHex: 'D97706',
+    textHeroHex: 'FFFFFF',
+    textSlideHex: '451A03',
+    badgeBg: 'bg-amber-950',
+    badgeText: 'text-amber-200',
+    previewGradient: 'from-amber-950 via-yellow-950 to-stone-900',
+  },
+  {
+    id: 'MINIMAL_SLATE',
+    name: 'Tối Giản Tinh Tế',
+    description: 'Phong cách tối giản hiện đại, rõ ràng, tập trung nội dung',
+    bgHeroHex: '1E293B',
+    bgSlideHex: 'FFFFFF',
+    accentHex: '475569',
+    textHeroHex: 'FFFFFF',
+    textSlideHex: '0F172A',
+    badgeBg: 'bg-slate-800',
+    badgeText: 'text-slate-300',
+    previewGradient: 'from-slate-800 via-slate-700 to-zinc-900',
+  },
+];
+
+export function getThemeById(themeId?: string): SlideTheme {
+  return BUILTIN_THEMES.find((t) => t.id === themeId) ?? BUILTIN_THEMES[0];
+}

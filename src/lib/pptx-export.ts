@@ -1,34 +1,43 @@
 import pptxgen from 'pptxgenjs';
 import { LessonPlanProject } from '@/types/lesson-plan';
+import { getThemeById } from './slide-themes';
 
 export async function exportLessonToPptx(project: LessonPlanProject): Promise<void> {
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_16x9';
 
+  const theme = getThemeById(project.themeId);
+  const teacher = project.teacherName || 'Giáo viên bộ môn';
+  const school = project.schoolName || 'Trường THPT';
+
   // Slide mở đầu (Hero Title)
   const introSlide = pptx.addSlide();
-  introSlide.background = { color: '0F172A' }; // Slate 900
+  introSlide.background = { color: theme.bgHeroHex };
   introSlide.addText(project.lessonName.toUpperCase(), {
-    x: 1.0, y: 2.2, w: '80%', h: 1.5,
-    fontSize: 36, bold: true, color: 'F8FAFC', align: 'left'
+    x: 1.0, y: 1.8, w: '80%', h: 1.5,
+    fontSize: 34, bold: true, color: theme.textHeroHex, align: 'left'
   });
-  introSlide.addText(`Môn học: ${project.subject} | Khối: ${project.gradeLevel} | Thời lượng: ${project.durationPeriod}p`, {
-    x: 1.0, y: 3.8, w: '80%', h: 0.8,
-    fontSize: 18, color: '38BDF8', align: 'left'
+  introSlide.addText(`Môn học: ${project.subject} | Khối: ${project.gradeLevel} | Thời lượng: ${project.durationPeriod} phút`, {
+    x: 1.0, y: 3.4, w: '80%', h: 0.6,
+    fontSize: 18, color: theme.accentHex, align: 'left'
+  });
+  introSlide.addText(`Giáo viên: ${teacher} | Đơn vị: ${school}`, {
+    x: 1.0, y: 4.1, w: '80%', h: 0.5,
+    fontSize: 15, color: '94A3B8', align: 'left'
   });
 
   // Từng slide hoạt động
   project.slides.forEach((item) => {
     const slide = pptx.addSlide();
-    slide.background = { color: 'F8FAFC' };
+    slide.background = { color: theme.bgSlideHex };
 
     // Header slide
     slide.addShape(pptx.ShapeType.rect, {
-      x: 0.8, y: 0.6, w: 0.15, h: 0.6, fill: { color: '0284C7' }
+      x: 0.8, y: 0.6, w: 0.15, h: 0.6, fill: { color: theme.accentHex }
     });
     slide.addText(item.title, {
       x: 1.1, y: 0.6, w: '85%', h: 0.6,
-      fontSize: 24, bold: true, color: '0F172A'
+      fontSize: 22, bold: true, color: theme.textSlideHex
     });
 
     // Bullets nội dung
@@ -37,7 +46,7 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
       options: { fontSize: 16, color: '334155', breakLine: true, bullet: true }
     }));
     slide.addText(bulletText, {
-      x: 1.0, y: 1.6, w: '80%', h: 4.0, lineSpacing: 28
+      x: 1.0, y: 1.5, w: '80%', h: 4.2, lineSpacing: 26
     });
 
     // Ghi chú của giáo viên (Speaker Notes)

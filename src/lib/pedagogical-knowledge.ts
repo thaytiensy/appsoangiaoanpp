@@ -1,5 +1,3 @@
-import { BloomLevel } from '@/types/lesson-plan';
-
 export interface SubjectTemplate {
   subject: string;
   defaultTopics: string[];
@@ -9,57 +7,85 @@ export interface SubjectTemplate {
   applicationPrefix: string;
 }
 
+export const ALL_GDPT_SUBJECTS: string[] = [
+  'Toán học',
+  'Ngữ văn',
+  'Tiếng Anh',
+  'Tin học',
+  'Khoa học tự nhiên',
+  'Vật lí',
+  'Hóa học',
+  'Sinh học',
+  'Lịch sử & Địa lí',
+  'Lịch sử',
+  'Địa lí',
+  'Công nghệ',
+  'Giáo dục Kinh tế & Pháp luật',
+  'Giáo dục công dân',
+  'Âm nhạc',
+  'Mĩ thuật',
+  'Giáo dục thể chất',
+  'Hoạt động trải nghiệm, hướng nghiệp',
+  'Giáo dục Quốc phòng và An ninh',
+];
+
+export const ALL_GRADES: string[] = [
+  'Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5',
+  'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9',
+  'Lớp 10', 'Lớp 11', 'Lớp 12',
+];
+
 export const SUBJECT_PRESETS: Record<string, SubjectTemplate> = {
-  'Tin học': {
-    subject: 'Tin học & Công nghệ số',
-    defaultTopics: [
-      'Trí tuệ nhân tạo và Đạo đức số trong đời sống',
-      'Thuật toán sắp xếp và tìm kiếm nâng cao',
-      'An toàn thông tin và Bảo mật dữ liệu cá nhân',
-      'Lập trình hướng đối tượng với Python',
-    ],
-    warmUpPrefix: 'Trò chơi tương tác số & Tình huống thực nghiệm',
-    knowledgePrefix: 'Khám phá mô hình dữ liệu và nguyên lý thuật toán',
-    practicePrefix: 'Thực hành giải quyết bài toán mã nguồn',
-    applicationPrefix: 'Dự án công nghệ ứng dụng giải quyết vấn đề cộng đồng',
-  },
   'Toán học': {
     subject: 'Toán học',
     defaultTopics: [
       'Phương trình bậc hai và Ứng dụng thực tế',
-      'Hình học không gian: Vị trí tương đối của đường thẳng và mặt phẳng',
+      'Hình học không gian: Mặt cầu và Thể tích khối tròn xoay',
       'Xác suất có điều kiện và Phân tích quyết định',
-      'Đạo hàm và Bài toán tối ưu hóa trong kinh tế',
+      'Đạo hàm và Khảo sát sự biến thiên của hàm số',
     ],
-    warmUpPrefix: 'Thử thách đố vui hình học & Nghịch lý toán học',
-    knowledgePrefix: 'Xây dựng định lý và chứng minh trực quan',
-    practicePrefix: 'Luyện tập giải toán đa dạng theo nhóm',
+    warmUpPrefix: 'Thử thách đố vui toán học & Câu đố logic tình huống',
+    knowledgePrefix: 'Hình thành định nghĩa, chứng minh định lý trực quan',
+    practicePrefix: 'Luyện tập giải toán đa cấp độ từ cơ bản đến nâng cao',
     applicationPrefix: 'Mô hình hóa bài toán thực tiễn bằng công cụ toán học',
   },
   'Ngữ văn': {
     subject: 'Ngữ văn',
     defaultTopics: [
-      'Nghệ thuật xây dựng nhân vật trong Truyện Kiều',
-      'Kỹ năng viết bài văn nghị luận xã hội về lối sống đẹp',
-      'Đặc trưng thể loại Thơ hiện đại qua tác phẩm Đất Nước',
-      'Kỹ năng thuyết trình và tranh biện trước đám đông',
+      'Nghệ thuật xây dựng hình tượng người lính trong thơ hiện đại',
+      'Kỹ năng viết bài văn nghị luận xã hội về trách nhiệm thế hệ trẻ',
+      'Đặc trưng thể loại Truyện ngắn Việt Nam hiện đại',
+      'Kỹ năng đọc hiểu văn bản thông tin và tranh biện đa chiều',
     ],
-    warmUpPrefix: 'Xem video tư liệu truyền cảm hứng & Bày tỏ cảm xúc ban đầu',
-    knowledgePrefix: 'Đọc hiểu văn bản và giải mã các tầng ý nghĩa nghệ thuật',
-    practicePrefix: 'Viết đoạn văn cảm nhận & Phân tích nghệ thuật ngôn từ',
-    applicationPrefix: 'Sáng tạo sản phẩm nghệ thuật: Kịch bản / Poster thông điệp',
+    warmUpPrefix: 'Thưởng thức âm nhạc/hình ảnh tư liệu truyền cảm hứng',
+    knowledgePrefix: 'Đọc hiểu sâu tác phẩm, giải mã tầng nghĩa nghệ thuật',
+    practicePrefix: 'Viết đoạn văn phân tích và cảm thụ ngôn từ nghệ thuật',
+    applicationPrefix: 'Sáng tạo sản phẩm truyền thông: Poster, Kịch bản, Podcast',
   },
-  'Khoa học tự nhiên': {
-    subject: 'Khoa học tự nhiên (Lý - Hóa - Sinh)',
+  'Tiếng Anh': {
+    subject: 'Tiếng Anh',
     defaultTopics: [
-      'Định luật vạn vật hấp dẫn và Chuyển động vệ tinh',
-      'Phản ứng oxi hóa - khử và Ứng dụng trong pin năng lượng',
-      'Quang hợp ở thực vật và Vai trò điều hòa sinh quyển',
-      'Di truyền học Mendel và Công nghệ biến đổi gen',
+      'Unit 1: Life Stories and Inspirational Figures',
+      'Unit 2: Protecting the Global Environment and Eco-lifestyle',
+      'Unit 3: Artificial Intelligence in Modern Education',
+      'Unit 4: Cultural Diversity and Global Integration',
     ],
-    warmUpPrefix: 'Thí nghiệm mở đầu kích thích trí tò mò khoa học',
-    knowledgePrefix: 'Quan sát hiện tượng và đúc kết quy luật tự nhiên',
-    practicePrefix: 'Giải bài tập định lượng và phân tích bảng số liệu thực nghiệm',
-    applicationPrefix: 'Đề xuất giải pháp bảo vệ môi trường và ứng dụng xanh',
+    warmUpPrefix: 'Interactive Warm-up game: Kahoot / Word Cloud / Quiz',
+    knowledgePrefix: 'Vocabulary in context, Grammar focus & Reading discovery',
+    practicePrefix: 'Pair work / Role-play / Sentence restructuring drills',
+    applicationPrefix: 'Group presentation & Mini debate on the lesson topic',
+  },
+  'Tin học': {
+    subject: 'Tin học',
+    defaultTopics: [
+      'Trí tuệ nhân tạo và Đạo đức số trong đời sống',
+      'Thuật toán sắp xếp và tìm kiếm nâng cao với Python',
+      'An toàn thông tin và Bảo mật dữ liệu cá nhân trên mạng',
+      'Thiết kế cơ sở dữ liệu quan hệ và Truy vấn SQL cơ bản',
+    ],
+    warmUpPrefix: 'Trò chơi Turing tương tác & Tình huống công nghệ số',
+    knowledgePrefix: 'Khám phá mô hình dữ liệu, nguyên lý giải thuật',
+    practicePrefix: 'Thực hành viết mã nguồn và gỡ lỗi thuật toán',
+    applicationPrefix: 'Xây dựng dự án phần mềm giải quyết nhu cầu đời sống',
   },
 };

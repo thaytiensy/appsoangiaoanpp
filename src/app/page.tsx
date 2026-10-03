@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, CheckCircle, Presentation, Wand2, Phone, MessageCircle } from 'lucide-react';
+import { Save, CheckCircle, Presentation } from 'lucide-react';
 import { LessonPlanProject, SlideItem } from '@/types/lesson-plan';
 import { User } from '@/types/user';
 import { INITIAL_LESSON_PLAN } from '@/lib/initial-data';
-import { generateSlidesFromPlan } from '@/lib/slide-generator';
+import { generatePedagogicalLessonPlan, LessonGeneratorParams } from '@/lib/ai-lesson-generator';
 import { saveLessonPlanAction } from '@/lib/actions';
-import { EditorHeader } from '@/components/editor/EditorHeader';
-import { ObjectivesEditor } from '@/components/editor/ObjectivesEditor';
-import { PedagogicalActivitiesEditor } from '@/components/editor/PedagogicalActivitiesEditor';
-import { AIAutoGenerateBar } from '@/components/editor/AIAutoGenerateBar';
-import { AILessonGeneratorModal } from '@/components/editor/AILessonGeneratorModal';
+import { LessonInputPanel } from '@/components/editor/LessonInputPanel';
+import { LessonPlanSummaryCard } from '@/components/editor/LessonPlanSummaryCard';
 import { Slide16x9Canvas } from '@/components/preview/Slide16x9Canvas';
 import { SlideDeckNavigation } from '@/components/preview/SlideDeckNavigation';
 import { TeacherNotesPanel } from '@/components/preview/TeacherNotesPanel';
@@ -28,7 +25,7 @@ const DEFAULT_USER: User = {
   phone: '0353205414',
   role: 'HEAD_OF_DEPARTMENT',
   school: 'THPT Chuyên Lê Hồng Phong',
-  subject: 'Tin học & Công nghệ số',
+  subject: 'Toán học',
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -36,31 +33,26 @@ export default function LessonPlannerPage() {
   const [project, setProject] = useState<LessonPlanProject>(INITIAL_LESSON_PLAN);
   const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   const activeSlide = project.slides[currentSlideIndex] || project.slides[0];
 
-  const handleUpdateProject = (partial: Partial<LessonPlanProject>) => {
-    setProject((prev) => ({ ...prev, ...partial, updatedAt: new Date().toISOString() }));
-  };
-
-  const handleSyncSlides = () => {
-    setIsSyncing(true);
+  const handleGenerateLesson = (params: LessonGeneratorParams) => {
+    setIsGenerating(true);
     setTimeout(() => {
-      const generated = generateSlidesFromPlan(project);
-      setProject((prev) => ({ ...prev, slides: generated, updatedAt: new Date().toISOString() }));
+      const newPlan = generatePedagogicalLessonPlan(params);
+      setProject(newPlan);
       setCurrentSlideIndex(0);
-      setIsSyncing(false);
+      setIsGenerating(false);
     }, 400);
   };
 
   const handleUpdateCurrentSlide = (updated: Partial<SlideItem>) => {
     const newSlides = [...project.slides];
     newSlides[currentSlideIndex] = { ...newSlides[currentSlideIndex], ...updated };
-    handleUpdateProject({ slides: newSlides });
+    setProject((prev) => ({ ...prev, slides: newSlides, updatedAt: new Date().toISOString() }));
   };
 
   const handleAddSlide = () => {
@@ -74,14 +66,14 @@ export default function LessonPlannerPage() {
       teacherScript: 'Giáo viên phân tích chi tiết điểm này cho học sinh.',
       visualSuggestion: 'Bố cục 2 khối thông tin trực quan.',
     };
-    handleUpdateProject({ slides: [...project.slides, newSlide] });
+    setProject((prev) => ({ ...prev, slides: [...prev.slides, newSlide], updatedAt: new Date().toISOString() }));
     setCurrentSlideIndex(project.slides.length);
   };
 
   const handleDeleteSlide = (index: number) => {
     if (project.slides.length <= 4) return;
     const filtered = project.slides.filter((_, i) => i !== index).map((s, idx) => ({ ...s, slideNumber: idx + 1 }));
-    handleUpdateProject({ slides: filtered });
+    setProject((prev) => ({ ...prev, slides: filtered, updatedAt: new Date().toISOString() }));
     setCurrentSlideIndex(Math.max(0, index - 1));
   };
 
@@ -126,20 +118,32 @@ export default function LessonPlannerPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* Cột trái: Form nhập liệu tinh gọn & Kế hoạch bài dạy đã sinh */}
           <div className="xl:col-span-7 space-y-4">
-            <EditorHeader plan={project} onChange={handleUpdateProject} onOpenAiModal={() => setIsAiModalOpen(true)} />
-            <ObjectivesEditor objectives={project.objectives} onChange={(objs) => handleUpdateProject({ objectives: objs })} />
-            <PedagogicalActivitiesEditor activities={project.activities} onChange={(acts) => handleUpdateProject({ activities: acts })} />
-            <AIAutoGenerateBar onGenerate={handleSyncSlides} isGenerating={isSyncing} />
+            <LessonInputPanel
+              onGenerate={handleGenerateLesson}
+              isGenerating={isGenerating}
+              defaultTeacherName={currentUser.name}
+              defaultSchoolName={currentUser.school}
+              defaultSubject={currentUser.subject}
+            />
+            <LessonPlanSummaryCard plan={project} />
           </div>
 
+          {/* Cột phải: Live Preview Slide 16:9 & Xuất PPTX */}
           <div className="xl:col-span-5 space-y-4">
             <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4 xl:sticky xl:top-20">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span className="text-sm font-bold text-slate-800">Live Preview 16:9 HD</span>
                 <span className="text-xs font-semibold text-slate-500">{project.slides.length} Slides</span>
               </div>
-              {activeSlide && <Slide16x9Canvas slide={activeSlide} totalSlides={project.slides.length} />}
+              {activeSlide && (
+                <Slide16x9Canvas
+                  slide={activeSlide}
+                  totalSlides={project.slides.length}
+                  themeId={project.themeId}
+                />
+              )}
               <SlideDeckNavigation
                 slides={project.slides}
                 currentIndex={currentSlideIndex}
@@ -155,20 +159,19 @@ export default function LessonPlannerPage() {
 
       <AppFooter />
 
-      <AILessonGeneratorModal
-        isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
-        onGenerated={(newPlan) => {
-          setProject(newPlan);
-          setCurrentSlideIndex(0);
-        }}
-      />
-
       <UserManagerModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
         currentUser={currentUser}
-        onSelectUser={setCurrentUser}
+        onSelectUser={(u) => {
+          setCurrentUser(u);
+          setProject((prev) => ({
+            ...prev,
+            teacherName: u.name,
+            schoolName: u.school,
+            departmentName: `Tổ ${u.subject}`,
+          }));
+        }}
       />
     </div>
   );
