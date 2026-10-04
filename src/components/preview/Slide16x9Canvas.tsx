@@ -4,6 +4,7 @@ import React from 'react';
 import { SlideItem } from '@/types/lesson-plan';
 import { CheckSquare, Sparkles, HelpCircle, Edit3, Plus, Trash2 } from 'lucide-react';
 import { getThemeById } from '@/lib/slide-themes';
+import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 
 interface Slide16x9CanvasProps {
   slide: SlideItem;
@@ -23,25 +24,31 @@ export function Slide16x9Canvas({
   const isHero = slide.layout === 'TITLE_HERO';
   const theme = getThemeById(themeId);
 
+  const displayTitle = sanitizePptxText(slide.title) || 'Tiêu Đề Bài Giảng';
+  const rawCleanBullets = sanitizePptxList(slide.bullets);
+  const displayBullets = rawCleanBullets.length > 0
+    ? rawCleanBullets
+    : ['Nội dung trọng tâm (bấm để sửa)'];
+
   const handleTitleChange = (val: string) => {
     if (onUpdateSlide) onUpdateSlide({ title: val });
   };
 
   const handleBulletChange = (idx: number, val: string) => {
     if (!onUpdateSlide) return;
-    const newBullets = [...slide.bullets];
+    const newBullets = [...displayBullets];
     newBullets[idx] = val;
     onUpdateSlide({ bullets: newBullets });
   };
 
   const handleAddBullet = () => {
-    if (!onUpdateSlide || slide.bullets.length >= 5) return;
-    onUpdateSlide({ bullets: [...slide.bullets, 'Nội dung trọng tâm mới (bấm để sửa)'] });
+    if (!onUpdateSlide || displayBullets.length >= 5) return;
+    onUpdateSlide({ bullets: [...displayBullets, 'Nội dung trọng tâm mới (bấm để sửa)'] });
   };
 
   const handleDeleteBullet = (idx: number) => {
-    if (!onUpdateSlide || slide.bullets.length <= 1) return;
-    onUpdateSlide({ bullets: slide.bullets.filter((_, i) => i !== idx) });
+    if (!onUpdateSlide || displayBullets.length <= 1) return;
+    onUpdateSlide({ bullets: displayBullets.filter((_, i) => i !== idx) });
   };
 
   const bgStyle = customBackgroundUrl
@@ -81,14 +88,14 @@ export function Slide16x9Canvas({
           <div className="space-y-3 max-w-2xl">
             <input
               type="text"
-              value={slide.title}
+              value={displayTitle}
               onChange={(e) => handleTitleChange(e.target.value)}
               className="w-full text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight bg-transparent text-white border-b border-white/20 hover:border-white/50 focus:border-indigo-400 focus:outline-hidden transition"
               title="Bấm để sửa tiêu đề trực tiếp"
             />
             <div className="w-16 h-1 bg-amber-400 rounded-full" />
             <div className="space-y-1.5 pt-1">
-              {slide.bullets.map((bullet, idx) => (
+              {displayBullets.map((bullet, idx) => (
                 <div key={idx} className="flex items-center gap-2 group">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
                   <input
@@ -97,7 +104,7 @@ export function Slide16x9Canvas({
                     onChange={(e) => handleBulletChange(idx, e.target.value)}
                     className="flex-1 text-xs sm:text-sm bg-transparent text-slate-200 border-b border-transparent hover:border-white/20 focus:border-indigo-400 focus:outline-hidden"
                   />
-                  {slide.bullets.length > 1 && (
+                  {displayBullets.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleDeleteBullet(idx)}
@@ -116,7 +123,7 @@ export function Slide16x9Canvas({
               <div className="w-1.5 h-6 bg-indigo-500 rounded-full shrink-0" />
               <input
                 type="text"
-                value={slide.title}
+                value={displayTitle}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full text-base sm:text-xl font-bold bg-transparent text-white border-b border-white/10 hover:border-white/40 focus:border-indigo-400 focus:outline-hidden"
                 title="Bấm để sửa tiêu đề trực tiếp"
@@ -124,7 +131,7 @@ export function Slide16x9Canvas({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {slide.bullets.map((bullet, idx) => (
+              {displayBullets.map((bullet, idx) => (
                 <div
                   key={idx}
                   className={`p-3 rounded-lg backdrop-blur-xs flex items-start gap-2 group ${theme.unifiedCardClass}`}
@@ -142,7 +149,7 @@ export function Slide16x9Canvas({
                     onChange={(e) => handleBulletChange(idx, e.target.value)}
                     className="flex-1 text-xs font-medium bg-transparent border-b border-transparent hover:border-white/30 focus:border-indigo-400 focus:outline-hidden"
                   />
-                  {slide.bullets.length > 1 && (
+                  {displayBullets.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleDeleteBullet(idx)}
@@ -155,7 +162,7 @@ export function Slide16x9Canvas({
                 </div>
               ))}
             </div>
-            {slide.bullets.length < 5 && (
+            {displayBullets.length < 5 && (
               <button
                 type="button"
                 onClick={handleAddBullet}

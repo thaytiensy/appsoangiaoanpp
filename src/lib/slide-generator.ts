@@ -1,4 +1,5 @@
 import { LessonPlanProject, SlideItem, SlideLayout } from '@/types/lesson-plan';
+import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 
 function generateRandomUuid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -92,5 +93,10 @@ export function generateSlidesFromPlan(plan: LessonPlanProject): SlideItem[] {
     },
   ];
 
-  return slides;
+  return slides.map((s) => ({
+    ...s,
+    title: sanitizePptxText(s.title) || `Slide ${s.slideNumber}`,
+    bullets: sanitizePptxList(s.bullets).length > 0 ? sanitizePptxList(s.bullets) : ['Nội dung bài học'],
+    teacherScript: sanitizePptxText(s.teacherScript),
+  }));
 }

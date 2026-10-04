@@ -1,6 +1,7 @@
 import pptxgen from 'pptxgenjs';
 import { LessonPlanProject } from '@/types/lesson-plan';
 import { getThemeById } from './slide-themes';
+import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 
 export async function exportLessonToPptx(project: LessonPlanProject): Promise<void> {
   const pptx = new pptxgen();
@@ -20,7 +21,9 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
     introSlide.background = { color: theme.bgHeroHex };
   }
 
-  introSlide.addText(project.lessonName.toUpperCase(), {
+  const cleanLessonName = sanitizePptxText(project.lessonName) || 'Bài Học';
+
+  introSlide.addText(cleanLessonName.toUpperCase(), {
     x: 1.0, y: 1.8, w: '80%', h: 1.5,
     fontSize: 34, bold: true, color: theme.textHeroHex, align: 'left'
   });
@@ -42,17 +45,21 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
       slide.background = { color: theme.bgSlideHex };
     }
 
+    const cleanTitle = sanitizePptxText(item.title) || `Slide ${item.slideNumber}`;
+    const cleanBullets = sanitizePptxList(item.bullets);
+    const finalBullets = cleanBullets.length > 0 ? cleanBullets : ['Nội dung trọng tâm bài giảng'];
+
     // Header slide
     slide.addShape(pptx.ShapeType.rect, {
       x: 0.8, y: 0.6, w: 0.15, h: 0.6, fill: { color: theme.accentHex }
     });
-    slide.addText(item.title, {
+    slide.addText(cleanTitle, {
       x: 1.1, y: 0.6, w: '85%', h: 0.6,
       fontSize: 22, bold: true, color: theme.textHeroHex
     });
 
     // Bullets nội dung
-    const bulletText = item.bullets.map((b: string) => ({
+    const bulletText = finalBullets.map((b: string) => ({
       text: b,
       options: { fontSize: 16, color: theme.textSlideHex, breakLine: true, bullet: true }
     }));
@@ -62,7 +69,7 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
 
     // Speaker Notes
     if (item.teacherScript) {
-      slide.addNotes(`[Lời giảng gợi ý]: ${item.teacherScript}`);
+      slide.addNotes(`[Lời giảng gợi ý]: ${sanitizePptxText(item.teacherScript)}`);
     }
   });
 

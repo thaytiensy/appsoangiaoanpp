@@ -1,5 +1,6 @@
 import { LessonPlanProject, LessonObjective, PedagogicalActivity } from '@/types/lesson-plan';
 import { generateSlidesFromPlan } from './slide-generator';
+import { sanitizePptxText } from '@/utils/sanitizePptxText';
 
 function makeId(prefix: string): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -36,9 +37,9 @@ export function generatePedagogicalLessonPlan(
         }
       : paramsOrTopic;
 
-  const cleanName = params.topic.trim() || 'Bài Học Trọng Tâm Mới';
-  const cleanSubject = params.subject.trim() || 'Toán học';
-  const cleanGrade = params.grade.trim() || 'Lớp 10';
+  const cleanName = sanitizePptxText(params.topic) || 'Bài Học Trọng Tâm Mới';
+  const cleanSubject = sanitizePptxText(params.subject) || 'Toán học';
+  const cleanGrade = sanitizePptxText(params.grade) || 'Lớp 10';
   const durationPeriod = params.duration || 45;
 
   const objectives: LessonObjective[] = [

@@ -7,6 +7,7 @@ import { INITIAL_LESSON_PLAN } from '@/lib/initial-data';
 import { generatePedagogicalLessonPlan, LessonGeneratorParams } from '@/lib/ai-lesson-generator';
 import { saveLessonPlanAction } from '@/lib/actions';
 import { ParsedTemplateResult } from '@/lib/pptx-parser';
+import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 import { LessonInputPanel } from '@/components/editor/LessonInputPanel';
 import { LessonPlanSummaryCard } from '@/components/editor/LessonPlanSummaryCard';
 import { Slide16x9Canvas } from '@/components/preview/Slide16x9Canvas';
@@ -55,8 +56,17 @@ export default function LessonPlannerPage() {
 
   const handleApplyTemplate = (parsed: ParsedTemplateResult) => {
     setProject((prev) => {
-      const newSlides = parsed.slides.length > 0 ? parsed.slides : prev.slides;
-      const newLessonName = parsed.lessonTitle || prev.lessonName;
+      const sanitizedIncomingSlides = (parsed.slides || []).map((s) => ({
+        ...s,
+        title: sanitizePptxText(s.title) || `Slide ${s.slideNumber}`,
+        bullets: sanitizePptxList(s.bullets).length > 0
+          ? sanitizePptxList(s.bullets)
+          : ['Nội dung bài giảng PowerPoint tích hợp'],
+        teacherScript: sanitizePptxText(s.teacherScript),
+      }));
+
+      const newSlides = sanitizedIncomingSlides.length > 0 ? sanitizedIncomingSlides : prev.slides;
+      const newLessonName = sanitizePptxText(parsed.lessonTitle) || prev.lessonName;
       return {
         ...prev,
         lessonName: newLessonName,

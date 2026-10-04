@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { SlideItem, SlideLayout } from '@/types/lesson-plan';
+import { sanitizePptxText, sanitizePptxList, isXmlGarbage } from '@/utils/sanitizePptxText';
 
 export interface ParsedTemplateResult {
   templateName: string;
@@ -10,18 +11,27 @@ export interface ParsedTemplateResult {
 
 function cleanXmlText(xml: string): string[] {
   const paragraphs: string[] = [];
+  // Gỡ bỏ các khối thuộc tính style/run properties trước để regex không ăn nhầm thẻ
+  const sanitizedXml = xml
+    .replace(/<a:pPr[\s\S]*?<\/a:pPr>/gi, '')
+    .replace(/<a:rPr[\s\S]*?<\/a:rPr>/gi, '')
+    .replace(/<a:endParaRPr[\s\S]*?<\/a:endParaRPr>/gi, '');
+
   const pRegex = /<a:p[\s>][\s\S]*?<\/a:p>/gi;
   let pMatch: RegExpExecArray | null;
-  while ((pMatch = pRegex.exec(xml)) !== null) {
+  while ((pMatch = pRegex.exec(sanitizedXml)) !== null) {
     const pContent = pMatch[0];
-    const tRegex = /<a:t[^>]*>([\s\S]*?)<\/a:t>/gi;
+    // Loại bỏ các thẻ tự đóng rác <a:t/> hoặc các thẻ shape
+    const contentWithoutSelfClosing = pContent.replace(/<a:[a-zA-Z0-9_\-]+[^>]*\/>/gi, '');
+    // Khớp thẻ <a:t>, KHÔNG cho phép chứa ký tự '<' để tránh ăn xuyên qua các thẻ khác
+    const tRegex = /<a:t(?:\s+[^>]*)?>([^<]*)<\/a:t>/gi;
     let tMatch: RegExpExecArray | null;
     let fullText = '';
-    while ((tMatch = tRegex.exec(pContent)) !== null) {
+    while ((tMatch = tRegex.exec(contentWithoutSelfClosing)) !== null) {
       fullText += tMatch[1];
     }
-    const clean = fullText.trim();
-    if (clean && clean.length > 1) {
+    const clean = sanitizePptxText(fullText);
+    if (clean && clean.length > 0 && !isXmlGarbage(clean)) {
       paragraphs.push(clean);
     }
   }
@@ -102,10 +112,12 @@ export async function parseUploadedTemplate(file: File): Promise<ParsedTemplateR
         const paras = cleanXmlText(xmlText);
         if (paras.length === 0) continue;
 
-        const title = paras[0].slice(0, 80);
+        const rawTitle = paras[0] || 'Slide bài giảng';
+        const title = sanitizePptxText(rawTitle.slice(0, 100)) || `Slide ${i + 1}`;
         if (i === 0 && !mainTitle) mainTitle = title;
 
-        const bullets = paras.slice(1, 5).map((p) => p.slice(0, 120));
+        const rawBullets = paras.slice(1);
+        const bullets = sanitizePptxList(rawBullets).slice(0, 5).map((p) => p.slice(0, 150));
         if (bullets.length === 0) {
           bullets.push(i === 0 ? 'Nội dung bài giảng PowerPoint tích hợp' : 'Nội dung trọng tâm (bấm để chỉnh sửa)');
         }

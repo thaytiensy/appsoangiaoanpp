@@ -3,6 +3,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { SlideItem } from '@/types/lesson-plan';
+import { sanitizePptxText } from '@/utils/sanitizePptxText';
 
 interface SlideDeckNavigationProps {
   slides: SlideItem[];
@@ -95,7 +96,7 @@ export function SlideDeckNavigation({
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-800 line-clamp-2 leading-tight">
-                {item.title}
+                {sanitizePptxText(item.title)}
               </p>
             </button>
           );
