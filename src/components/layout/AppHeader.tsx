@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Presentation, Save, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Presentation, Save, CheckCircle, Video } from 'lucide-react';
 import { User } from '@/types/user';
 import { LessonPlanProject } from '@/types/lesson-plan';
 import { UserBadge } from '@/components/user/UserBadge';
@@ -48,6 +49,13 @@ export function AppHeader({
             <span>{saveStatus === 'saved' ? 'Đã Lưu' : 'Lưu'}</span>
           </button>
           <ExportPptxButton project={project} />
+          <Link
+            href="/studio"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 rounded-lg hover:from-sky-400 hover:to-indigo-500 transition shadow-xs cursor-pointer"
+          >
+            <Video className="w-4 h-4" />
+            <span>Studio Video</span>
+          </Link>
         </div>
       </div>
     </header>
