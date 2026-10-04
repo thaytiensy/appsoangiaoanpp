@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LessonPlanProject, SlideItem } from '@/types/lesson-plan';
+import { LessonPlanProject, SlideItem, PedagogicalActivity } from '@/types/lesson-plan';
 import { User } from '@/types/user';
 import { INITIAL_LESSON_PLAN } from '@/lib/initial-data';
 import { generatePedagogicalLessonPlan, LessonGeneratorParams } from '@/lib/ai-lesson-generator';
@@ -103,11 +103,48 @@ export default function LessonPlannerPage() {
     setCurrentSlideIndex(project.slides.length);
   };
 
+  const handleDuplicateSlide = (index: number) => {
+    const target = project.slides[index];
+    if (!target) return;
+    const cloned: SlideItem = {
+      ...target,
+      id: crypto.randomUUID ? crypto.randomUUID() : `slide-${Date.now()}`,
+      slideNumber: index + 2,
+      title: `${target.title} (Bản sao)`,
+      bullets: [...target.bullets],
+    };
+    const newSlides = [...project.slides];
+    newSlides.splice(index + 1, 0, cloned);
+    const renumbered = newSlides.map((s, idx) => ({ ...s, slideNumber: idx + 1 }));
+    setProject((prev) => ({ ...prev, slides: renumbered, updatedAt: new Date().toISOString() }));
+    setCurrentSlideIndex(index + 1);
+  };
+
   const handleDeleteSlide = (index: number) => {
     if (project.slides.length <= 4) return;
     const filtered = project.slides.filter((_, i) => i !== index).map((s, idx) => ({ ...s, slideNumber: idx + 1 }));
     setProject((prev) => ({ ...prev, slides: filtered, updatedAt: new Date().toISOString() }));
     setCurrentSlideIndex(Math.max(0, index - 1));
+  };
+
+  const handleUpdateObjective = (index: number, description: string) => {
+    setProject((prev) => {
+      const newObjs = [...prev.objectives];
+      if (newObjs[index]) {
+        newObjs[index] = { ...newObjs[index], description };
+      }
+      return { ...prev, objectives: newObjs, updatedAt: new Date().toISOString() };
+    });
+  };
+
+  const handleUpdateActivity = (index: number, updated: Partial<PedagogicalActivity>) => {
+    setProject((prev) => {
+      const newActs = [...prev.activities] as [PedagogicalActivity, PedagogicalActivity, PedagogicalActivity, PedagogicalActivity];
+      if (newActs[index]) {
+        newActs[index] = { ...newActs[index], ...updated };
+      }
+      return { ...prev, activities: newActs, updatedAt: new Date().toISOString() };
+    });
   };
 
   const handleSaveToDb = async () => {
@@ -141,7 +178,11 @@ export default function LessonPlannerPage() {
               onSelectTheme={handleSelectTheme}
               onApplyTemplate={handleApplyTemplate}
             />
-            <LessonPlanSummaryCard plan={project} />
+            <LessonPlanSummaryCard
+              plan={project}
+              onUpdateObjective={handleUpdateObjective}
+              onUpdateActivity={handleUpdateActivity}
+            />
           </div>
 
           <div className="xl:col-span-5 space-y-4">
@@ -165,6 +206,7 @@ export default function LessonPlannerPage() {
                 onSelect={setCurrentSlideIndex}
                 onAddSlide={handleAddSlide}
                 onDeleteSlide={handleDeleteSlide}
+                onDuplicateSlide={handleDuplicateSlide}
               />
               {activeSlide && <TeacherNotesPanel slide={activeSlide} onChange={handleUpdateCurrentSlide} />}
             </div>

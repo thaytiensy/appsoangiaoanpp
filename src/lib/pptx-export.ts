@@ -58,14 +58,33 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
       fontSize: 22, bold: true, color: theme.textHeroHex
     });
 
-    // Bullets nội dung
-    const bulletText = finalBullets.map((b: string) => ({
-      text: b,
-      options: { fontSize: 16, color: theme.textSlideHex, breakLine: true, bullet: true }
-    }));
-    slide.addText(bulletText, {
-      x: 1.0, y: 1.5, w: '80%', h: 4.2, lineSpacing: 26
-    });
+    // Bullets nội dung theo layout sư phạm
+    if (item.layout === 'INTERACTIVE_QUIZ') {
+      const choiceLetters = ['A', 'B', 'C', 'D', 'E'];
+      const quizBullets = finalBullets.map((b: string, idx: number) => ({
+        text: `[${choiceLetters[idx] || (idx + 1)}]  ${b}`,
+        options: { fontSize: 16, color: theme.textSlideHex, breakLine: true, bullet: false }
+      }));
+      slide.addText(quizBullets, {
+        x: 1.0, y: 1.5, w: '80%', h: 4.2, lineSpacing: 28
+      });
+    } else if (item.layout === 'TIMELINE_PROCESS') {
+      const processBullets = finalBullets.map((b: string, idx: number) => ({
+        text: `Bước ${idx + 1}:  ${b}`,
+        options: { fontSize: 16, color: theme.textSlideHex, breakLine: true, bullet: false }
+      }));
+      slide.addText(processBullets, {
+        x: 1.0, y: 1.5, w: '80%', h: 4.2, lineSpacing: 28
+      });
+    } else {
+      const bulletText = finalBullets.map((b: string) => ({
+        text: b,
+        options: { fontSize: 16, color: theme.textSlideHex, breakLine: true, bullet: true }
+      }));
+      slide.addText(bulletText, {
+        x: 1.0, y: 1.5, w: '80%', h: 4.2, lineSpacing: 26
+      });
+    }
 
     // Speaker Notes
     if (item.teacherScript) {
@@ -73,5 +92,6 @@ export async function exportLessonToPptx(project: LessonPlanProject): Promise<vo
     }
   });
 
-  await pptx.writeFile({ fileName: `${project.lessonName.replace(/\s+/g, '_')}_GiaoAn.pptx` });
+  const safeFileName = sanitizePptxText(project.lessonName).replace(/[^a-zA-Z0-9_\-\u00C0-\u1EF9]/g, '_') || 'GiaoAn_DienTu';
+  await pptx.writeFile({ fileName: `${safeFileName}_GiaoAn_16x9.pptx` });
 }

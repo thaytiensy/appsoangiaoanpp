@@ -51,9 +51,11 @@ export function TimelineToolbar() {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      await importMedia(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        await importMedia(files[i]);
+      }
       if (e.target) e.target.value = '';
     }
   };
@@ -186,6 +188,7 @@ export function TimelineToolbar() {
         <input
           ref={fileInputRef}
           type="file"
+          multiple
           accept="video/*,audio/*,image/*"
           onChange={handleFileChange}
           className="hidden"

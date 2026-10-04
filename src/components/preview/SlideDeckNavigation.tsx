@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Copy } from 'lucide-react';
 import { SlideItem } from '@/types/lesson-plan';
 import { sanitizePptxText } from '@/utils/sanitizePptxText';
 
@@ -11,6 +11,7 @@ interface SlideDeckNavigationProps {
   onSelect: (index: number) => void;
   onAddSlide: () => void;
   onDeleteSlide: (index: number) => void;
+  onDuplicateSlide?: (index: number) => void;
 }
 
 export function SlideDeckNavigation({
@@ -19,6 +20,7 @@ export function SlideDeckNavigation({
   onSelect,
   onAddSlide,
   onDeleteSlide,
+  onDuplicateSlide,
 }: SlideDeckNavigationProps) {
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex < slides.length - 1;
@@ -52,6 +54,17 @@ export function SlideDeckNavigation({
         </div>
 
         <div className="flex items-center gap-2">
+          {onDuplicateSlide && (
+            <button
+              type="button"
+              onClick={() => onDuplicateSlide(currentIndex)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50 rounded-lg border border-sky-200 transition"
+              title="Nhân đôi slide hiện tại"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Nhân đôi</span>
+            </button>
+          )}
           {slides.length > 4 && (
             <button
               type="button"

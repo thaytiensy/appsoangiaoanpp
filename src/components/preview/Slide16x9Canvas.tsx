@@ -2,7 +2,17 @@
 
 import React from 'react';
 import { SlideItem } from '@/types/lesson-plan';
-import { CheckSquare, Sparkles, HelpCircle, Edit3, Plus, Trash2 } from 'lucide-react';
+import {
+  CheckSquare,
+  Sparkles,
+  HelpCircle,
+  Edit3,
+  Plus,
+  Trash2,
+  ArrowRight,
+  Split,
+  Lightbulb,
+} from 'lucide-react';
 import { getThemeById } from '@/lib/slide-themes';
 import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 
@@ -21,8 +31,8 @@ export function Slide16x9Canvas({
   customBackgroundUrl,
   onUpdateSlide,
 }: Slide16x9CanvasProps) {
-  const isHero = slide.layout === 'TITLE_HERO';
   const theme = getThemeById(themeId);
+  const layout = slide.layout;
 
   const displayTitle = sanitizePptxText(slide.title) || 'Tiêu Đề Bài Giảng';
   const rawCleanBullets = sanitizePptxList(slide.bullets);
@@ -69,7 +79,7 @@ export function Slide16x9Canvas({
             Slide {slide.slideNumber} / {totalSlides}
           </span>
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-            {slide.layout.replace('_', ' ')}
+            {layout.replace('_', ' ')}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-300">
@@ -84,7 +94,8 @@ export function Slide16x9Canvas({
 
       {/* Slide Body Content */}
       <div className="flex-1 p-5 sm:p-7 flex flex-col justify-center overflow-y-auto">
-        {isHero ? (
+        {/* LAYOUT 1: TITLE HERO */}
+        {layout === 'TITLE_HERO' && (
           <div className="space-y-3 max-w-2xl">
             <input
               type="text"
@@ -109,6 +120,7 @@ export function Slide16x9Canvas({
                       type="button"
                       onClick={() => handleDeleteBullet(idx)}
                       className="opacity-0 group-hover:opacity-100 p-1 text-rose-400 hover:text-rose-300 transition"
+                      title="Xóa ý"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -117,7 +129,193 @@ export function Slide16x9Canvas({
               ))}
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* LAYOUT 2: INTERACTIVE QUIZ */}
+        {layout === 'INTERACTIVE_QUIZ' && (
+          <div className="space-y-3 h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-md bg-amber-500/20 text-amber-300 shrink-0">
+                <HelpCircle className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                value={displayTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full text-base sm:text-xl font-bold bg-transparent text-white border-b border-white/10 hover:border-white/40 focus:border-indigo-400 focus:outline-hidden"
+                placeholder="Nhập câu hỏi tương tác / trắc nghiệm..."
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {displayBullets.map((bullet, idx) => {
+                const choiceLetters = ['A', 'B', 'C', 'D', 'E'];
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-lg backdrop-blur-xs flex items-start gap-2.5 group ${theme.unifiedCardClass}`}
+                  >
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                      {choiceLetters[idx] || (idx + 1)}
+                    </span>
+                    <input
+                      type="text"
+                      value={bullet}
+                      onChange={(e) => handleBulletChange(idx, e.target.value)}
+                      className="flex-1 text-xs font-medium bg-transparent border-b border-transparent hover:border-white/30 focus:border-indigo-400 focus:outline-hidden"
+                    />
+                    {displayBullets.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBullet(idx)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-300 transition"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT 3: TIMELINE PROCESS */}
+        {layout === 'TIMELINE_PROCESS' && (
+          <div className="space-y-3 h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2.5">
+              <div className="w-1.5 h-6 bg-sky-500 rounded-full shrink-0" />
+              <input
+                type="text"
+                value={displayTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full text-base sm:text-xl font-bold bg-transparent text-white border-b border-white/10 hover:border-white/40 focus:border-indigo-400 focus:outline-hidden"
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pt-2">
+              {displayBullets.map((bullet, idx) => (
+                <React.Fragment key={idx}>
+                  <div className={`flex-1 min-w-[130px] p-3 rounded-lg backdrop-blur-xs group ${theme.unifiedCardClass} space-y-1.5`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">
+                        Bước {idx + 1}
+                      </span>
+                      {displayBullets.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBullet(idx)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-300 transition"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={bullet}
+                      onChange={(e) => handleBulletChange(idx, e.target.value)}
+                      className="w-full text-xs font-medium bg-transparent border-b border-transparent hover:border-white/30 focus:border-indigo-400 focus:outline-hidden resize-none"
+                    />
+                  </div>
+                  {idx < displayBullets.length - 1 && (
+                    <ArrowRight className="w-4 h-4 text-sky-400 shrink-0 hidden sm:block" />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT 4: COMPARISON TABLE */}
+        {layout === 'COMPARISON_TABLE' && (
+          <div className="space-y-3 h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-md bg-purple-500/20 text-purple-300 shrink-0">
+                <Split className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                value={displayTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full text-base sm:text-xl font-bold bg-transparent text-white border-b border-white/10 hover:border-white/40 focus:border-indigo-400 focus:outline-hidden"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {displayBullets.map((bullet, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg backdrop-blur-xs flex items-start gap-2 group border-l-2 ${
+                    idx % 2 === 0 ? 'border-sky-500' : 'border-indigo-500'
+                  } ${theme.unifiedCardClass}`}
+                >
+                  <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5">
+                    {idx % 2 === 0 ? 'Vế A' : 'Vế B'}
+                  </span>
+                  <input
+                    type="text"
+                    value={bullet}
+                    onChange={(e) => handleBulletChange(idx, e.target.value)}
+                    className="flex-1 text-xs font-medium bg-transparent border-b border-transparent hover:border-white/30 focus:border-indigo-400 focus:outline-hidden"
+                  />
+                  {displayBullets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBullet(idx)}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-300 transition"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT 5: SUMMARY MINDMAP */}
+        {layout === 'SUMMARY_MINDMAP' && (
+          <div className="space-y-3 h-full flex flex-col justify-center">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-md bg-emerald-500/20 text-emerald-300 shrink-0">
+                <Lightbulb className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                value={displayTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full text-base sm:text-xl font-bold bg-transparent text-white border-b border-white/10 hover:border-white/40 focus:border-indigo-400 focus:outline-hidden"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {displayBullets.map((bullet, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg backdrop-blur-xs flex items-start gap-2 group ${theme.unifiedCardClass}`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
+                  <input
+                    type="text"
+                    value={bullet}
+                    onChange={(e) => handleBulletChange(idx, e.target.value)}
+                    className="flex-1 text-xs font-medium bg-transparent border-b border-transparent hover:border-white/30 focus:border-indigo-400 focus:outline-hidden"
+                  />
+                  {displayBullets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBullet(idx)}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-300 transition"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LAYOUT 6: CONCEPT BREAKDOWN & DEFAULT */}
+        {(layout === 'CONCEPT_BREAKDOWN' ||
+          !['TITLE_HERO', 'INTERACTIVE_QUIZ', 'TIMELINE_PROCESS', 'COMPARISON_TABLE', 'SUMMARY_MINDMAP'].includes(layout)) && (
           <div className="space-y-3 h-full flex flex-col justify-center">
             <div className="flex items-center gap-2.5">
               <div className="w-1.5 h-6 bg-indigo-500 rounded-full shrink-0" />
@@ -137,11 +335,7 @@ export function Slide16x9Canvas({
                   className={`p-3 rounded-lg backdrop-blur-xs flex items-start gap-2 group ${theme.unifiedCardClass}`}
                 >
                   <div className="p-1 rounded-md bg-indigo-500/20 text-indigo-300 mt-0.5 shrink-0">
-                    {slide.layout === 'INTERACTIVE_QUIZ' ? (
-                      <HelpCircle className="w-3.5 h-3.5" />
-                    ) : (
-                      <CheckSquare className="w-3.5 h-3.5" />
-                    )}
+                    <CheckSquare className="w-3.5 h-3.5" />
                   </div>
                   <input
                     type="text"
@@ -162,16 +356,18 @@ export function Slide16x9Canvas({
                 </div>
               ))}
             </div>
-            {displayBullets.length < 5 && (
-              <button
-                type="button"
-                onClick={handleAddBullet}
-                className="self-start text-[11px] text-indigo-300 hover:text-white flex items-center gap-1 font-semibold pt-1"
-              >
-                <Plus className="w-3 h-3" /> Thêm điểm nhấn
-              </button>
-            )}
           </div>
+        )}
+
+        {/* Nút Thêm điểm nhấn (Áp dụng cho mọi layout trừ Title Hero nếu chưa đủ 5 ý) */}
+        {layout !== 'TITLE_HERO' && displayBullets.length < 5 && (
+          <button
+            type="button"
+            onClick={handleAddBullet}
+            className="self-start text-[11px] text-indigo-300 hover:text-white flex items-center gap-1 font-semibold pt-1 transition"
+          >
+            <Plus className="w-3 h-3" /> Thêm điểm nhấn
+          </button>
         )}
       </div>
 

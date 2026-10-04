@@ -3,6 +3,7 @@
 import React from 'react';
 import { Mic, Eye, Sliders, ListPlus, Trash2 } from 'lucide-react';
 import { SlideItem, SlideLayout } from '@/types/lesson-plan';
+import { sanitizePptxText, sanitizePptxList } from '@/utils/sanitizePptxText';
 
 interface TeacherNotesPanelProps {
   slide: SlideItem;
@@ -19,20 +20,23 @@ const LAYOUT_OPTIONS: { value: SlideLayout; label: string }[] = [
 ];
 
 export function TeacherNotesPanel({ slide, onChange }: TeacherNotesPanelProps) {
+  const cleanBullets = sanitizePptxList(slide.bullets);
+  const displayBullets = cleanBullets.length > 0 ? cleanBullets : ['Nội dung điểm nhấn (bấm để sửa)'];
+
   const handleBulletChange = (idx: number, val: string) => {
-    const newBullets = [...slide.bullets];
+    const newBullets = [...displayBullets];
     newBullets[idx] = val;
     onChange({ bullets: newBullets });
   };
 
   const handleAddBullet = () => {
-    if (slide.bullets.length >= 5) return;
-    onChange({ bullets: [...slide.bullets, 'Nội dung điểm nhấn mới'] });
+    if (displayBullets.length >= 5) return;
+    onChange({ bullets: [...displayBullets, 'Nội dung điểm nhấn mới'] });
   };
 
   const handleDeleteBullet = (idx: number) => {
-    if (slide.bullets.length <= 1) return;
-    onChange({ bullets: slide.bullets.filter((_, i) => i !== idx) });
+    if (displayBullets.length <= 1) return;
+    onChange({ bullets: displayBullets.filter((_, i) => i !== idx) });
   };
 
   return (
@@ -75,7 +79,7 @@ export function TeacherNotesPanel({ slide, onChange }: TeacherNotesPanelProps) {
             </button>
           )}
         </div>
-        {slide.bullets.map((b, idx) => (
+        {displayBullets.map((b, idx) => (
           <div key={idx} className="flex items-center gap-2">
             <input
               type="text"
@@ -83,7 +87,7 @@ export function TeacherNotesPanel({ slide, onChange }: TeacherNotesPanelProps) {
               onChange={(e) => handleBulletChange(idx, e.target.value)}
               className="flex-1 text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-1 focus:ring-indigo-500"
             />
-            {slide.bullets.length > 1 && (
+            {displayBullets.length > 1 && (
               <button
                 type="button"
                 onClick={() => handleDeleteBullet(idx)}
