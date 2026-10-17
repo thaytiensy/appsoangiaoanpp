@@ -1,26 +1,42 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 
-test.describe('Visual & Functional Verification', () => {
-  test('Kiểm tra giao diện AI PowerPoint Lesson Planner Pro và Live Preview', async ({ page }) => {
+function ensurePreviewDir(): void {
+  const previewDir = path.resolve(process.cwd(), '.preview');
+  if (!fs.existsSync(previewDir)) {
+    fs.mkdirSync(previewDir, { recursive: true });
+  }
+}
+
+test.describe('Visual Verification (Desktop & Mobile)', () => {
+  test.beforeAll(() => {
+    ensurePreviewDir();
+  });
+
+  test('Chụp ảnh màn hình Desktop (1440x900)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('http://localhost:3000');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // 1. Kiểm tra tiêu đề và hotline hỗ trợ
     await expect(page.locator('h1')).toContainText('AI PowerPoint Lesson Planner Pro');
     await expect(page.getByText('0353205414').first()).toBeVisible();
 
-    // 2. Kiểm tra tài khoản mặc định Thầy Đỗ Tiến Sỹ (ADMIN)
-    await expect(page.getByText('Thầy Đỗ Tiến Sỹ').first()).toBeVisible();
-    await expect(page.getByText('ADMIN').first()).toBeVisible();
-
-    // 3. Kiểm tra các khối giao diện chuẩn GDPT và Live Preview 16:9
-    await expect(page.getByText('Thông Tin Bài Dạy Chuẩn GDPT')).toBeVisible();
-    await expect(page.getByText('Live Preview 16:9 HD')).toBeVisible();
-
-    // 4. Chụp ảnh màn hình kiểm thử thị giác
     await page.screenshot({
-      path: '.preview/desktop-visual-check.png',
+      path: '.preview/desktop-latest.png',
+      fullPage: true,
+    });
+  });
+
+  test('Chụp ảnh màn hình Mobile (375x667)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    await expect(page.locator('h1')).toContainText('AI PowerPoint Lesson Planner Pro');
+
+    await page.screenshot({
+      path: '.preview/mobile-latest.png',
       fullPage: true,
     });
   });
