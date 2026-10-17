@@ -9,39 +9,31 @@ function ensurePreviewDir(): void {
   }
 }
 
-test.describe('Visual Verification (Home & Automation Dashboard)', () => {
+test.describe('Visual Verification Clean Slate (Home Page)', () => {
   test.beforeAll(() => {
     ensurePreviewDir();
   });
 
-  test('Chụp ảnh màn hình Desktop Dashboard Automation (1440x900)', async ({ page }) => {
+  test('Chụp ảnh màn hình Desktop Clean Slate (1440x900)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/automation');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('h1')).toContainText('Dashboard Tự động hóa Web');
+    await expect(page.locator('h1')).toContainText('Hệ thống AI Soạn Giáo Án');
 
-    await page.screenshot({
-      path: '.preview/automation-desktop.png',
-      fullPage: true,
-    });
     await page.screenshot({
       path: '.preview/desktop-latest.png',
       fullPage: true,
     });
   });
 
-  test('Chụp ảnh màn hình Mobile Dashboard Automation (375x667)', async ({ page }) => {
+  test('Chụp ảnh màn hình Mobile Clean Slate (375x667)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/automation');
+    await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('h1')).toContainText('Dashboard Tự động hóa Web');
+    await expect(page.locator('h1')).toContainText('Hệ thống AI Soạn Giáo Án');
 
-    await page.screenshot({
-      path: '.preview/automation-mobile.png',
-      fullPage: true,
-    });
     await page.screenshot({
       path: '.preview/mobile-latest.png',
       fullPage: true,

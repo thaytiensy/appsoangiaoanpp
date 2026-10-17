@@ -1,12 +1,11 @@
 import Link from 'next/link';
-import type { ReactElement } from 'react';
 
-export default function NotFound(): ReactElement {
+export default function NotFound(): React.JSX.Element {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">404 - Không tìm thấy trang</h2>
-        <p className="text-gray-600 mb-6 text-sm">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-md w-full text-center">
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">404 - Không tìm thấy trang</h2>
+        <p className="text-slate-600 mb-6 text-sm">
           Trang bạn yêu cầu không tồn tại hoặc đã được di chuyển.
         </p>
         <Link

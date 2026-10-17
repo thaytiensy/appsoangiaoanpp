@@ -1,139 +1,143 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useLessonPlanner } from '@/hooks/useLessonPlanner';
-import { LessonInputPanel } from '@/components/editor/LessonInputPanel';
-import { LessonPlanSummaryCard } from '@/components/editor/LessonPlanSummaryCard';
-import { QuickTemplatesBar, QuickLessonTemplate } from '@/components/editor/QuickTemplatesBar';
-import { StepLoadingOverlay } from '@/components/editor/StepLoadingOverlay';
-import { LessonPlanDocxCard } from '@/components/editor/LessonPlanDocxCard';
-import { Slide16x9Canvas } from '@/components/preview/Slide16x9Canvas';
-import { SlideDeckNavigation } from '@/components/preview/SlideDeckNavigation';
-import { TeacherNotesPanel } from '@/components/preview/TeacherNotesPanel';
-import { UserManagerModal } from '@/components/user/UserManagerModal';
-import { SupportContactBar } from '@/components/layout/SupportContactBar';
-import { AppHeader } from '@/components/layout/AppHeader';
-import { AppFooter } from '@/components/layout/AppFooter';
+import { useState } from 'react';
+import { BookOpen, Sparkles, Clock, GraduationCap, CheckCircle, Presentation } from 'lucide-react';
+import { LessonInputSchema, type LessonInput } from '../contracts/app.schema';
 
-export default function LessonPlannerPage() {
-  const [selectedQuickTemplate, setSelectedQuickTemplate] = useState<QuickLessonTemplate | null>(null);
+const DEFAULT_SUBJECTS: readonly string[] = [
+  'Toán học',
+  'Ngữ văn',
+  'Tiếng Anh',
+  'Khoa học tự nhiên',
+  'Lịch sử & Địa lí',
+  'Tin học',
+  'Giáo dục công dân',
+];
 
-  const {
-    project,
-    setProject,
-    currentUser,
-    setCurrentUser,
-    currentSlideIndex,
-    setCurrentSlideIndex,
-    isGenerating,
-    generatingInfo,
-    saveStatus,
-    isUserModalOpen,
-    setIsUserModalOpen,
-    activeSlide,
-    handleGenerateLesson,
-    handleApplyTemplate,
-    handleSelectTheme,
-    handleUpdateCurrentSlide,
-    handleAddSlide,
-    handleDuplicateSlide,
-    handleDeleteSlide,
-    handleUpdateObjective,
-    handleUpdateActivity,
-    handleSaveToDb,
-  } = useLessonPlanner();
+export default function HomePage(): React.JSX.Element {
+  const [formData, setFormData] = useState<LessonInput>({
+    subject: 'Toán học',
+    grade: 6,
+    topic: 'Số thập phân và các phép tính',
+    durationMinutes: 45,
+  });
+  const [submitted, setSubmitted] = useState<boolean>(false);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
+    const result = LessonInputSchema.safeParse(formData);
+    if (result.success) {
+      setSubmitted(true);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
-      <SupportContactBar />
-      <AppHeader
-        currentUser={currentUser}
-        onOpenUserModal={() => setIsUserModalOpen(true)}
-        saveStatus={saveStatus}
-        onSaveToDb={handleSaveToDb}
-        project={project}
-      />
+    <main className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+      <header className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-4">
+          <Sparkles className="w-4 h-4" />
+          <span>Kiến trúc 4 Trụ Cột Chuẩn GDPT 2026</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Hệ thống AI Soạn Giáo Án & Slide PowerPoint Chuẩn Bộ GD
+        </h1>
+        <p className="mt-3 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
+          Tự động hóa xây dựng tiến trình hoạt động dạy học 4 bước và cấu trúc slide trình chiếu bài giảng theo chuẩn Công văn 5512.
+        </p>
+      </header>
 
-      <StepLoadingOverlay
-        isGenerating={isGenerating}
-        topic={generatingInfo?.topic || project.lessonName}
-        subject={generatingInfo?.subject || project.subject}
-      />
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="subject-select" className="block text-sm font-semibold text-slate-700 mb-2">
+                <BookOpen className="w-4 h-4 inline mr-1 text-blue-600" />
+                Môn học
+              </label>
+              <select
+                id="subject-select"
+                aria-label="Chọn môn học"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {DEFAULT_SUBJECTS.map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            </div>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <div className="xl:col-span-7 space-y-4">
-            <QuickTemplatesBar
-              selectedId={selectedQuickTemplate?.id}
-              onSelect={(tmpl) => setSelectedQuickTemplate(tmpl)}
-            />
-
-            <LessonInputPanel
-              onGenerate={handleGenerateLesson}
-              isGenerating={isGenerating}
-              defaultTeacherName={currentUser.name}
-              defaultSchoolName={currentUser.school}
-              defaultSubject={currentUser.subject}
-              currentThemeId={project.themeId}
-              onSelectTheme={handleSelectTheme}
-              onApplyTemplate={handleApplyTemplate}
-              selectedQuickTemplate={selectedQuickTemplate}
-            />
-
-            <LessonPlanSummaryCard
-              plan={project}
-              onUpdateObjective={handleUpdateObjective}
-              onUpdateActivity={handleUpdateActivity}
-            />
-
-            <LessonPlanDocxCard plan={project} />
-          </div>
-
-          <div className="xl:col-span-5 space-y-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4 xl:sticky xl:top-20">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="text-sm font-bold text-slate-800">Live Preview 16:9 HD</span>
-                <span className="text-xs font-semibold text-slate-500">{project.slides.length} Slides</span>
-              </div>
-              {activeSlide && (
-                <Slide16x9Canvas
-                  slide={activeSlide}
-                  totalSlides={project.slides.length}
-                  themeId={project.themeId}
-                  customBackgroundUrl={project.customBackgroundUrl}
-                  onUpdateSlide={handleUpdateCurrentSlide}
-                />
-              )}
-              <SlideDeckNavigation
-                slides={project.slides}
-                currentIndex={currentSlideIndex}
-                onSelect={setCurrentSlideIndex}
-                onAddSlide={handleAddSlide}
-                onDeleteSlide={handleDeleteSlide}
-                onDuplicateSlide={handleDuplicateSlide}
-              />
-              {activeSlide && <TeacherNotesPanel slide={activeSlide} onChange={handleUpdateCurrentSlide} />}
+            <div>
+              <label htmlFor="grade-select" className="block text-sm font-semibold text-slate-700 mb-2">
+                <GraduationCap className="w-4 h-4 inline mr-1 text-blue-600" />
+                Khối lớp
+              </label>
+              <select
+                id="grade-select"
+                aria-label="Chọn khối lớp"
+                value={formData.grade}
+                onChange={(e) => setFormData({ ...formData, grade: Number(e.target.value) })}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                  <option key={grade} value={grade}>Lớp {grade}</option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
-      </main>
 
-      <AppFooter />
+          <div>
+            <label htmlFor="topic-input" className="block text-sm font-semibold text-slate-700 mb-2">
+              <Presentation className="w-4 h-4 inline mr-1 text-blue-600" />
+              Chủ đề bài dạy
+            </label>
+            <input
+              id="topic-input"
+              type="text"
+              aria-label="Chủ đề bài dạy"
+              value={formData.topic}
+              onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+              placeholder="Ví dụ: Định luật II Newton, Phép nhân phân số..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
 
-      <UserManagerModal
-        isOpen={isUserModalOpen}
-        onClose={() => setIsUserModalOpen(false)}
-        currentUser={currentUser}
-        onSelectUser={(u) => {
-          setCurrentUser(u);
-          setProject((prev) => ({
-            ...prev,
-            teacherName: u.name,
-            schoolName: u.school,
-            departmentName: `Tổ ${u.subject}`,
-          }));
-        }}
-      />
-    </div>
+          <div>
+            <label htmlFor="duration-input" className="block text-sm font-semibold text-slate-700 mb-2">
+              <Clock className="w-4 h-4 inline mr-1 text-blue-600" />
+              Thời lượng (phút)
+            </label>
+            <input
+              id="duration-input"
+              type="number"
+              aria-label="Thời lượng bài dạy tính theo phút"
+              value={formData.durationMinutes}
+              onChange={(e) => setFormData({ ...formData, durationMinutes: Number(e.target.value) })}
+              className="w-full sm:w-48 rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-500">Khóa Data Contract: LessonInputSchema</span>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Thiết kế Giáo án & Slide</span>
+            </button>
+          </div>
+        </form>
+
+        {submitted && (
+          <div className="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>
+              Đã xác thực dữ liệu đầu vào thành công theo Data Contract: <strong>{formData.subject} - Lớp {formData.grade}</strong>: <em>{formData.topic}</em> ({formData.durationMinutes} phút).
+            </span>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

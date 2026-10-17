@@ -1,21 +1,23 @@
 {
   "status": "success",
-  "task": "Nâng cấp trang /automation từ dữ liệu mẫu sang thực thi thật 100% bằng Playwright và Gemini API",
+  "task": "Clean Slate Reset & Khởi tạo lại hệ thống theo Quy trình Kiến trúc 4 Trụ cột",
   "attempt": 1,
   "files_modified": [
-    "src/types/automation.ts",
-    "src/lib/url-utils.ts",
-    "src/lib/automation-runner.ts",
-    "src/app/api/automation/execute/route.ts",
-    "src/components/automation/task-result-modal.tsx",
-    "src/components/automation/task-card.tsx",
-    "src/components/automation/create-task-modal.tsx",
-    "src/stores/automation-store.ts",
-    "src/app/automation/page.tsx",
+    "src/contracts/app.schema.ts",
+    "src/contracts/bridge.schema.ts",
+    "src/bridge/file-manager.ts",
+    "src/bridge/gemini-agent.ts",
+    "src/bridge/console-reporter.ts",
+    "src/bridge/auto-loop.ts",
+    "src/app/globals.css",
+    "src/app/layout.tsx",
+    "src/app/not-found.tsx",
+    "src/app/page.tsx",
     "scripts/visual-check.ts",
+    "verify.sh",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh để thẩm định 4 tầng guardrails và kiểm tra hiển thị trực tiếp trên giao diện"
+  "next_step": "Chạy bash verify.sh và npx playwright test scripts/visual-check.ts để nghiệm thu giao diện Clean Slate"
 }

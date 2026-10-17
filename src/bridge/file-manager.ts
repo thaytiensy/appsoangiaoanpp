@@ -1,74 +1,59 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { FileAction } from '../contracts/bridge.schema';
+import type { FileAction } from '../contracts/bridge.schema';
 
 export const PROTECTED_PATHS: readonly string[] = [
   'verify.sh',
   'src/bridge/',
   'src/contracts/bridge.schema.ts',
+  'src/contracts/app.schema.ts',
+  'package.json',
+  'tsconfig.json',
+  '.env',
 ];
 
-export function normalizeRelPath(filePath: string): string {
-  return filePath.replace(/\\/g, '/').replace(/^\.\//, '');
+export function isPathProtected(targetPath: string): boolean {
+  const normalized = targetPath.replace(/\\/g, '/');
+  return PROTECTED_PATHS.some((protectedPath) =>
+    normalized.startsWith(protectedPath) || normalized === protectedPath
+  );
 }
 
-export function isProtectedPath(filePath: string): boolean {
-  const normalized = normalizeRelPath(filePath);
-  return PROTECTED_PATHS.some((p) => {
-    const cleanP = normalizeRelPath(p);
-    return normalized === cleanP || normalized.startsWith(cleanP);
-  });
-}
-
-export function safeReadFile(filePath: string): string | null {
-  try {
-    const resolved = path.resolve(process.cwd(), filePath);
-    if (!fs.existsSync(resolved)) return null;
-    return fs.readFileSync(resolved, 'utf-8');
-  } catch {
-    return null;
+export function readFileSafe(filePath: string): string {
+  const fullPath = path.resolve(process.cwd(), filePath);
+  if (!fs.existsSync(fullPath)) {
+    return '';
   }
+  return fs.readFileSync(fullPath, 'utf-8');
 }
 
-export function safeWriteFile(filePath: string, content: string): void {
-  if (isProtectedPath(filePath)) {
-    throw new Error(`[SECURITY] Thao tác bị từ chối: Đường dẫn được bảo vệ: ${filePath}`);
+export function applyFileAction(action: FileAction): void {
+  if (isPathProtected(action.path)) {
+    console.warn(`[File Manager] Bỏ qua file thuộc danh mục bảo vệ: ${action.path}`);
+    return;
   }
-  const resolved = path.resolve(process.cwd(), filePath);
-  const dir = path.dirname(resolved);
+
+  const fullPath = path.resolve(process.cwd(), action.path);
+
+  if (action.action === 'delete') {
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      console.log(`[File Manager] Đã xóa file: ${action.path}`);
+    }
+    return;
+  }
+
+  const dir = path.dirname(fullPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  fs.writeFileSync(resolved, content, 'utf-8');
+
+  fs.writeFileSync(fullPath, action.content, 'utf-8');
+  console.log(`[File Manager] Đã ghi file (${action.action}): ${action.path}`);
 }
 
-export function safeDeleteFile(filePath: string): void {
-  if (isProtectedPath(filePath)) {
-    throw new Error(`[SECURITY] Thao tác bị từ chối: Không thể xóa đường dẫn bảo vệ: ${filePath}`);
+export function applyFiles(files: FileAction[]): void {
+  for (const file of files) {
+    applyFileAction(file);
   }
-  const resolved = path.resolve(process.cwd(), filePath);
-  if (fs.existsSync(resolved)) {
-    fs.unlinkSync(resolved);
-  }
-}
-
-export function applyFileActions(actions: FileAction[]): string[] {
-  const modifiedFiles: string[] = [];
-
-  for (const action of actions) {
-    if (isProtectedPath(action.path)) {
-      console.warn(`⚠️ [CẢNH BÁO] Bỏ qua file nằm trong danh sách bảo vệ: ${action.path}`);
-      continue;
-    }
-
-    if (action.action === 'create' || action.action === 'update') {
-      safeWriteFile(action.path, action.content);
-      modifiedFiles.push(action.path);
-    } else if (action.action === 'delete') {
-      safeDeleteFile(action.path);
-      modifiedFiles.push(action.path);
-    }
-  }
-
-  return modifiedFiles;
 }

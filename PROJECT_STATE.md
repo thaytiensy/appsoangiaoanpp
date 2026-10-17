@@ -1,34 +1,30 @@
-# PROJECT_STATE: Gemini ⇄ Antigravity Autonomous Loop V2.1 & Lesson Planner Pro
+# PROJECT_STATE: Gemini ⇄ Antigravity Autonomous Loop & Lesson Planner
 
 ## 1. Project Overview & Scope
-- **Hệ thống**: Cầu nối Tự động hóa Khép kín Hai chiều (Gemini ⇄ Antigravity Autonomous Loop V2.1) với cơ chế Báo cáo Trực tiếp tại Terminal.
-- **Ứng dụng chủ lực**: AI PowerPoint Lesson Planner Pro chuẩn GDPT 2026 và Antigravity Studio.
-- **Mục tiêu**: Tự động hóa chu trình Phát triển ➔ Kiểm thử ➔ Tự sửa lỗi (Self-Healing Loop) ➔ Báo cáo nghiệm thu hoặc Blocker tự động tối đa 5 vòng lặp.
+- **Hệ thống**: Hệ thống AI Soạn Giáo Án & Slide PowerPoint Chuẩn Bộ GD kết hợp Cầu nối Tự động hóa Khép kín Hai chiều (Gemini ⇄ Antigravity Autonomous Loop).
+- **Mục tiêu**: Tự động hóa chu trình Phát triển ➔ Kiểm định 4 tầng Rào chắn ➔ Tự sửa lỗi (Self-Healing Loop) ➔ Bàn giao nghiệm thu tự động.
+- **Kiến trúc**: Clean Slate 4 Trụ cột (Data Contract First, Automated Guardrails, Autonomous Bridge, Visual Verification).
 
 ## 2. Approved Libraries & Tools
 - **Bridge & AI Loop**: `@google/generative-ai`, `zod`, `@playwright/test`, `dotenv`, `tsx`
-- **Frontend & App Core**: `next` (15.1.7), `react` (19.0.0), `react-dom`, `typescript` (5.7.3)
-- **Styling & UI**: `tailwindcss` (4.0.6), `lucide-react`, `clsx`, `tailwind-merge`
-- **Data & Export**: `drizzle-orm`, `better-sqlite3`, `pptxgenjs`, `zustand`
+- **Frontend & App Core**: `next` (15.1.7), `react` (19.0.0), `react-dom`, `typescript` (5.7.3), `lucide-react`
+- **Styling**: `tailwindcss` (4.0.6)
 
 ## 3. Data Contracts Locked
+- `src/contracts/app.schema.ts`:
+  - `LessonInputSchema`: `{ subject, grade, topic, durationMinutes }`
+  - `ActivitySchema`: `{ stepName, objective, teacherAction, studentAction, product }`
+  - `SlideItemSchema`: `{ slideNumber, title, bulletPoints, visualNote }`
+  - `LessonPlanOutputSchema`: `{ id, metadata, activities, slides, createdAt }`
 - `src/contracts/bridge.schema.ts`:
-  - `FileActionSchema`: Thao tác file `{ path, content, action: "create" | "update" | "delete" }`
-  - `GeminiResponseSchema`: Phản hồi cấu trúc `{ explanation, files, next_step }`
-  - `HandoffReportSchema`: Biên bản bàn giao `{ status, task, attempt, files_modified, errors, next_step }`
-- `HANDOFF.json`: Bàn giao trạng thái máy đọc giữa các vòng lặp tự động.
+  - `FileActionSchema`: `{ path, content, action: "create" | "update" | "delete" }`
+  - `GeminiResponseSchema`: `{ explanation, files, next_step }`
+  - `HandoffReportSchema`: `{ status, task, attempt, files_modified, errors, next_step }`
 
 ## 4. Completed Modules
-- [x] [2026-10-17 20:45:00] Nâng cấp Dashboard Automation sang thực thi thật 100% với Playwright Chromium và Gemini API (src/types/automation.ts, src/lib/url-utils.ts, src/lib/automation-runner.ts, src/app/api/automation/execute/route.ts, src/components/automation/task-result-modal.tsx, src/components/automation/task-card.tsx, src/components/automation/create-task-modal.tsx, src/stores/automation-store.ts, src/app/automation/page.tsx, scripts/visual-check.ts)
-- [x] [2026-10-17 13:06:26] Tạo trang Dashboard quản lý các tác vụ tự động hóa web (src/types/automation.ts, src/stores/automation-store.ts, src/components/automation/stats-bar.tsx, src/components/automation/task-card.tsx, src/components/automation/create-task-modal.tsx, src/app/automation/page.tsx, HANDOFF.json)
-- [x] Module 0: Data Contracts & Bridge Schemas (`src/contracts/bridge.schema.ts`)
-- [x] Module 1: AI PowerPoint Lesson Planner Pro (18 GDPT Subjects, 16:9 Live Preview, PPTX Export)
-- [x] Module 2: Role-based User Management & Privacy Protection (Admin Thầy Đỗ Tiến Sỹ)
-- [x] Module 3: Multi-track Timeline & Studio Video Editor
-- [x] Module 4: Console Reporter & Safe File Manager (`src/bridge/console-reporter.ts`, `src/bridge/file-manager.ts`)
-- [x] Module 5: Gemini Agent & Autonomous Self-Healing Loop (`src/bridge/gemini-agent.ts`, `src/bridge/auto-loop.ts`)
-- [x] Module 6: 4-Tier Guardrail Verification & Visual Check (`verify.sh`, `scripts/visual-check.ts`)
+- [x] Clean Slate Reset & Cấu trúc thư mục mới (`src/contracts/`, `src/bridge/`, `src/services/`, `src/components/`, `src/app/`)
+- [x] Khóa Data Contracts (`src/contracts/app.schema.ts`, `src/contracts/bridge.schema.ts`)
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Hoàn tất kiểm thử Playwright & Gemini API thực thi thật 100%, sẵn sàng chạy kiểm tra visual và nghiệm thu.
-- **Blockers**: Không có. Toàn bộ file mã nguồn tuân thủ <= 200 dòng và 0 vi phạm kiểu any.
+- **In-Progress**: Thiết lập Trụ cột 2 (verify.sh), Trụ cột 3 (src/bridge/), Trụ cột 4 (Visual check & UI baseline).
+- **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng.
