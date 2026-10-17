@@ -20,7 +20,7 @@ export async function askGeminiAgent(context: AgentContext): Promise<GeminiRespo
 
   const ai = new GoogleGenerativeAI(apiKey);
   const model = ai.getGenerativeModel({
-    model: 'gemini-3.8-flash',
+    model: 'gemini-3.0-flash',
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.1,

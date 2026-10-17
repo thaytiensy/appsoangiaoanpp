@@ -7,18 +7,27 @@ export async function POST(req: Request): Promise<NextResponse> {
     const rawBody: unknown = await req.json();
     const input = LessonInputSchema.parse(rawBody);
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const clientKey = req.headers.get('x-gemini-api-key')?.trim();
+    const envKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = clientKey || (envKey && envKey !== 'your_api_key_here' ? envKey : '');
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'Chưa cấu hình GEMINI_API_KEY trong file .env' }, { status: 500 });
+      return NextResponse.json(
+        {
+          error:
+            'Chưa có GEMINI_API_KEY hợp lệ. Thầy/Cô vui lòng mở file .env và dán API Key thật của mình vào dòng GEMINI_API_KEY=..., hoặc nhập trực tiếp tại ô "Cài đặt API Key" trên thanh điều hướng.',
+        },
+        { status: 400 }
+      );
     }
 
     const standardDoc = input.grade <= 5 ? 'Công văn 2345/BGDĐT-GDTH' : 'Công văn 5512/BGDĐT-GDTrH';
     const ai = new GoogleGenerativeAI(apiKey);
     const model = ai.getGenerativeModel({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.0-flash',
       generationConfig: {
         responseMimeType: 'application/json',
-        temperature: 0.2,
+        temperature: 0.1,
       },
     });
 

@@ -1,21 +1,21 @@
 {
   "status": "success",
-  "task": "Sprint 2: Mở rộng Data Contract GDPT 2018 (Lớp 1-12), độc quyền bộ sách 'Kết nối tri thức với cuộc sống', API Gemini sinh giáo án chuẩn CV 5512/2345, giao diện Kế hoạch bài dạy & Slide 16:9",
+  "task": "Nâng cấp hệ thống Clean Slate V3.0 (Kiểm toán tương thích Next.js 15.5.27 & Gemini 3.0 Flash, QuickTemplates, GenerationProgress, EditableKhbd & EditableSlides)",
   "attempt": 1,
   "files_modified": [
-    "src/constants/curriculum.ts",
-    "src/contracts/app.schema.ts",
-    "src/components/form-admin-section.tsx",
-    "src/components/form-lesson-section.tsx",
-    "src/components/lesson-form.tsx",
-    "src/components/lesson-plan-document.tsx",
-    "src/components/slide-preview.tsx",
-    "src/components/lesson-result.tsx",
+    "src/bridge/gemini-agent.ts",
     "src/app/api/lesson-plan/route.ts",
+    "src/components/lesson/quick-templates.tsx",
+    "src/components/lesson/generation-progress.tsx",
+    "src/components/lesson/editable-khbd.tsx",
+    "src/components/lesson/editable-slides.tsx",
+    "src/components/lesson/api-key-modal.tsx",
+    "src/components/lesson-result.tsx",
+    "src/components/lesson-form.tsx",
     "src/app/page.tsx",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh để xác thực 4 tầng guardrails và chạy npm run visual chụp ảnh giao diện nghiệm thu"
+  "next_step": "Chạy bash verify.sh xác thực 4 tầng guardrails và khởi động lại dev server"
 }

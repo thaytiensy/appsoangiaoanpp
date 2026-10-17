@@ -10,11 +10,12 @@ import { FormLessonSection } from './form-lesson-section';
 interface LessonFormProps {
   readonly onSubmit: (data: LessonInput) => void;
   readonly isLoading: boolean;
+  readonly externalPreset?: Partial<LessonInput> | null;
 }
 
 const LOCAL_STORAGE_KEY = 'lesson_planner_teacher_profile';
 
-export function LessonForm({ onSubmit, isLoading }: LessonFormProps): React.JSX.Element {
+export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormProps): React.JSX.Element {
   const [formData, setFormData] = useState<LessonInput>({
     departmentName: 'Phòng GD&ĐT Thành phố',
     schoolName: 'Trường THCS & THPT Chu Văn An',
@@ -43,6 +44,12 @@ export function LessonForm({ onSubmit, isLoading }: LessonFormProps): React.JSX.
       // Bỏ qua lỗi localStorage
     }
   }, []);
+
+  useEffect(() => {
+    if (externalPreset) {
+      setFormData((prev) => ({ ...prev, ...externalPreset }));
+    }
+  }, [externalPreset]);
 
   const handleAdminChange = (key: keyof LessonInput, val: string): void => {
     const updated = { ...formData, [key]: val };
