@@ -5,6 +5,7 @@ import { useAutomationStore } from "@/stores/automation-store";
 import { StatsBar } from "@/components/automation/stats-bar";
 import { TaskCard } from "@/components/automation/task-card";
 import { CreateTaskModal } from "@/components/automation/create-task-modal";
+import { TaskResultModal } from "@/components/automation/task-result-modal";
 import { Plus, Search, Filter } from "lucide-react";
 
 export default function AutomationDashboardPage() {
@@ -13,6 +14,8 @@ export default function AutomationDashboardPage() {
     tasks,
     filter,
     searchQuery,
+    activeResult,
+    setActiveResult,
     setFilter,
     setSearchQuery,
     addTask,
@@ -24,8 +27,7 @@ export default function AutomationDashboardPage() {
   const metrics = getMetrics();
 
   const filteredTasks = tasks.filter((task) => {
-    const matchesFilter =
-      filter === "all" ? true : task.status === filter;
+    const matchesFilter = filter === "all" ? true : task.status === filter;
     const matchesSearch =
       task.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.targetUrl.toLowerCase().includes(searchQuery.toLowerCase());
@@ -33,7 +35,7 @@ export default function AutomationDashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 select-none">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -41,12 +43,13 @@ export default function AutomationDashboardPage() {
               Dashboard Tự động hóa Web
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Điều khiển và giám sát các tác vụ Playwright Crawler, E2E Testing & Batch Tasks
+              Điều khiển và giám sát các tác vụ Playwright Chromium, E2E Testing & Gemini Scraper thật
             </p>
           </div>
           <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Tạo tác vụ mới</span>
@@ -63,7 +66,7 @@ export default function AutomationDashboardPage() {
               placeholder="Tìm kiếm theo tên tác vụ hoặc URL..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-sm focus:border-indigo-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-sm focus:border-indigo-500 focus:bg-white focus:outline-hidden"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -72,8 +75,9 @@ export default function AutomationDashboardPage() {
               {(['all', 'running', 'completed', 'failed'] as const).map((mode) => (
                 <button
                   key={mode}
+                  type="button"
                   onClick={() => setFilter(mode)}
-                  className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all ${
+                  className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all cursor-pointer ${
                     filter === mode
                       ? "bg-white text-slate-900 shadow-xs"
                       : "text-slate-500 hover:text-slate-900"
@@ -87,7 +91,7 @@ export default function AutomationDashboardPage() {
         </div>
 
         {filteredTasks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400 text-sm">
             Không tìm thấy tác vụ tự động hóa nào phù hợp.
           </div>
         ) : (
@@ -98,6 +102,7 @@ export default function AutomationDashboardPage() {
                 task={task}
                 onRun={runTask}
                 onDelete={deleteTask}
+                onViewResult={(res) => setActiveResult(res)}
               />
             ))}
           </div>
@@ -108,6 +113,11 @@ export default function AutomationDashboardPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={addTask}
+      />
+
+      <TaskResultModal
+        result={activeResult}
+        onClose={() => setActiveResult(null)}
       />
     </div>
   );

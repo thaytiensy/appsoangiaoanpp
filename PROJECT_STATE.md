@@ -19,6 +19,7 @@
 - `HANDOFF.json`: Bàn giao trạng thái máy đọc giữa các vòng lặp tự động.
 
 ## 4. Completed Modules
+- [x] [2026-10-17 20:45:00] Nâng cấp Dashboard Automation sang thực thi thật 100% với Playwright Chromium và Gemini API (src/types/automation.ts, src/lib/url-utils.ts, src/lib/automation-runner.ts, src/app/api/automation/execute/route.ts, src/components/automation/task-result-modal.tsx, src/components/automation/task-card.tsx, src/components/automation/create-task-modal.tsx, src/stores/automation-store.ts, src/app/automation/page.tsx, scripts/visual-check.ts)
 - [x] [2026-10-17 13:06:26] Tạo trang Dashboard quản lý các tác vụ tự động hóa web (src/types/automation.ts, src/stores/automation-store.ts, src/components/automation/stats-bar.tsx, src/components/automation/task-card.tsx, src/components/automation/create-task-modal.tsx, src/app/automation/page.tsx, HANDOFF.json)
 - [x] Module 0: Data Contracts & Bridge Schemas (`src/contracts/bridge.schema.ts`)
 - [x] Module 1: AI PowerPoint Lesson Planner Pro (18 GDPT Subjects, 16:9 Live Preview, PPTX Export)
@@ -29,5 +30,5 @@
 - [x] Module 6: 4-Tier Guardrail Verification & Visual Check (`verify.sh`, `scripts/visual-check.ts`)
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Đang hoàn tất kiểm tra và chốt Checkpoint an toàn đầu tiên qua `bash verify.sh`.
+- **In-Progress**: Hoàn tất kiểm thử Playwright & Gemini API thực thi thật 100%, sẵn sàng chạy kiểm tra visual và nghiệm thu.
 - **Blockers**: Không có. Toàn bộ file mã nguồn tuân thủ <= 200 dòng và 0 vi phạm kiểu any.

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
 import { AutomationActionType } from "@/types/automation";
+import { sanitizeUrl } from "@/lib/url-utils";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -34,16 +35,19 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       setError("Vui lòng nhập tên tác vụ");
       return;
     }
+
+    const cleanedUrl = sanitizeUrl(targetUrl);
     try {
-      new URL(targetUrl);
+      new URL(cleanedUrl);
     } catch {
-      setError("URL hợp lệ bắt đầu bằng http:// hoặc https://");
+      setError("URL không hợp lệ. Vui lòng nhập URL dạng https://example.com");
       return;
     }
+
     setError(null);
     onSubmit({
-      name,
-      targetUrl,
+      name: name.trim(),
+      targetUrl: cleanedUrl,
       actionType,
       scheduleCron: scheduleCron.trim() || undefined,
     });
@@ -58,13 +62,13 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-lg font-bold text-slate-900">Tạo tác vụ tự động hóa mới</h3>
-          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-600">
+          <div className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-600 font-medium">
             {error}
           </div>
         )}
@@ -80,7 +84,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               placeholder="VD: Quét dữ liệu bài giảng GDPT mới"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-hidden"
             />
           </div>
 
@@ -89,12 +93,15 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               Đường dẫn mục tiêu (URL) *
             </label>
             <input
-              type="url"
+              type="text"
               required
-              placeholder="https://example.com"
+              placeholder="https://example.com hoặc example.com"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              onBlur={() => {
+                if (targetUrl) setTargetUrl(sanitizeUrl(targetUrl));
+              }}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-hidden font-mono text-xs"
             />
           </div>
 
@@ -105,11 +112,11 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             <select
               value={actionType}
               onChange={(e) => setActionType(e.target.value as AutomationActionType)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none bg-white"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-hidden bg-white cursor-pointer"
             >
-              <option value="scrape">Web Scraping (Thu thập dữ liệu)</option>
-              <option value="e2e_test">E2E Testing (Kiểm thử chức năng)</option>
-              <option value="screenshot">Screenshot (Chụp ảnh màn hình)</option>
+              <option value="scrape">Web Scraping (Thu thập dữ liệu + Gemini AI)</option>
+              <option value="screenshot">Screenshot (Chụp ảnh màn hình thật)</option>
+              <option value="e2e_test">E2E Testing (Kiểm thử tải trang & phần tử)</option>
               <option value="form_fill">Form Auto-fill (Điền form tự động)</option>
             </select>
           </div>
@@ -123,7 +130,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
               placeholder="0 8 * * * (Mỗi sáng lúc 8:00)"
               value={scheduleCron}
               onChange={(e) => setScheduleCron(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-hidden"
             />
           </div>
 
@@ -131,13 +138,13 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700 cursor-pointer"
             >
               Khởi tạo tác vụ
             </button>

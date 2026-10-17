@@ -1,14 +1,16 @@
 import { create } from "zustand";
-import { AutomationTask, TaskMetrics } from "@/types/automation";
+import { AutomationTask, TaskMetrics, TaskExecutionResult } from "@/types/automation";
 
 interface AutomationState {
   tasks: AutomationTask[];
   filter: "all" | "running" | "completed" | "failed";
   searchQuery: string;
+  activeResult: TaskExecutionResult | null;
+  setActiveResult: (result: TaskExecutionResult | null) => void;
   setFilter: (filter: "all" | "running" | "completed" | "failed") => void;
   setSearchQuery: (query: string) => void;
-  addTask: (task: Omit<AutomationTask, "id" | "createdAt" | "lastRunAt" | "successRate" | "durationMs" | "status">) => void;
-  runTask: (id: string) => void;
+  addTask: (task: Omit<AutomationTask, "id" | "createdAt" | "lastRunAt" | "successRate" | "durationMs" | "status" | "lastResult">) => void;
+  runTask: (id: string) => Promise<TaskExecutionResult>;
   deleteTask: (id: string) => void;
   getMetrics: () => TaskMetrics;
 }
@@ -21,34 +23,34 @@ const initialTasks: AutomationTask[] = [
     actionType: "scrape",
     status: "completed",
     scheduleCron: "0 8 * * *",
-    lastRunAt: "2025-02-23T08:00:00Z",
+    lastRunAt: "2026-10-17T08:00:00Z",
     successRate: 98.5,
     durationMs: 4250,
-    createdAt: "2025-02-15T00:00:00Z",
+    createdAt: "2026-10-15T00:00:00Z",
   },
   {
     id: "task-02",
     name: "Kiểm thử E2E Đăng ký giáo viên & Khóa học",
-    targetUrl: "https://app.antigravity.edu.vn/auth/signup",
+    targetUrl: "http://localhost:3000/automation",
     actionType: "e2e_test",
-    status: "running",
+    status: "idle",
     scheduleCron: "*/30 * * * *",
-    lastRunAt: "2025-02-23T10:30:00Z",
+    lastRunAt: "2026-10-17T10:30:00Z",
     successRate: 94.2,
-    durationMs: 12800,
-    createdAt: "2025-02-18T00:00:00Z",
+    durationMs: 1800,
+    createdAt: "2026-10-16T00:00:00Z",
   },
   {
     id: "task-03",
     name: "Chụp ảnh giao diện Live Preview 16:9",
-    targetUrl: "https://app.antigravity.edu.vn/lesson-planner",
+    targetUrl: "http://localhost:3000",
     actionType: "screenshot",
-    status: "failed",
+    status: "idle",
     scheduleCron: "0 0 * * *",
-    lastRunAt: "2025-02-23T00:00:00Z",
-    successRate: 75.0,
-    durationMs: 3100,
-    createdAt: "2025-02-20T00:00:00Z",
+    lastRunAt: null,
+    successRate: 90.0,
+    durationMs: 0,
+    createdAt: "2026-10-17T00:00:00Z",
   },
 ];
 
@@ -56,6 +58,8 @@ export const useAutomationStore = create<AutomationState>((set, get) => ({
   tasks: initialTasks,
   filter: "all",
   searchQuery: "",
+  activeResult: null,
+  setActiveResult: (activeResult) => set({ activeResult }),
   setFilter: (filter) => set({ filter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   addTask: (data) => {
@@ -70,23 +74,79 @@ export const useAutomationStore = create<AutomationState>((set, get) => ({
     };
     set((state) => ({ tasks: [newTask, ...state.tasks] }));
   },
-  runTask: (id) => {
+  runTask: async (id: string): Promise<TaskExecutionResult> => {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) {
+      throw new Error(`Task ${id} không tồn tại`);
+    }
+
     set((state) => ({
       tasks: state.tasks.map((t) =>
-        t.id === id
-          ? { ...t, status: "running", lastRunAt: new Date().toISOString() }
-          : t
+        t.id === id ? { ...t, status: "running" } : t
       ),
     }));
-    setTimeout(() => {
+
+    try {
+      const typeMapping: Record<string, "SCREENSHOT" | "SCRAPE" | "E2E_TEST" | "FORM_FILL"> = {
+        scrape: "SCRAPE",
+        screenshot: "SCREENSHOT",
+        e2e_test: "E2E_TEST",
+        form_fill: "FORM_FILL",
+      };
+      const apiType = typeMapping[task.actionType] || "SCREENSHOT";
+
+      const res = await fetch("/api/automation/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: task.id,
+          type: apiType,
+          targetUrl: task.targetUrl,
+        }),
+      });
+
+      const result: TaskExecutionResult = await res.json();
+
       set((state) => ({
+        activeResult: result,
         tasks: state.tasks.map((t) =>
           t.id === id
-            ? { ...t, status: "completed", durationMs: Math.floor(Math.random() * 5000) + 1500 }
+            ? {
+                ...t,
+                status: result.success ? "completed" : "failed",
+                durationMs: result.durationMs,
+                lastRunAt: result.executedAt,
+                lastResult: result,
+                successRate: result.success
+                  ? Math.min(100, t.successRate + 2)
+                  : Math.max(0, t.successRate - 15),
+              }
             : t
         ),
       }));
-    }, 2500);
+
+      return result;
+    } catch (err) {
+      const errorResult: TaskExecutionResult = {
+        taskId: task.id,
+        type: task.actionType.toUpperCase(),
+        success: false,
+        durationMs: 0,
+        error: err instanceof Error ? err.message : String(err),
+        executedAt: new Date().toISOString(),
+      };
+
+      set((state) => ({
+        activeResult: errorResult,
+        tasks: state.tasks.map((t) =>
+          t.id === id
+            ? { ...t, status: "failed", lastResult: errorResult }
+            : t
+        ),
+      }));
+
+      return errorResult;
+    }
   },
   deleteTask: (id) =>
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),

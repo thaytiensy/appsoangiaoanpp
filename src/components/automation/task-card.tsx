@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { AutomationTask } from "@/types/automation";
-import { Play, Trash2, Globe, Clock, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { AutomationTask, TaskExecutionResult } from "@/types/automation";
+import { Play, Trash2, Globe, Clock, CheckCircle, AlertCircle, RefreshCw, Eye } from "lucide-react";
 
 interface TaskCardProps {
   task: AutomationTask;
   onRun: (id: string) => void;
   onDelete: (id: string) => void;
+  onViewResult?: (result: TaskExecutionResult) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onRun, onDelete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onRun, onDelete, onViewResult }) => {
   const statusConfig = {
     idle: { label: "Sẵn sàng", badge: "bg-slate-100 text-slate-700 border-slate-200" },
     running: { label: "Đang chạy", badge: "bg-amber-100 text-amber-800 border-amber-300 animate-pulse" },
@@ -37,20 +38,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onRun, onDelete }) => 
         </div>
 
         <div className="flex items-center gap-1.5">
+          {task.lastResult && onViewResult && (
+            <button
+              type="button"
+              onClick={() => onViewResult(task.lastResult!)}
+              className="flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+              title="Xem kết quả thực thi gần nhất"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Kết quả</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => onRun(task.id)}
             disabled={isRunning}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
           >
             {isRunning ? (
               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Play className="h-3.5 w-3.5" />
             )}
-            <span>{isRunning ? "Đang chạy..." : "Kích hoạt"}
-            </span>
+            <span>{isRunning ? "Đang chạy..." : "Kích hoạt"}</span>
           </button>
+
           <button
             type="button"
             onClick={() => onDelete(task.id)}
@@ -64,7 +77,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onRun, onDelete }) => 
 
       <div className="mt-4 flex items-center gap-2 text-xs text-slate-600 truncate">
         <Globe className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <a href={task.targetUrl} target="_blank" rel="noreferrer" className="truncate hover:underline text-indigo-600">
+        <a href={task.targetUrl} target="_blank" rel="noreferrer" className="truncate hover:underline text-indigo-600 font-mono">
           {task.targetUrl}
         </a>
       </div>
@@ -72,7 +85,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onRun, onDelete }) => 
       <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
         <div className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5 text-slate-400" />
-          <span>Thời gian: {task.durationMs > 0 ? `${(task.durationMs / 1000).toFixed(1)}s` : "-"}</span>
+          <span>Thời gian: {task.durationMs > 0 ? `${(task.durationMs / 1000).toFixed(2)}s` : "-"}</span>
         </div>
         <div className="flex items-center justify-end gap-1.5">
           {task.successRate >= 90 ? (

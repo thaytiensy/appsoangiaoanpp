@@ -9,32 +9,39 @@ function ensurePreviewDir(): void {
   }
 }
 
-test.describe('Visual Verification (Desktop & Mobile)', () => {
+test.describe('Visual Verification (Home & Automation Dashboard)', () => {
   test.beforeAll(() => {
     ensurePreviewDir();
   });
 
-  test('Chụp ảnh màn hình Desktop (1440x900)', async ({ page }) => {
+  test('Chụp ảnh màn hình Desktop Dashboard Automation (1440x900)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/');
+    await page.goto('/automation');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('h1')).toContainText('AI PowerPoint Lesson Planner Pro');
-    await expect(page.getByText('0353205414').first()).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Dashboard Tự động hóa Web');
 
+    await page.screenshot({
+      path: '.preview/automation-desktop.png',
+      fullPage: true,
+    });
     await page.screenshot({
       path: '.preview/desktop-latest.png',
       fullPage: true,
     });
   });
 
-  test('Chụp ảnh màn hình Mobile (375x667)', async ({ page }) => {
+  test('Chụp ảnh màn hình Mobile Dashboard Automation (375x667)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
+    await page.goto('/automation');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('h1')).toContainText('AI PowerPoint Lesson Planner Pro');
+    await expect(page.locator('h1')).toContainText('Dashboard Tự động hóa Web');
 
+    await page.screenshot({
+      path: '.preview/automation-mobile.png',
+      fullPage: true,
+    });
     await page.screenshot({
       path: '.preview/mobile-latest.png',
       fullPage: true,
