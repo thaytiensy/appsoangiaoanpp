@@ -1,21 +1,18 @@
 {
   "status": "success",
-  "task": "Nâng cấp hệ thống Clean Slate V3.0 (Kiểm toán tương thích Next.js 15.5.27 & Gemini 3.0 Flash, QuickTemplates, GenerationProgress, EditableKhbd & EditableSlides)",
+  "task": "Bỏ qua khóa API thủ công, tích hợp Engine AI Sư phạm chuẩn Bộ GD tự động + Đăng nhập Gmail & Quyền Admin xem bảng điều khiển tổng hợp người dùng",
   "attempt": 1,
   "files_modified": [
-    "src/bridge/gemini-agent.ts",
+    "src/contracts/user.schema.ts",
+    "src/services/pedagogical-generator.ts",
+    "src/services/user-service.ts",
+    "src/components/auth/user-profile-button.tsx",
+    "src/components/auth/admin-dashboard-modal.tsx",
     "src/app/api/lesson-plan/route.ts",
-    "src/components/lesson/quick-templates.tsx",
-    "src/components/lesson/generation-progress.tsx",
-    "src/components/lesson/editable-khbd.tsx",
-    "src/components/lesson/editable-slides.tsx",
-    "src/components/lesson/api-key-modal.tsx",
-    "src/components/lesson-result.tsx",
-    "src/components/lesson-form.tsx",
     "src/app/page.tsx",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh xác thực 4 tầng guardrails và khởi động lại dev server"
+  "next_step": "Chạy bash verify.sh để xác thực 4 tầng và chạy visual check kiểm tra giao diện Gmail & Admin Dashboard"
 }
