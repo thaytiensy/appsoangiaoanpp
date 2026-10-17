@@ -26,7 +26,8 @@
 - [x] Trụ cột 2: Rào chắn chất lượng tự động 4 tầng (`verify.sh`)
 - [x] Trụ cột 3: Cầu nối tự hàn gắn Gemini ⇄ Antigravity (`src/bridge/file-manager.ts`, `src/bridge/gemini-agent.ts`, `src/bridge/console-reporter.ts`, `src/bridge/auto-loop.ts`)
 - [x] Trụ cột 4: Giao thức bàn giao (`HANDOFF.json`), UI khởi đầu chuẩn GDPT (`src/app/page.tsx`) & Kiểm tra thị giác (`scripts/visual-check.ts`)
+- [x] [2026-10-17 22:42:00] Tách biệt triệt để cache Webpack: build dùng `.next-verify` độc lập, không ảnh hưởng dev server (`.next`), cập nhật `next.config.mjs`, `verify.sh`, `.gitignore`
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Đã hoàn thành Clean Slate và chốt Baseline Commit cho kiến trúc 4 Trụ cột; sẵn sàng phát triển logic sinh giáo án và xuất slide AI.
+- **In-Progress**: Đang hoàn tất xác thực 4 tầng verify và khởi động dev server sạch.
 - **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng.

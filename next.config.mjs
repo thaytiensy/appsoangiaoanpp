@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.BUILD_MODE === 'verify' ? '.next-verify' : '.next',
   reactStrictMode: true,
   serverExternalPackages: ['better-sqlite3', 'drizzle-orm'],
   async headers() {

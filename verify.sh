@@ -66,13 +66,15 @@ npm run lint || {
   exit 1
 }
 
-echo "--> Đang chạy npm run build..."
-npm run build || {
+echo "--> Đang chạy BUILD_MODE=verify npm run build..."
+BUILD_MODE=verify npm run build || {
   echo "❌ [TẦNG 2 THẤT BẠI] Build Next.js thất bại! Rollback mã nguồn..." >&2
+  rm -rf .next-verify
   git reset --hard HEAD
   exit 1
 }
-echo "✅ Tầng 2 ĐẠT CHUẨN: Typecheck, Lint và Build thành công 100%."
+rm -rf .next-verify
+echo "✅ Tầng 2 ĐẠT CHUẨN: Typecheck, Lint và Build thành công 100% (Đã dọn dẹp .next-verify)."
 
 # ========================================================
 # TẦNG 3: Safety Checkpoint

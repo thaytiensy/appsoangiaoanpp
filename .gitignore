@@ -9,6 +9,8 @@
 
 # Next.js
 /.next/
+/.next-verify/
+.next-verify
 /out/
 
 # Production
