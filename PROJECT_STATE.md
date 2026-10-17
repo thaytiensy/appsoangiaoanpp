@@ -19,6 +19,7 @@
 - `HANDOFF.json`: Bàn giao trạng thái máy đọc giữa các vòng lặp tự động.
 
 ## 4. Completed Modules
+- [x] [2026-10-17 13:06:26] Tạo trang Dashboard quản lý các tác vụ tự động hóa web (src/types/automation.ts, src/stores/automation-store.ts, src/components/automation/stats-bar.tsx, src/components/automation/task-card.tsx, src/components/automation/create-task-modal.tsx, src/app/automation/page.tsx, HANDOFF.json)
 - [x] Module 0: Data Contracts & Bridge Schemas (`src/contracts/bridge.schema.ts`)
 - [x] Module 1: AI PowerPoint Lesson Planner Pro (18 GDPT Subjects, 16:9 Live Preview, PPTX Export)
 - [x] Module 2: Role-based User Management & Privacy Protection (Admin Thầy Đỗ Tiến Sỹ)
