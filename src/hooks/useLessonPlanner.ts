@@ -28,6 +28,10 @@ export function useLessonPlanner() {
   const [currentUser, setCurrentUser] = useState<User>(DEFAULT_USER);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingInfo, setGeneratingInfo] = useState<{ topic: string; subject: string }>({
+    topic: '',
+    subject: '',
+  });
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
@@ -35,12 +39,13 @@ export function useLessonPlanner() {
 
   const handleGenerateLesson = (params: LessonGeneratorParams) => {
     setIsGenerating(true);
+    setGeneratingInfo({ topic: params.topic, subject: params.subject });
     setTimeout(() => {
       const newPlan = generatePedagogicalLessonPlan(params);
       setProject(newPlan);
       setCurrentSlideIndex(0);
       setIsGenerating(false);
-    }, 400);
+    }, 2000);
   };
 
   const handleApplyTemplate = (parsed: ParsedTemplateResult) => {
@@ -151,6 +156,7 @@ export function useLessonPlanner() {
     currentSlideIndex,
     setCurrentSlideIndex,
     isGenerating,
+    generatingInfo,
     saveStatus,
     isUserModalOpen,
     setIsUserModalOpen,

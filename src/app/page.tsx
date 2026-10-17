@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLessonPlanner } from '@/hooks/useLessonPlanner';
 import { LessonInputPanel } from '@/components/editor/LessonInputPanel';
 import { LessonPlanSummaryCard } from '@/components/editor/LessonPlanSummaryCard';
+import { QuickTemplatesBar, QuickLessonTemplate } from '@/components/editor/QuickTemplatesBar';
+import { StepLoadingOverlay } from '@/components/editor/StepLoadingOverlay';
+import { LessonPlanDocxCard } from '@/components/editor/LessonPlanDocxCard';
 import { Slide16x9Canvas } from '@/components/preview/Slide16x9Canvas';
 import { SlideDeckNavigation } from '@/components/preview/SlideDeckNavigation';
 import { TeacherNotesPanel } from '@/components/preview/TeacherNotesPanel';
@@ -13,6 +16,8 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { AppFooter } from '@/components/layout/AppFooter';
 
 export default function LessonPlannerPage() {
+  const [selectedQuickTemplate, setSelectedQuickTemplate] = useState<QuickLessonTemplate | null>(null);
+
   const {
     project,
     setProject,
@@ -21,6 +26,7 @@ export default function LessonPlannerPage() {
     currentSlideIndex,
     setCurrentSlideIndex,
     isGenerating,
+    generatingInfo,
     saveStatus,
     isUserModalOpen,
     setIsUserModalOpen,
@@ -48,9 +54,20 @@ export default function LessonPlannerPage() {
         project={project}
       />
 
+      <StepLoadingOverlay
+        isGenerating={isGenerating}
+        topic={generatingInfo?.topic || project.lessonName}
+        subject={generatingInfo?.subject || project.subject}
+      />
+
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           <div className="xl:col-span-7 space-y-4">
+            <QuickTemplatesBar
+              selectedId={selectedQuickTemplate?.id}
+              onSelect={(tmpl) => setSelectedQuickTemplate(tmpl)}
+            />
+
             <LessonInputPanel
               onGenerate={handleGenerateLesson}
               isGenerating={isGenerating}
@@ -60,12 +77,16 @@ export default function LessonPlannerPage() {
               currentThemeId={project.themeId}
               onSelectTheme={handleSelectTheme}
               onApplyTemplate={handleApplyTemplate}
+              selectedQuickTemplate={selectedQuickTemplate}
             />
+
             <LessonPlanSummaryCard
               plan={project}
               onUpdateObjective={handleUpdateObjective}
               onUpdateActivity={handleUpdateActivity}
             />
+
+            <LessonPlanDocxCard plan={project} />
           </div>
 
           <div className="xl:col-span-5 space-y-4">

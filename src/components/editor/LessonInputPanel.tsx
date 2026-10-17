@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wand2, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 import { ALL_GDPT_SUBJECTS, ALL_GRADES } from '@/lib/pedagogical-knowledge';
 import { SlideThemeSelector } from './SlideThemeSelector';
@@ -8,6 +8,7 @@ import { TeacherSchoolFields } from './TeacherSchoolFields';
 import { LessonDurationPicker } from './LessonDurationPicker';
 import { LessonGeneratorParams } from '@/lib/ai-lesson-generator';
 import { ParsedTemplateResult } from '@/lib/pptx-parser';
+import { QuickLessonTemplate } from './QuickTemplatesBar';
 
 interface LessonInputPanelProps {
   onGenerate: (params: LessonGeneratorParams) => void;
@@ -18,6 +19,7 @@ interface LessonInputPanelProps {
   currentThemeId?: string;
   onSelectTheme?: (themeId: string) => void;
   onApplyTemplate?: (result: ParsedTemplateResult) => void;
+  selectedQuickTemplate?: QuickLessonTemplate | null;
 }
 
 export function LessonInputPanel({
@@ -29,6 +31,7 @@ export function LessonInputPanel({
   currentThemeId = 'TECH_DARK',
   onSelectTheme,
   onApplyTemplate,
+  selectedQuickTemplate,
 }: LessonInputPanelProps) {
   const [topic, setTopic] = useState('Phương trình bậc hai và Ứng dụng thực tế');
   const [subject, setSubject] = useState(defaultSubject || 'Toán học');
@@ -39,6 +42,18 @@ export function LessonInputPanel({
   const [departmentName, setDepartmentName] = useState('Tổ Toán học');
   const [themeId, setThemeId] = useState(currentThemeId);
   const [customBgUrl, setCustomBgUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (selectedQuickTemplate) {
+      setTopic(selectedQuickTemplate.title);
+      setSubject(selectedQuickTemplate.subject);
+      setGrade(selectedQuickTemplate.grade);
+      setDuration(selectedQuickTemplate.duration);
+      setDepartmentName(`Tổ ${selectedQuickTemplate.subject}`);
+      setThemeId(selectedQuickTemplate.themeId);
+      if (onSelectTheme) onSelectTheme(selectedQuickTemplate.themeId);
+    }
+  }, [selectedQuickTemplate, onSelectTheme]);
 
   const handleThemeChange = (id: string) => {
     setThemeId(id);
