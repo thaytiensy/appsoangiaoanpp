@@ -22,9 +22,11 @@
   - `HandoffReportSchema`: `{ status, task, attempt, files_modified, errors, next_step }`
 
 ## 4. Completed Modules
-- [x] Clean Slate Reset & Cấu trúc thư mục mới (`src/contracts/`, `src/bridge/`, `src/services/`, `src/components/`, `src/app/`)
-- [x] Khóa Data Contracts (`src/contracts/app.schema.ts`, `src/contracts/bridge.schema.ts`)
+- [x] Trụ cột 1: Khóa Data Contracts (`src/contracts/app.schema.ts`, `src/contracts/bridge.schema.ts`) & Quản trị trạng thái (`PROJECT_STATE.md`)
+- [x] Trụ cột 2: Rào chắn chất lượng tự động 4 tầng (`verify.sh`)
+- [x] Trụ cột 3: Cầu nối tự hàn gắn Gemini ⇄ Antigravity (`src/bridge/file-manager.ts`, `src/bridge/gemini-agent.ts`, `src/bridge/console-reporter.ts`, `src/bridge/auto-loop.ts`)
+- [x] Trụ cột 4: Giao thức bàn giao (`HANDOFF.json`), UI khởi đầu chuẩn GDPT (`src/app/page.tsx`) & Kiểm tra thị giác (`scripts/visual-check.ts`)
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Thiết lập Trụ cột 2 (verify.sh), Trụ cột 3 (src/bridge/), Trụ cột 4 (Visual check & UI baseline).
+- **In-Progress**: Đã hoàn thành Clean Slate và chốt Baseline Commit cho kiến trúc 4 Trụ cột; sẵn sàng phát triển logic sinh giáo án và xuất slide AI.
 - **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng.

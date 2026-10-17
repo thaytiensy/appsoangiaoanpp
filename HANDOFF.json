@@ -1,6 +1,6 @@
 {
   "status": "success",
-  "task": "Clean Slate Reset & Khởi tạo lại hệ thống theo Quy trình Kiến trúc 4 Trụ cột",
+  "task": "Clean Slate Reset & Khởi tạo hoàn tất Kiến trúc 4 Trụ cột",
   "attempt": 1,
   "files_modified": [
     "src/contracts/app.schema.ts",
@@ -19,5 +19,5 @@
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh và npx playwright test scripts/visual-check.ts để nghiệm thu giao diện Clean Slate"
+  "next_step": "Sẵn sàng nhận lệnh tự động 'npm run auto' để phát triển dịch vụ AI sinh giáo án theo chuẩn GDPT"
 }
