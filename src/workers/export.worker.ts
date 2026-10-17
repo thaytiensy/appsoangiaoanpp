@@ -1,6 +1,6 @@
-import { ExportWorkerRequest } from '@/types/export';
-import { EXPORT_RESOLUTIONS } from '@/types/export';
+import { ExportWorkerRequest, EXPORT_RESOLUTIONS } from '@/types/export';
 import { WebMMuxer } from '@/core/export/webmMuxer';
+import { drawWorkerFrameClip } from './workerCanvasRenderer';
 
 export async function processExportInWorker(
   request: ExportWorkerRequest,
@@ -23,7 +23,6 @@ export async function processExportInWorker(
     durationSeconds: duration,
   });
 
-  // Kiểm tra hỗ trợ WebCodecs VideoEncoder
   if (typeof VideoEncoder === 'undefined') {
     onError('Trình duyệt hiện tại không hỗ trợ WebCodecs VideoEncoder API.');
     return;
@@ -54,7 +53,6 @@ export async function processExportInWorker(
     return;
   }
 
-  // Khởi tạo OffscreenCanvas cho headless render
   const offscreen = new OffscreenCanvas(width, height);
   const ctx = offscreen.getContext('2d');
   if (!ctx) {
@@ -70,7 +68,7 @@ export async function processExportInWorker(
       try {
         encoder.close();
       } catch {
-        // Bỏ qua lỗi khi hủy
+        // Ignore on cancel
       }
       return;
     }
@@ -83,88 +81,36 @@ export async function processExportInWorker(
     const currentTime = frameIndex / fps;
     const timestampMicros = Math.round(currentTime * 1_000_000);
 
-    // 1. Render Background
     ctx.fillStyle = '#090d16';
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Render từng layer track
     for (const track of sortedTracks) {
       if (!track.visible) continue;
-
       for (const clip of track.clips) {
         if (clip.start <= currentTime && currentTime <= clip.end) {
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, Math.min(1, clip.transform.opacity));
-          ctx.translate(width / 2 + clip.transform.x, height / 2 + clip.transform.y);
-          if (clip.transform.rotation !== 0) {
-            ctx.rotate((clip.transform.rotation * Math.PI) / 180);
-          }
-          if (clip.transform.scale !== 1.0) {
-            ctx.scale(clip.transform.scale, clip.transform.scale);
-          }
-
-          if (clip.type === 'text') {
-            const cfg = clip.textConfig || {
-              content: clip.name,
-              fontSize: 64,
-              color: '#ffffff',
-              fontFamily: 'sans-serif',
-            };
-            ctx.font = `bold ${cfg.fontSize}px ${cfg.fontFamily}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            if (cfg.backgroundColor) {
-              const metrics = ctx.measureText(cfg.content);
-              ctx.fillStyle = cfg.backgroundColor;
-              ctx.fillRect(-metrics.width / 2 - 20, -cfg.fontSize / 2 - 10, metrics.width + 40, cfg.fontSize + 20);
-            }
-
-            ctx.fillStyle = cfg.color;
-            ctx.fillText(cfg.content, 0, 0);
-          } else {
-            // Render khung đồ họa nền tượng trưng cho Video/Image
-            ctx.fillStyle = clip.type === 'video' ? '#4f46e5' : '#0284c7';
-            ctx.fillRect(-width * 0.4, -height * 0.4, width * 0.8, height * 0.8);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 36px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(clip.name, 0, 0);
-          }
-
-          ctx.restore();
+          drawWorkerFrameClip(ctx, clip, width, height);
         }
       }
     }
 
-    // 3. Tạo VideoFrame từ OffscreenCanvas
     const videoFrame = new VideoFrame(offscreen, { timestamp: timestampMicros });
     const isKeyframe = frameIndex % (fps * 2) === 0;
-
     encoder.encode(videoFrame, { keyFrame: isKeyframe });
-
-    // 4. BẮT BUỘC: Giải phóng VideoFrame lập tức để chống tràn RAM
     videoFrame.close();
 
-    // 5. Cập nhật tiến trình & ETA
     const elapsed = (performance.now() - startTime) / 1000;
     const progressPercent = Math.min(99, Math.round(((frameIndex + 1) / totalFrames) * 100));
     const eta = frameIndex > 0 ? (elapsed / frameIndex) * (totalFrames - frameIndex) : 0;
-
     onProgress(progressPercent, frameIndex + 1, totalFrames, Math.max(0, Math.ceil(eta)));
 
-    // Nhường chu kỳ CPU định kỳ cho hàng đợi sự kiện
     if (frameIndex % 15 === 0) {
       await new Promise((r) => setTimeout(r, 0));
     }
   }
 
-  // 6. Xả hàng đợi mã hóa (Flush) và đóng gói Muxer
   try {
     await encoder.flush();
     encoder.close();
-
     const webmBytes = muxer.finalize();
     const finalBlob = new Blob([webmBytes.buffer as ArrayBuffer], { type: 'video/webm' });
     onProgress(100, totalFrames, totalFrames, 0);
@@ -174,7 +120,6 @@ export async function processExportInWorker(
   }
 }
 
-// Xử lý thông điệp nếu chạy trong ngữ cảnh Dedicated Worker
 if (typeof self !== 'undefined' && typeof window === 'undefined') {
   let isCancelled = false;
 
@@ -202,16 +147,10 @@ if (typeof self !== 'undefined' && typeof window === 'undefined') {
           });
         },
         (blob) => {
-          self.postMessage({
-            type: 'COMPLETE',
-            blob,
-          });
+          self.postMessage({ type: 'COMPLETE', blob });
         },
         (error) => {
-          self.postMessage({
-            type: 'ERROR',
-            error,
-          });
+          self.postMessage({ type: 'ERROR', error });
         },
         () => isCancelled
       );

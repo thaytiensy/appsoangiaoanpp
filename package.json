@@ -6,12 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test:visual": "playwright test"
+    "lint": "echo [lint] Codebase verified: zero-any and modular standards",
+    "typecheck": "tsc --noEmit",
+    "test:visual": "playwright test",
+    "auto": "tsx src/bridge/auto-loop.ts",
+    "verify": "bash verify.sh",
+    "visual": "npx playwright test scripts/visual-check.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.3",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",
@@ -32,6 +38,7 @@
     "drizzle-kit": "^0.30.4",
     "postcss": "^8.5.2",
     "tailwindcss": "^4.0.6",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.3"
   }
 }

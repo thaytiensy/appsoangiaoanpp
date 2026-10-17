@@ -1,37 +1,32 @@
-# PROJECT_STATE: AI PowerPoint Lesson Planner Pro
+# PROJECT_STATE: Gemini ⇄ Antigravity Autonomous Loop V2.1 & Lesson Planner Pro
 
 ## 1. Project Overview & Scope
-- Target: Ứng dụng tạo giáo án & xuất slide PowerPoint chuẩn sư phạm 2026.
-- Tech Stack: Next.js 15 (App Router), TypeScript, Tailwind CSS v4, Drizzle ORM, SQLite, PptxGenJS.
+- **Hệ thống**: Cầu nối Tự động hóa Khép kín Hai chiều (Gemini ⇄ Antigravity Autonomous Loop V2.1) với cơ chế Báo cáo Trực tiếp tại Terminal.
+- **Ứng dụng chủ lực**: AI PowerPoint Lesson Planner Pro chuẩn GDPT 2026 và Antigravity Studio.
+- **Mục tiêu**: Tự động hóa chu trình Phát triển ➔ Kiểm thử ➔ Tự sửa lỗi (Self-Healing Loop) ➔ Báo cáo nghiệm thu hoặc Blocker tự động tối đa 5 vòng lặp.
 
 ## 2. Approved Libraries & Tools
-- Core: next, react, react-dom, typescript
-- Styling: tailwindcss, lucide-react, clsx, tailwind-merge
-- Validation & Data: zod, drizzle-orm, better-sqlite3
-- Export & Test: pptxgenjs, @playwright/test
+- **Bridge & AI Loop**: `@google/generative-ai`, `zod`, `@playwright/test`, `dotenv`, `tsx`
+- **Frontend & App Core**: `next` (15.1.7), `react` (19.0.0), `react-dom`, `typescript` (5.7.3)
+- **Styling & UI**: `tailwindcss` (4.0.6), `lucide-react`, `clsx`, `tailwind-merge`
+- **Data & Export**: `drizzle-orm`, `better-sqlite3`, `pptxgenjs`, `zustand`
 
 ## 3. Data Contracts Locked
-- src/types/lesson-plan.ts (BloomLevel, Objectives, 4 Activities, SlideDeck, Teacher, School, Department, Theme)
-- src/types/user.ts (User, UserRole, SQLite User Table)
-- src/types/template.ts (SlideTheme, Custom Template Upload)
+- `src/contracts/bridge.schema.ts`:
+  - `FileActionSchema`: Thao tác file `{ path, content, action: "create" | "update" | "delete" }`
+  - `GeminiResponseSchema`: Phản hồi cấu trúc `{ explanation, files, next_step }`
+  - `HandoffReportSchema`: Biên bản bàn giao `{ status, task, attempt, files_modified, errors, next_step }`
+- `HANDOFF.json`: Bàn giao trạng thái máy đọc giữa các vòng lặp tự động.
 
 ## 4. Completed Modules
-- [x] Module: 18 GDPT Subjects & Custom Template Upload - COMPLETED.
-- [x] Module 1: Project Scaffolding & State Config
-- [x] Module 2: Streamlined Teacher Input Form (Chủ đề, Lớp, Giáo viên, Môn học, Trường, Tổ chuyên môn, Thời lượng tiết)
-- [x] Module 3: Full GDPT 18 Subjects & Grade 1-12 Pedagogical Engine
-- [x] Module 4: Slide Themes & Real PPTX Template Parsing & Application (Slide content, Background, In-place editing)
-- [x] Module 5: Live 16:9 Slide Preview & Interactive Direct Editing
-- [x] Module 6: PptxGenJS Direct Export Service with Custom Background & Dynamic Themes
-- [x] Module 7: Playwright Visual Verification & verify.sh / verify.ps1
-- [x] Module 8: Teacher Profile & Role-Based User Management (Admin Thầy Đỗ Tiến Sỹ, non-admin phone privacy protected)
-- [x] Module 9: Hotline & Zalo Contact Integration (0353205414)
+- [x] Module 0: Data Contracts & Bridge Schemas (`src/contracts/bridge.schema.ts`)
+- [x] Module 1: AI PowerPoint Lesson Planner Pro (18 GDPT Subjects, 16:9 Live Preview, PPTX Export)
+- [x] Module 2: Role-based User Management & Privacy Protection (Admin Thầy Đỗ Tiến Sỹ)
+- [x] Module 3: Multi-track Timeline & Studio Video Editor
+- [x] Module 4: Console Reporter & Safe File Manager (`src/bridge/console-reporter.ts`, `src/bridge/file-manager.ts`)
+- [x] Module 5: Gemini Agent & Autonomous Self-Healing Loop (`src/bridge/gemini-agent.ts`, `src/bridge/auto-loop.ts`)
+- [x] Module 6: 4-Tier Guardrail Verification & Visual Check (`verify.sh`, `scripts/visual-check.ts`)
 
-## 5. Negative Constraints Status
-- All files in src/ <= 200 lines: PASS (Max file is 167 lines).
-- 0 any types: PASS (100% strict TypeScript types & Zod schemas).
-- No unapproved libraries: PASS.
-
-## 6. Active Task & Safety
-- Active: All modules complete, 0 lint/type errors, verified and serving on http://localhost:3000
-- Safety Scripts: verify.sh, verify.ps1, HANDOFF.json active
+## 5. In-Progress & Blockers
+- **In-Progress**: Đang hoàn tất kiểm tra và chốt Checkpoint an toàn đầu tiên qua `bash verify.sh`.
+- **Blockers**: Không có. Toàn bộ file mã nguồn tuân thủ <= 200 dòng và 0 vi phạm kiểu any.

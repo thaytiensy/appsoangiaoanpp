@@ -8,17 +8,13 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  Scissors,
-  Trash2,
-  Undo2,
-  Redo2,
-  Magnet,
   ZoomIn,
   ZoomOut,
   Upload,
   Plus,
 } from 'lucide-react';
 import { TrackType } from '@/types/timeline';
+import { TimelineEditButtons } from './TimelineEditButtons';
 
 export function TimelineToolbar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,7 +63,7 @@ export function TimelineToolbar() {
         <button
           type="button"
           onClick={() => stepFrame(-1)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
           title="Lùi 1 Frame (Arrow Left)"
         >
           <SkipBack className="w-4 h-4" />
@@ -76,7 +72,7 @@ export function TimelineToolbar() {
         <button
           type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="p-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition shadow-sm"
+          className="p-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition shadow-xs cursor-pointer"
           title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
         >
           {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
@@ -85,7 +81,7 @@ export function TimelineToolbar() {
         <button
           type="button"
           onClick={() => stepFrame(1)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
           title="Tới 1 Frame (Arrow Right)"
         >
           <SkipForward className="w-4 h-4" />
@@ -99,118 +95,76 @@ export function TimelineToolbar() {
       </div>
 
       {/* 2. Edit Tools: Split, Delete, Undo, Redo, Snapping */}
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => splitClipAtPlayhead()}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1 text-xs"
-          title="Cắt Clip tại Playhead (S hoặc Ctrl+K)"
-        >
-          <Scissors className="w-4 h-4 text-amber-400" />
-          <span className="hidden sm:inline">Cắt</span>
-        </button>
+      <TimelineEditButtons
+        onSplit={() => splitClipAtPlayhead()}
+        onDelete={deleteSelectedClips}
+        hasSelectedClips={selectedClipIds.length > 0}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={historyState.canUndo}
+        canRedo={historyState.canRedo}
+        isSnappingEnabled={isSnappingEnabled}
+        onToggleSnapping={toggleSnapping}
+      />
 
-        <button
-          type="button"
-          disabled={selectedClipIds.length === 0}
-          onClick={deleteSelectedClips}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition flex items-center gap-1 text-xs disabled:opacity-40"
-          title="Xóa Clip đã chọn (Delete)"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Xóa</span>
-        </button>
-
-        <div className="w-px h-5 bg-slate-800 mx-1" />
-
-        <button
-          type="button"
-          disabled={!historyState.canUndo}
-          onClick={undo}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-40"
-          title={`Hoàn tác (${historyState.undoCount}) - Ctrl+Z`}
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-
-        <button
-          type="button"
-          disabled={!historyState.canRedo}
-          onClick={redo}
-          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-40"
-          title={`Làm lại (${historyState.redoCount}) - Ctrl+Y`}
-        >
-          <Redo2 className="w-4 h-4" />
-        </button>
-
-        <div className="w-px h-5 bg-slate-800 mx-1" />
-
-        <button
-          type="button"
-          onClick={toggleSnapping}
-          className={`p-1.5 rounded-lg transition flex items-center gap-1 text-xs ${
-            isSnappingEnabled
-              ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-          }`}
-          title="Bật/Tắt chế độ Hút điểm (Snapping)"
-        >
-          <Magnet className="w-4 h-4" />
-          <span className="hidden md:inline">Snap</span>
-        </button>
-      </div>
-
-      {/* 3. Zoom & Add Media / Track */}
+      {/* 3. Zoom & Media Import */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 text-slate-400 text-xs">
-          <ZoomOut className="w-3.5 h-3.5" />
-          <input
-            type="range"
-            min={15}
-            max={200}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="w-20 accent-sky-400 cursor-pointer"
-            title="Tỉ lệ phóng to Timeline (+ / -)"
-          />
-          <ZoomIn className="w-3.5 h-3.5" />
-          <span className="font-mono text-[11px] w-9 text-right text-slate-300">{zoom}px/s</span>
+        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+          <button
+            type="button"
+            onClick={() => setZoom(zoom - 10)}
+            className="p-1 rounded text-slate-400 hover:text-white transition cursor-pointer"
+            title="Thu nhỏ Timeline (Ctrl+-)"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-[10px] font-mono text-slate-400 px-1">{zoom}px/s</span>
+          <button
+            type="button"
+            onClick={() => setZoom(zoom + 10)}
+            className="p-1 rounded text-slate-400 hover:text-white transition cursor-pointer"
+            title="Phóng to Timeline (Ctrl++)"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-sm cursor-pointer"
-        >
-          <Upload className="w-3.5 h-3.5" />
-          <span>Import Media</span>
-        </button>
         <input
           ref={fileInputRef}
           type="file"
-          multiple
           accept="video/*,audio/*,image/*"
+          multiple
           onChange={handleFileChange}
           className="hidden"
         />
 
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+          title="Nhập Video/Audio/Hình ảnh từ máy tính"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          <span>Nhập Media</span>
+        </button>
+
         <div className="relative group">
           <button
             type="button"
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-            title="Thêm Track mới"
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
+            title="Thêm Track Mới"
           >
             <Plus className="w-4 h-4" />
           </button>
-          <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1 z-50 w-32">
-            {(['video', 'audio', 'text', 'image'] as TrackType[]).map((type) => (
+          <div className="absolute right-0 top-full mt-1 w-32 bg-slate-900 border border-slate-800 rounded-lg shadow-xl py-1 hidden group-hover:block z-50">
+            {(['video', 'audio', 'text'] as TrackType[]).map((t) => (
               <button
-                key={type}
+                key={t}
                 type="button"
-                onClick={() => addTrack(type)}
-                className="px-3 py-1.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white capitalize"
+                onClick={() => addTrack(t)}
+                className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white capitalize transition cursor-pointer"
               >
-                + Track {type}
+                + Track {t}
               </button>
             ))}
           </div>
