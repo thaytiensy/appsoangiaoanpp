@@ -1,14 +1,21 @@
 {
   "status": "success",
-  "task": "Khắc phục triệt để lỗi xung đột bộ nhớ đệm Webpack và cấu hình chống xung đột giữa npm run dev và verify.sh",
+  "task": "Sprint 2: Mở rộng Data Contract GDPT 2018 (Lớp 1-12), độc quyền bộ sách 'Kết nối tri thức với cuộc sống', API Gemini sinh giáo án chuẩn CV 5512/2345, giao diện Kế hoạch bài dạy & Slide 16:9",
   "attempt": 1,
   "files_modified": [
-    "next.config.mjs",
-    ".gitignore",
-    "verify.sh",
+    "src/constants/curriculum.ts",
+    "src/contracts/app.schema.ts",
+    "src/components/form-admin-section.tsx",
+    "src/components/form-lesson-section.tsx",
+    "src/components/lesson-form.tsx",
+    "src/components/lesson-plan-document.tsx",
+    "src/components/slide-preview.tsx",
+    "src/components/lesson-result.tsx",
+    "src/app/api/lesson-plan/route.ts",
+    "src/app/page.tsx",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh xác thực 4 tầng xanh, khởi động lại dev server và kiểm tra 200 OK kèm ảnh chụp giao diện"
+  "next_step": "Chạy bash verify.sh để xác thực 4 tầng guardrails và chạy npm run visual chụp ảnh giao diện nghiệm thu"
 }

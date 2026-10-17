@@ -1,29 +1,66 @@
 import { z } from 'zod';
 
 export const LessonInputSchema = z.object({
-  subject: z.string().min(1, 'Môn học không được để trống'),
+  departmentName: z.string().default('Phòng Giáo dục và Đào tạo'),
+  schoolName: z.string().min(1, 'Tên trường không được để trống'),
+  facultyName: z.string().min(1, 'Tổ chuyên môn không được để trống'),
+  teacherName: z.string().min(1, 'Họ tên giáo viên không được để trống'),
+  schoolYear: z.string().default('2026 - 2027'),
+  prepareDate: z.string().default(''),
+  teachDate: z.string().default(''),
   grade: z.number().int().min(1).max(12),
-  topic: z.string().min(1, 'Chủ đề bài dạy không được để trống'),
+  subject: z.string().min(1, 'Môn học không được để trống'),
+  textbook: z.string().default('Kết nối tri thức với cuộc sống'),
+  periodNumber: z.string().default('Tiết 1'),
   durationMinutes: z.number().int().positive().default(45),
+  topic: z.string().min(1, 'Tên bài dạy không được để trống'),
+  additionalNotes: z.string().default(''),
 });
 
 export type LessonInput = z.infer<typeof LessonInputSchema>;
 
-export const ActivitySchema = z.object({
-  stepName: z.string().min(1, 'Tên hoạt động không được để trống'),
-  objective: z.string().min(1, 'Mục tiêu không được để trống'),
-  teacherAction: z.string().min(1, 'Hoạt động của giáo viên không được để trống'),
-  studentAction: z.string().min(1, 'Hoạt động của học sinh không được để trống'),
-  product: z.string().min(1, 'Sản phẩm học tập không được để trống'),
+export const ObjectivesSchema = z.object({
+  knowledge: z.string(),
+  coreCompetencies: z.string(),
+  specificCompetencies: z.string(),
+  qualities: z.string(),
 });
 
-export type Activity = z.infer<typeof ActivitySchema>;
+export type Objectives = z.infer<typeof ObjectivesSchema>;
+
+export const MaterialsSchema = z.object({
+  teacherPreparation: z.string(),
+  studentPreparation: z.string(),
+});
+
+export type Materials = z.infer<typeof MaterialsSchema>;
+
+export const ImplementationStepsSchema = z.object({
+  transferTask: z.string(),
+  performTask: z.string(),
+  reportDiscuss: z.string(),
+  concludeJudge: z.string(),
+});
+
+export type ImplementationSteps = z.infer<typeof ImplementationStepsSchema>;
+
+export const PedagogicalActivitySchema = z.object({
+  stepName: z.string(),
+  duration: z.string(),
+  objective: z.string(),
+  content: z.string(),
+  product: z.string(),
+  implementation: ImplementationStepsSchema,
+});
+
+export type PedagogicalActivity = z.infer<typeof PedagogicalActivitySchema>;
 
 export const SlideItemSchema = z.object({
   slideNumber: z.number().int().positive(),
   title: z.string().min(1, 'Tiêu đề slide không được để trống'),
   bulletPoints: z.array(z.string()).min(1, 'Nội dung slide tối thiểu 1 ý'),
   visualNote: z.string().default(''),
+  speakerNotes: z.string().default(''),
 });
 
 export type SlideItem = z.infer<typeof SlideItemSchema>;
@@ -31,7 +68,9 @@ export type SlideItem = z.infer<typeof SlideItemSchema>;
 export const LessonPlanOutputSchema = z.object({
   id: z.string(),
   metadata: LessonInputSchema,
-  activities: z.array(ActivitySchema),
+  objectives: ObjectivesSchema,
+  materials: MaterialsSchema,
+  activities: z.array(PedagogicalActivitySchema),
   slides: z.array(SlideItemSchema),
   createdAt: z.string(),
 });
