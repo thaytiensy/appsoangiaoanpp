@@ -1,8 +1,89 @@
 import type { LessonInput, LessonPlanOutput } from '../contracts/app.schema';
+import { getSlideImageUrl } from './slide-image-service';
 
 export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
   const isElementary = input.grade <= 5;
   const standardTitle = isElementary ? 'CÔNG VĂN 2345/BGDĐT-GDTH' : 'CÔNG VĂN 5512/BGDĐT-GDTrH';
+
+  const rawSlides = [
+    {
+      slideNumber: 1,
+      title: `${input.topic.toUpperCase()}`,
+      bulletPoints: [
+        `Môn: ${input.subject} - Khối: Lớp ${input.grade}`,
+        `Bộ sách: ${input.textbook}`,
+        `Giáo viên giảng dạy: ${input.teacherName}`,
+        `Đơn vị: ${input.schoolName}`,
+      ],
+      visualNote: `Hình nền nhận diện thương hiệu bộ sách ${input.textbook}, biểu trưng môn ${input.subject}.`,
+      speakerNotes: `Chào mừng toàn thể quý Thầy Cô và các em học sinh đến với tiết học ${input.subject} hôm nay.`,
+    },
+    {
+      slideNumber: 2,
+      title: 'MỤC TIÊU BÀI HỌC',
+      bulletPoints: [
+        `Kiến thức: Nắm vững cốt lõi bài học "${input.topic}"`,
+        `Năng lực: Rèn luyện năng lực tự học, hợp tác và giải quyết vấn đề`,
+        `Phẩm chất: Phát triển tính chăm chỉ, trách nhiệm và tư duy khoa học`,
+      ],
+      visualNote: `Sơ đồ hình phễu hoặc 3 khối thẻ màu sắc tương phản nổi bật.`,
+      speakerNotes: `Trong bài học này, chúng ta sẽ cùng nhau hoàn thành 3 mục tiêu trọng tâm sau đây.`,
+    },
+    {
+      slideNumber: 3,
+      title: '1. KHỞI ĐỘNG: KHÁM PHÁ TÌNH HUỐNG',
+      bulletPoints: [
+        `Tình huống thực tế dẫn nhập vào bài mới`,
+        `Câu hỏi gợi mở: Quan sát và tìm mối liên hệ`,
+        `Thời gian suy nghĩ và trao đổi cặp: 2 phút`,
+      ],
+      visualNote: `Hình ảnh minh họa tình huống sinh động, câu hỏi đặt trong khung hội thoại nổi bật.`,
+      speakerNotes: `Các em hãy cùng quan sát hình ảnh trên màn chiếu và suy nghĩ giải quyết tình huống sau.`,
+    },
+    {
+      slideNumber: 4,
+      title: '2. HÌNH THÀNH KIẾN THỨC MỚI',
+      bulletPoints: [
+        `Khái niệm và quy tắc trọng tâm của "${input.topic}"`,
+        `Ví dụ minh họa chi tiết và các trường hợp đặc biệt`,
+        `Ghi nhớ cốt lõi theo SGK ${input.textbook}`,
+      ],
+      visualNote: `Bảng so sánh 2 cột hoặc khối hộp công thức/quy tắc được viền sáng.`,
+      speakerNotes: `Đây là nội dung cốt lõi của bài học, thầy/cô mời các em chú ý theo dõi các bước chứng minh.`,
+    },
+    {
+      slideNumber: 5,
+      title: '3. LUYỆN TẬP & BÀI TẬP THỰC HÀNH',
+      bulletPoints: [
+        `Bài tập 1: Bài tập nhận biết và củng cố nhanh`,
+        `Bài tập 2: Vận dụng quy tắc giải quyết bài toán tiêu chuẩn`,
+        `Lưu ý các lỗi sai thường gặp khi làm bài`,
+      ],
+      visualNote: `Khung bài tập chia 2 cột Đề bài và Gợi ý các bước giải quyết.`,
+      speakerNotes: `Bây giờ chúng ta sẽ cùng áp dụng kiến thức vừa học vào làm các bài tập sau vào vở.`,
+    },
+    {
+      slideNumber: 6,
+      title: '4. VẬN DỤNG & DẶN DÒ VỀ NHÀ',
+      bulletPoints: [
+        `Nhiệm vụ thực tế liên hệ kiến thức với đời sống hàng ngày`,
+        `Ôn tập lại các nội dung đã học trong bài`,
+        `Đọc và chuẩn bị trước nội dung bài học tiết sau`,
+      ],
+      visualNote: `Icon ngôi sao thành tích, đồng hồ nhắc nhở và hình ảnh ứng dụng thực tế.`,
+      speakerNotes: `Bài học hôm nay khép lại tại đây, các em nhớ hoàn thành nhiệm vụ vận dụng tại nhà.`,
+    },
+  ];
+
+  const slides = rawSlides.map((s) => ({
+    ...s,
+    imageUrl: getSlideImageUrl({
+      subject: input.subject,
+      topic: input.topic,
+      slideTitle: s.title,
+      slideNumber: s.slideNumber,
+    }),
+  }));
 
   return {
     id: `lp_${Date.now()}`,
@@ -71,75 +152,7 @@ export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
         },
       },
     ],
-    slides: [
-      {
-        slideNumber: 1,
-        title: `${input.topic.toUpperCase()}`,
-        bulletPoints: [
-          `Môn: ${input.subject} - Khối: Lớp ${input.grade}`,
-          `Bộ sách: ${input.textbook}`,
-          `Giáo viên giảng dạy: ${input.teacherName}`,
-          `Đơn vị: ${input.schoolName}`,
-        ],
-        visualNote: `Hình nền nhận diện thương hiệu bộ sách ${input.textbook}, biểu trưng môn ${input.subject}, thiết kế hiện đại 16:9.`,
-        speakerNotes: `Chào mừng toàn thể quý Thầy Cô và các em học sinh đến với tiết học ${input.subject} hôm nay.`,
-      },
-      {
-        slideNumber: 2,
-        title: 'MỤC TIÊU BÀI HỌC',
-        bulletPoints: [
-          `Kiến thức: Nắm vững cốt lõi bài học "${input.topic}"`,
-          `Năng lực: Rèn luyện năng lực tự học, hợp tác và giải quyết vấn đề`,
-          `Phẩm chất: Phát triển tính chăm chỉ, trách nhiệm và tư duy khoa học`,
-        ],
-        visualNote: `Sơ đồ hình phễu hoặc 3 khối thẻ màu sắc tương phản nổi bật.`,
-        speakerNotes: `Trong bài học này, chúng ta sẽ cùng nhau hoàn thành 3 mục tiêu trọng tâm sau đây.`,
-      },
-      {
-        slideNumber: 3,
-        title: '1. KHỞI ĐỘNG: KHÁM PHÁ TÌNH HUỐNG',
-        bulletPoints: [
-          `Tình huống thực tế dẫn nhập vào bài mới`,
-          `Câu hỏi gợi mở: Quan sát và tìm mối liên hệ`,
-          `Thời gian suy nghĩ và trao đổi cặp: 2 phút`,
-        ],
-        visualNote: `Hình ảnh minh họa tình huống sinh động, câu hỏi đặt trong khung hội thoại nổi bật.`,
-        speakerNotes: `Các em hãy cùng quan sát hình ảnh trên màn chiếu và suy nghĩ giải quyết tình huống sau.`,
-      },
-      {
-        slideNumber: 4,
-        title: '2. HÌNH THÀNH KIẾN THỨC MỚI',
-        bulletPoints: [
-          `Khái niệm và quy tắc trọng tâm của "${input.topic}"`,
-          `Ví dụ minh họa chi tiết và các trường hợp đặc biệt`,
-          `Ghi nhớ cốt lõi theo SGK ${input.textbook}`,
-        ],
-        visualNote: `Bảng so sánh 2 cột hoặc khối hộp công thức/quy tắc được viền sáng.`,
-        speakerNotes: `Đây là nội dung cốt lõi của bài học, thầy/cô mời các em chú ý theo dõi các bước chứng minh.`,
-      },
-      {
-        slideNumber: 5,
-        title: '3. LUYỆN TẬP & BÀI TẬP THỰC HÀNH',
-        bulletPoints: [
-          `Bài tập 1: Bài tập nhận biết và củng cố nhanh`,
-          `Bài tập 2: Vận dụng quy tắc giải quyết bài toán tiêu chuẩn`,
-          `Lưu ý các lỗi sai thường gặp khi làm bài`,
-        ],
-        visualNote: `Khung bài tập chia 2 cột Đề bài và Gợi ý các bước giải quyết.`,
-        speakerNotes: `Bây giờ chúng ta sẽ cùng áp dụng kiến thức vừa học vào làm các bài tập sau vào vở.`,
-      },
-      {
-        slideNumber: 6,
-        title: '4. VẬN DỤNG & DẶN DÒ VỀ NHÀ',
-        bulletPoints: [
-          `Nhiệm vụ thực tế liên hệ kiến thức với đời sống hàng ngày`,
-          `Ôn tập lại các nội dung đã học trong bài`,
-          `Đọc và chuẩn bị trước nội dung bài học tiết sau`,
-        ],
-        visualNote: `Icon ngôi sao thành tích, đồng hồ nhắc nhở và hình ảnh ứng dụng thực tế.`,
-        speakerNotes: `Bài học hôm nay khép lại tại đây, các em nhớ hoàn thành nhiệm vụ vận dụng tại nhà.`,
-      },
-    ],
+    slides,
     createdAt: new Date().toISOString(),
   };
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LessonInputSchema, LessonPlanOutputSchema, type LessonPlanOutput } from '@/contracts/app.schema';
 import { generatePedagogicalPlan } from '@/services/pedagogical-generator';
+import { getSlideImageUrl } from '@/services/slide-image-service';
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
@@ -42,7 +43,21 @@ Trả về đúng JSON gồm: id, metadata, objectives (knowledge, coreCompetenc
         const cleanJson = rawText.replace(/```json\n?|```/g, '').trim();
         const parsedData: unknown = JSON.parse(cleanJson);
         const validated: LessonPlanOutput = LessonPlanOutputSchema.parse(parsedData);
-        return NextResponse.json(validated);
+
+        const enrichedWithImages: LessonPlanOutput = {
+          ...validated,
+          slides: validated.slides.map((s) => ({
+            ...s,
+            imageUrl: s.imageUrl || getSlideImageUrl({
+              subject: input.subject,
+              topic: input.topic,
+              slideTitle: s.title,
+              slideNumber: s.slideNumber,
+            }),
+          })),
+        };
+
+        return NextResponse.json(enrichedWithImages);
       } catch (geminiError) {
         console.warn('[Gemini API Fallback] Chuyển tiếp sang Engine AI Sư Phạm Tích Hợp:', geminiError);
       }

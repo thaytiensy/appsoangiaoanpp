@@ -1,6 +1,7 @@
 import type { LessonPlanOutput, PedagogicalActivity, SlideItem } from '../contracts/app.schema';
 import type { ParsedWordResult } from './word-parser';
 import { convertParsedToLessonInput } from './word-parser';
+import { getSlideImageUrl } from './slide-image-service';
 
 export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
   const metadata = convertParsedToLessonInput(parsed);
@@ -60,7 +61,7 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
     },
   ];
 
-  const slides: SlideItem[] = [
+  const rawSlides: Omit<SlideItem, 'imageUrl'>[] = [
     {
       slideNumber: 1,
       title: `${metadata.topic}`,
@@ -129,6 +130,16 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
       speakerNotes: 'Về nhà các em nhớ hoàn thiện bài tập và chuẩn bị kỹ bài cho tiết sau nhé.',
     },
   ];
+
+  const slides: SlideItem[] = rawSlides.map((s) => ({
+    ...s,
+    imageUrl: getSlideImageUrl({
+      subject: metadata.subject,
+      topic: metadata.topic,
+      slideTitle: s.title,
+      slideNumber: s.slideNumber,
+    }),
+  }));
 
   return {
     id: `plan-word-${Date.now()}`,

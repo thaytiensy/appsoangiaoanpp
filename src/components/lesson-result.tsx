@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Presentation, ArrowLeft, Download, CheckCircle2, Loader2 } from 'lucide-react';
+import { FileText, Presentation, ArrowLeft, Download, CheckCircle2, Loader2, Mail } from 'lucide-react';
 import type { LessonPlanOutput } from '../contracts/app.schema';
 import { EditableKhbd } from './lesson/editable-khbd';
 import { EditableSlides } from './lesson/editable-slides';
 import { exportLessonToPptx } from '../services/pptx-exporter';
+import { ShareModal } from './share/share-modal';
 
 interface LessonResultProps {
   readonly plan: LessonPlanOutput;
@@ -17,6 +18,7 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
   const [activeTab, setActiveTab] = useState<'khbd' | 'slides'>('khbd');
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportSuccess, setExportSuccess] = useState<boolean>(false);
+  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
 
   const handleExportPptx = async (): Promise<void> => {
     setIsExporting(true);
@@ -34,7 +36,7 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
 
   return (
     <div className="space-y-6">
-      {/* Thanh công cụ điều hướng & chuyển Tab & Xuất File */}
+      {/* Thanh công cụ điều hướng & chuyển Tab & Xuất File & Chia sẻ Gmail */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2">
           <button
@@ -70,12 +72,21 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
           </div>
         </div>
 
-        {/* Nút hành động Xuất PowerPoint & Trạng thái kiểm tra */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-medium">
+        {/* Nút hành động Chia sẻ Gmail & Xuất PowerPoint */}
+        <div className="flex items-center gap-2.5">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>Chuẩn 5512 • 0 trùng lặp</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold transition cursor-pointer"
+          >
+            <Mail className="w-3.5 h-3.5 text-blue-600" />
+            <span>Chia sẻ qua Gmail</span>
+          </button>
 
           <button
             type="button"
@@ -102,6 +113,14 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
           </button>
         </div>
       </div>
+
+      {/* Modal Chia Sẻ Miễn Phí Qua Gmail */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        lessonId={plan.id}
+        lessonTitle={plan.metadata.topic}
+      />
 
       {/* Nội dung Tab hiển thị và chỉnh sửa trực tiếp */}
       {activeTab === 'khbd' ? (

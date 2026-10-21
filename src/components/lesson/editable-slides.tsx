@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Monitor, MessageSquare, Image as ImageIcon, Copy, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Monitor, MessageSquare, Image as ImageIcon, Copy, Check, Sparkles } from 'lucide-react';
 import type { SlideItem } from '../../contracts/app.schema';
 
 interface EditableSlidesProps {
@@ -39,29 +39,29 @@ export function EditableSlides({ slides }: EditableSlidesProps): React.JSX.Eleme
 
   return (
     <div className="space-y-6">
-      {/* Khung Slide 16:9 */}
-      <div className="bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-800">
-        <div className="flex items-center justify-between text-white text-sm mb-4 pb-2 border-b border-slate-800">
+      {/* Khung Slide 16:9 Nền Trắng Chuẩn Hiện Đại */}
+      <div className="bg-slate-50/90 rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200">
+        <div className="flex items-center justify-between text-slate-700 text-sm mb-4 pb-2 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Monitor className="w-4 h-4 text-blue-400" />
+            <Monitor className="w-4 h-4 text-blue-600" />
             <span className="font-semibold text-xs sm:text-sm">
-              Slide {currentSlide.slideNumber} / {slides.length} (Tỷ lệ 16:9 Chuẩn Trình Chiếu)
+              Slide {currentSlide.slideNumber} / {slides.length} (Tỷ lệ 16:9 Trình Chiếu Nền Trắng)
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleCopySlides}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded-lg transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-100 text-xs text-slate-700 font-medium rounded-lg border border-slate-200 transition cursor-pointer"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
               <span>{copied ? 'Đã sao chép!' : 'Sao chép toàn bộ Slide'}</span>
             </button>
             <button
               type="button"
               onClick={() => setCurrentIdx((p) => (p > 0 ? p - 1 : slides.length - 1))}
               aria-label="Slide trước"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -69,65 +69,94 @@ export function EditableSlides({ slides }: EditableSlidesProps): React.JSX.Eleme
               type="button"
               onClick={() => setCurrentIdx((p) => (p < slides.length - 1 ? p + 1 : 0))}
               aria-label="Slide tiếp theo"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Khung Slide 16:9 contentEditable */}
+        {/* Khung Canvas Trình Chiếu 16:9 Tone Trắng Tinh Tế */}
         <div
           contentEditable
           suppressContentEditableWarning
-          className="aspect-video w-full bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-xl p-6 sm:p-10 flex flex-col justify-between border border-slate-700 text-white shadow-2xl relative overflow-hidden focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="aspect-video w-full bg-white rounded-xl p-6 sm:p-8 flex flex-col justify-between border-2 border-slate-200 text-slate-900 shadow-md relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
-          <div>
-            <div className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
-              Slide {currentSlide.slideNumber}
+          {/* Header Slide & Nội dung phân 2 cột với ảnh minh họa */}
+          <div className="flex flex-col md:flex-row gap-6 justify-between items-start h-full">
+            {/* Cột Trái: Tiêu đề & Bullet points */}
+            <div className="flex-1 space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-blue-500" />
+                <span>SLIDE {currentSlide.slideNumber}</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 leading-snug">
+                {currentSlide.title}
+              </h3>
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-700 pt-1">
+                {currentSlide.bulletPoints.map((point, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                    <span className="leading-relaxed">{point}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-4">
-              {currentSlide.title}
-            </h3>
-            <ul className="space-y-2.5 text-sm sm:text-base text-slate-200">
-              {currentSlide.bulletPoints.map((point, idx) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-400 mt-2 shrink-0" />
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ul>
+
+            {/* Cột Phải: Hình ảnh minh họa phù hợp nội dung */}
+            {currentSlide.imageUrl && (
+              <div className="w-full md:w-5/12 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs flex flex-col">
+                <div className="aspect-16/9 w-full bg-slate-100 overflow-hidden relative">
+                  <img
+                    src={currentSlide.imageUrl}
+                    alt={currentSlide.title}
+                    className="w-full h-full object-cover transition hover:scale-105 duration-300"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
+                </div>
+                <div className="p-2 bg-white border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                  <span className="flex items-center gap-1 text-slate-600 truncate max-w-[170px]">
+                    <ImageIcon className="w-3 h-3 text-blue-600 shrink-0" />
+                    <span>Ảnh minh họa AI phù hợp</span>
+                  </span>
+                  <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-semibold">16:9 HD</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {currentSlide.visualNote && (
-            <div className="mt-4 pt-3 border-t border-slate-800 flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg">
-              <ImageIcon className="w-4 h-4 shrink-0" />
-              <span><strong>Gợi ý hình ảnh:</strong> {currentSlide.visualNote}</span>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2 text-xs text-amber-900 bg-amber-50/80 px-3 py-1.5 rounded-lg border border-amber-200/70">
+              <ImageIcon className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+              <span><strong>Gợi ý sư phạm:</strong> {currentSlide.visualNote}</span>
             </div>
           )}
         </div>
 
         {currentSlide.speakerNotes && (
-          <div className="mt-4 p-4 rounded-xl bg-slate-800/80 border border-slate-700 text-xs sm:text-sm text-slate-300 flex items-start gap-2.5">
-            <MessageSquare className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+          <div className="mt-4 p-3.5 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-700 flex items-start gap-2.5 shadow-2xs">
+            <MessageSquare className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
             <div>
-              <span className="font-bold text-emerald-400">Gợi ý lời giảng của giáo viên: </span>
-              <span>{currentSlide.speakerNotes}</span>
+              <span className="font-bold text-emerald-700">Gợi ý lời giảng của giáo viên: </span>
+              <span className="leading-relaxed">{currentSlide.speakerNotes}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Thumbnails */}
+      {/* Danh sách Thumbnails Slide */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         {slides.map((slide, idx) => (
           <button
             key={slide.slideNumber}
             type="button"
             onClick={() => setCurrentIdx(idx)}
-            className={`p-2.5 rounded-xl border text-left transition ${
+            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
               currentIdx === idx
-                ? 'border-blue-500 bg-blue-50 shadow-sm'
+                ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-1 ring-blue-500'
                 : 'border-slate-200 bg-white hover:border-slate-300'
             }`}
           >

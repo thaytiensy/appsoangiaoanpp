@@ -51,7 +51,7 @@ export async function exportLessonToPptx(plan: LessonPlanOutput): Promise<void> 
   for (let i = 1; i < plan.slides.length; i++) {
     const s = plan.slides[i];
     const slide = pptx.addSlide();
-    slide.background = { color: 'F8FAFC' };
+    slide.background = { color: 'FFFFFF' };
 
     // Header thanh tiêu đề
     slide.addShape(pptx.ShapeType.rect, {

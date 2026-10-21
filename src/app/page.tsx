@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, AlertCircle, UploadCloud, Cloud } from 'lucide-react';
+import { Sparkles, AlertCircle, Mail } from 'lucide-react';
 import type { LessonInput, LessonPlanOutput } from '../contracts/app.schema';
 import type { User } from '../contracts/user.schema';
 import { getCurrentUser } from '../services/user-service';
@@ -11,14 +11,12 @@ import { QuickTemplates } from '../components/lesson/quick-templates';
 import { GenerationProgress } from '../components/lesson/generation-progress';
 import { UserProfileButton } from '../components/auth/user-profile-button';
 import { AdminDashboardModal } from '../components/auth/admin-dashboard-modal';
-import { WordUploadModal } from '../components/lesson/word-upload-modal';
-import { CloudDeployModal } from '../components/deploy/cloud-deploy-modal';
+import { ShareModal } from '../components/share/share-modal';
 
 export default function HomePage(): React.JSX.Element {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
-  const [isWordOpen, setIsWordOpen] = useState<boolean>(false);
-  const [isDeployOpen, setIsDeployOpen] = useState<boolean>(false);
+  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [plan, setPlan] = useState<LessonPlanOutput | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +55,7 @@ export default function HomePage(): React.JSX.Element {
   };
 
   return (
-    <main className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <main className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto bg-white">
       {/* Header thanh công cụ & Tác vụ nâng cao */}
       <header className="mb-8">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -69,20 +67,11 @@ export default function HomePage(): React.JSX.Element {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsWordOpen(true)}
+              onClick={() => setIsShareOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition cursor-pointer"
             >
-              <UploadCloud className="w-4 h-4 text-blue-600" />
-              <span>Tải file Word (.docx)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsDeployOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl transition cursor-pointer"
-            >
-              <Cloud className="w-4 h-4 text-indigo-600" />
-              <span>GitHub & Vercel</span>
+              <Mail className="w-4 h-4 text-blue-600" />
+              <span>Chia sẻ miễn phí qua Gmail</span>
             </button>
 
             <UserProfileButton
@@ -98,19 +87,19 @@ export default function HomePage(): React.JSX.Element {
             Hệ thống AI Soạn Giáo Án & Slide PowerPoint Chuẩn Bộ GD
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-            Bộ sách giáo khoa <strong>Kết nối tri thức với cuộc sống</strong> • Bóc tách Word tạo Slide 16:9 • Tự động lọc trùng lặp & đồng bộ GitHub / Vercel.
+            Bộ sách giáo khoa <strong>Kết nối tri thức với cuộc sống</strong> • Giao diện chuẩn nền trắng • Tự động sinh hình ảnh phù hợp nội dung Slide 16:9 • Chia sẻ miễn phí bằng Gmail.
           </p>
         </div>
       </header>
 
       {/* Các Modal Quản trị & Tiện ích */}
       <AdminDashboardModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
-      <WordUploadModal
-        isOpen={isWordOpen}
-        onClose={() => setIsWordOpen(false)}
-        onApplyPlan={(newPlan) => setPlan(newPlan)}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        lessonId={plan?.id || 'general'}
+        lessonTitle={plan?.metadata.topic || 'Hệ thống AI Soạn Giáo Án GDPT 2018'}
       />
-      <CloudDeployModal isOpen={isDeployOpen} onClose={() => setIsDeployOpen(false)} />
 
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-3">

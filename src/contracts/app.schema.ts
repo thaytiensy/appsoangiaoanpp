@@ -61,6 +61,7 @@ export const SlideItemSchema = z.object({
   bulletPoints: z.array(z.string()).min(1, 'Nội dung slide tối thiểu 1 ý'),
   visualNote: z.string().default(''),
   speakerNotes: z.string().default(''),
+  imageUrl: z.string().default(''),
 });
 
 export type SlideItem = z.infer<typeof SlideItemSchema>;

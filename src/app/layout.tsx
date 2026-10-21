@@ -13,8 +13,8 @@ export default function RootLayout({
   children: ReactNode;
 }): React.JSX.Element {
   return (
-    <html lang="vi">
-      <body className="bg-slate-50 text-slate-900 antialiased min-h-screen">
+    <html lang="vi" className="light" style={{ colorScheme: 'light' }}>
+      <body className="bg-white text-slate-900 antialiased min-h-screen">
         {children}
       </body>
     </html>
