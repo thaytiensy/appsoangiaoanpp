@@ -10,6 +10,12 @@ interface TopicVisualCollection {
   readonly images: string[];
 }
 
+const THANK_YOU_IMAGES: string[] = [
+  'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80', // Tri ân & chúc mừng
+  'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=800&q=80', // Hoa tươi rực rỡ
+  'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80', // Lời cảm ơn chân thành
+];
+
 const TOPIC_COLLECTIONS: TopicVisualCollection[] = [
   {
     keywords: ['gia đình', 'nhà', 'bố mẹ', 'cha mẹ', 'ông bà', 'family', 'cả nhà'],
@@ -102,6 +108,14 @@ const DEFAULT_COLLECTION: string[] = [
 ];
 
 export function getSlideImageUrl(ctx: SlideImageContext): string {
+  const lowerTitle = ctx.slideTitle.toLowerCase();
+  
+  // Slide cuối có lời cảm ơn hoặc tổng kết
+  if (lowerTitle.includes('cảm ơn') || lowerTitle.includes('kết thúc') || lowerTitle.includes('chân thành')) {
+    const idx = (ctx.slideNumber - 1) % THANK_YOU_IMAGES.length;
+    return THANK_YOU_IMAGES[idx] || THANK_YOU_IMAGES[0];
+  }
+
   const textToMatch = `${ctx.topic} ${ctx.subject} ${ctx.slideTitle}`.toLowerCase();
 
   // Tìm bộ ảnh phù hợp nhất theo từ khóa chủ đề bài học

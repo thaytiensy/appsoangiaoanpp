@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const LessonInputSchema = z.object({
-  departmentName: z.string().default('Phòng Giáo dục và Đào tạo'),
-  schoolName: z.string().min(1, 'Tên trường không được để trống'),
-  facultyName: z.string().min(1, 'Tổ chuyên môn không được để trống'),
-  teacherName: z.string().min(1, 'Họ tên giáo viên không được để trống'),
+  departmentName: z.string().default(''),
+  schoolName: z.string().default(''),
+  facultyName: z.string().default(''),
+  teacherName: z.string().default(''),
   schoolYear: z.string().default('2026 - 2027'),
   prepareDate: z.string().default(''),
   teachDate: z.string().default(''),

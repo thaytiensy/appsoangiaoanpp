@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
-import { getSubjectsByGrade } from '../constants/curriculum';
 import { LessonInputSchema, type LessonInput } from '../contracts/app.schema';
 import { FormAdminSection } from './form-admin-section';
 import { FormLessonSection } from './form-lesson-section';
@@ -17,20 +16,20 @@ const LOCAL_STORAGE_KEY = 'lesson_planner_teacher_profile';
 
 export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormProps): React.JSX.Element {
   const [formData, setFormData] = useState<LessonInput>({
-    departmentName: 'Phòng GD&ĐT Thành phố',
-    schoolName: 'Trường THCS & THPT Chu Văn An',
-    facultyName: 'Tổ Toán - Tin học',
-    teacherName: 'Thầy Đỗ Tiến Sỹ',
+    departmentName: '',
+    schoolName: '',
+    facultyName: '',
+    teacherName: '',
     schoolYear: '2026 - 2027',
     prepareDate: new Date().toISOString().split('T')[0],
     teachDate: new Date().toISOString().split('T')[0],
-    grade: 6,
+    grade: 1,
     subject: 'Toán học',
     textbook: 'Kết nối tri thức với cuộc sống',
-    periodNumber: 'Tiết 12',
-    durationMinutes: 45,
-    topic: 'Số thập phân và các phép tính',
-    additionalNotes: 'Tích hợp hoạt động thảo luận nhóm và bài tập thực hành ứng dụng thực tế',
+    periodNumber: 'Tiết 1',
+    durationMinutes: 35,
+    topic: '',
+    additionalNotes: '',
   });
 
   useEffect(() => {
@@ -38,7 +37,10 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as Partial<LessonInput>;
-        setFormData((prev) => ({ ...prev, ...parsed }));
+        // Chỉ nạp nếu người dùng đã tự lưu thông tin trước đó
+        if (parsed.schoolName || parsed.teacherName) {
+          setFormData((prev) => ({ ...prev, ...parsed }));
+        }
       }
     } catch {
       // Bỏ qua lỗi localStorage
@@ -55,32 +57,32 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
     const updated = { ...formData, [key]: val };
     setFormData(updated);
     try {
-      localStorage.setItem(
-        LOCAL_STORAGE_KEY,
-        JSON.stringify({
-          departmentName: updated.departmentName,
-          schoolName: updated.schoolName,
-          facultyName: updated.facultyName,
-          teacherName: updated.teacherName,
-          schoolYear: updated.schoolYear,
-        })
-      );
+      const adminProfile = {
+        departmentName: updated.departmentName,
+        schoolName: updated.schoolName,
+        facultyName: updated.facultyName,
+        teacherName: updated.teacherName,
+        schoolYear: updated.schoolYear,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(adminProfile));
     } catch {
-      // Bỏ qua lỗi lưu
+      // Bỏ qua lỗi localStorage
     }
   };
 
-  const handleGradeChange = (newGrade: number): void => {
-    const validSubjects = getSubjectsByGrade(newGrade);
-    const newSubject = validSubjects.includes(formData.subject) ? formData.subject : validSubjects[0];
-    setFormData({ ...formData, grade: newGrade, subject: newSubject });
+  const handleGradeChange = (grade: number): void => {
+    setFormData((prev) => ({
+      ...prev,
+      grade,
+      durationMinutes: grade <= 5 ? 35 : 45,
+    }));
   };
 
   const handleFieldChange = <K extends keyof LessonInput>(key: K, val: LessonInput[K]): void => {
     setFormData((prev) => ({ ...prev, [key]: val }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     const result = LessonInputSchema.safeParse(formData);
     if (result.success) {
@@ -100,7 +102,7 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
         <button
           type="submit"
           disabled={isLoading}
-          className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-medium rounded-xl shadow-md transition transform active:scale-95"
+          className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-medium rounded-xl shadow-md transition transform active:scale-95 cursor-pointer"
         >
           <Sparkles className="w-5 h-5 animate-pulse" />
           <span>{isLoading ? 'AI Đang Soạn Giáo Án & Slide...' : 'Bắt Đầu Soạn Giáo Án & Tạo Slide AI'}</span>

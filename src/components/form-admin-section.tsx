@@ -23,6 +23,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             id="dept-name"
             type="text"
             aria-label="Cơ quan chủ quản"
+            placeholder="ví dụ: Phòng Giáo dục và Đào tạo..."
             value={formData.departmentName}
             onChange={(e) => onChange('departmentName', e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -35,6 +36,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Tên trường"
             required
+            placeholder="ví dụ: Trường PTDTBTTH Lê Quý Đôn..."
             value={formData.schoolName}
             onChange={(e) => onChange('schoolName', e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -47,6 +49,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Tổ chuyên môn"
             required
+            placeholder="ví dụ: Tổ Khối 2, Tổ Toán..."
             value={formData.facultyName}
             onChange={(e) => onChange('facultyName', e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -61,6 +64,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Họ tên giáo viên"
             required
+            placeholder="ví dụ: Thầy Đỗ Tiến Sỹ..."
             value={formData.teacherName}
             onChange={(e) => onChange('teacherName', e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-slate-800"
@@ -72,6 +76,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             id="school-year"
             type="text"
             aria-label="Năm học"
+            placeholder="2026 - 2027"
             value={formData.schoolYear}
             onChange={(e) => onChange('schoolYear', e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"

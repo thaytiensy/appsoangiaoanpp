@@ -67,8 +67,8 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
       slideNumber: 1,
       title: `${metadata.topic}`,
       bulletPoints: [
-        `Môn học: ${metadata.subject} - Lớp ${metadata.grade}`,
-        `Bộ sách: ${metadata.textbook}`,
+        'CHÀO MỪNG QUÝ THẦY CÔ VÀ CÁC EM HỌC SINH THAM DỰ TIẾT HỌC!',
+        `Môn học: ${metadata.subject} - Lớp ${metadata.grade} | Bộ sách: ${metadata.textbook}`,
         `Giáo viên: ${metadata.teacherName}`,
         `Đơn vị: ${metadata.schoolName}`,
       ],
@@ -110,6 +110,17 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
     },
     {
       slideNumber: 5,
+      title: 'Phân Tích Chi Tiết & Ví Dụ Minh Họa',
+      bulletPoints: [
+        'Phân tích chi tiết ví dụ điển hình của bài học.',
+        'Hướng dẫn các bước giải quyết bài toán tiêu chuẩn.',
+        'Lưu ý các sai sót học sinh thường mắc phải.',
+      ],
+      visualNote: 'Bảng quy tắc mẫu và các bước thực hành rõ ràng',
+      speakerNotes: 'Thầy sẽ cùng các em phân tích chi tiết ví dụ mẫu này.',
+    },
+    {
+      slideNumber: 6,
       title: 'Hoạt Động 3: Luyện Tập & Thực Hành',
       bulletPoints: [
         'Vận dụng công thức/kiến thức để giải bài tập.',
@@ -120,7 +131,7 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
       speakerNotes: 'Các em có 7 phút làm bài vào vở, sau đó thầy gọi 2 bạn lên bảng.',
     },
     {
-      slideNumber: 6,
+      slideNumber: 7,
       title: 'Hoạt Động 4: Vận Dụng & Dặn Dò',
       bulletPoints: [
         'Ứng dụng kiến thức vào tình huống thực tế cuộc sống.',
@@ -130,10 +141,26 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
       visualNote: 'Hình ảnh ứng dụng thực tế phong phú và danh sách nhiệm vụ về nhà',
       speakerNotes: 'Về nhà các em nhớ hoàn thiện bài tập và chuẩn bị kỹ bài cho tiết sau nhé.',
     },
+    {
+      slideNumber: 8,
+      title: 'CHÂN THÀNH CẢM ƠN QUÝ THẦY CÔ VÀ CÁC EM!',
+      bulletPoints: [
+        'Trân trọng cảm ơn quý Thầy Cô đã dành thời gian về tham dự giờ dạy.',
+        'Biểu dương tinh thần học tập tích cực, sáng tạo của cả lớp.',
+        'Dặn dò: Ôn tập kỹ bài học, hoàn thành bài tập về nhà và đọc trước bài mới.',
+        'Kính chúc quý Thầy Cô nhiều sức khỏe - Chúc các em luôn chăm ngoan, học giỏi!',
+      ],
+      visualNote: 'Hình ảnh hoa tươi rực rỡ, thông điệp tri ân và lời chúc tốt đẹp.',
+      speakerNotes: 'Tiết học của chúng ta đến đây xin được khép lại. Chân thành cảm ơn quý Thầy Cô và các em học sinh. Hẹn gặp lại các em!',
+    },
   ];
 
   const slides: SlideItem[] = rawSlides.map((s) => ({
     ...s,
+    title: normalizeNfc(s.title),
+    bulletPoints: s.bulletPoints.map((bp) => normalizeNfc(bp)),
+    visualNote: normalizeNfc(s.visualNote),
+    speakerNotes: normalizeNfc(s.speakerNotes),
     imageUrl: getSlideImageUrl({
       subject: metadata.subject,
       topic: metadata.topic,
@@ -146,14 +173,14 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
     id: `plan-word-${Date.now()}`,
     metadata,
     objectives: {
-      knowledge: parsed.sections.objectives,
-      coreCompetencies: 'Năng lực tự chủ và tự học, năng lực giao tiếp và hợp tác, năng lực giải quyết vấn đề.',
-      specificCompetencies: `Năng lực đặc thù môn ${metadata.subject} theo chuẩn GDPT 2018.`,
-      qualities: 'Chăm chỉ, trung thực, trách nhiệm và say mê tìm tòi sáng tạo.',
+      knowledge: normalizeNfc(parsed.sections.objectives),
+      coreCompetencies: normalizeNfc('Năng lực tự chủ và tự học, năng lực giao tiếp và hợp tác, năng lực giải quyết vấn đề.'),
+      specificCompetencies: normalizeNfc(`Năng lực đặc thù môn ${metadata.subject} theo chuẩn GDPT 2018.`),
+      qualities: normalizeNfc('Chăm chỉ, trung thực, trách nhiệm và say mê tìm tòi sáng tạo.'),
     },
     materials: {
-      teacherPreparation: parsed.sections.materials,
-      studentPreparation: 'Sách giáo khoa Kết nối tri thức, vở ghi, đồ dùng học tập đầy đủ.',
+      teacherPreparation: normalizeNfc(parsed.sections.materials),
+      studentPreparation: normalizeNfc('Sách giáo khoa Kết nối tri thức, vở ghi, đồ dùng học tập đầy đủ.'),
     },
     activities,
     slides,

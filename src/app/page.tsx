@@ -12,6 +12,7 @@ import { GenerationProgress } from '../components/lesson/generation-progress';
 import { UserProfileButton } from '../components/auth/user-profile-button';
 import { AdminDashboardModal } from '../components/auth/admin-dashboard-modal';
 import { ShareModal } from '../components/share/share-modal';
+import { WordUploadCard } from '../components/lesson/word-upload-card';
 
 export default function HomePage(): React.JSX.Element {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -55,7 +56,7 @@ export default function HomePage(): React.JSX.Element {
   };
 
   return (
-    <main className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto bg-white">
+    <main className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto bg-white font-sans">
       {/* Header thanh công cụ & Tác vụ nâng cao */}
       <header className="mb-8">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -125,6 +126,7 @@ export default function HomePage(): React.JSX.Element {
         ) : (
           <>
             <QuickTemplates onSelect={(preset) => setSelectedPreset(preset)} />
+            <WordUploadCard onApplyPlan={(newPlan) => setPlan(newPlan)} />
             <LessonForm
               onSubmit={handleGenerate}
               isLoading={isLoading}

@@ -5,14 +5,14 @@ const CURRENT_USER_KEY = 'lesson_planner_current_user';
 
 export const INITIAL_USERS: readonly User[] = [
   {
-    id: 'user_1',
-    name: 'Thầy Đỗ Tiến Sỹ',
-    email: 'tiensy.edu@gmail.com',
-    avatar: '👨‍🏫',
-    school: 'Trường THCS & THPT Chu Văn An',
-    subject: 'Toán học',
+    id: 'user_admin',
+    name: 'admin',
+    email: 'chuotbachchise@gmail.com',
+    avatar: '🛡️',
+    school: 'Hệ thống Quản trị Giáo dục Toàn quốc',
+    subject: 'Quản trị viên',
     role: 'admin',
-    lessonPlansCreated: 38,
+    lessonPlansCreated: 52,
     lastActive: 'Vừa xong',
   },
   {
@@ -48,17 +48,6 @@ export const INITIAL_USERS: readonly User[] = [
     lessonPlansCreated: 31,
     lastActive: '15/10/2026',
   },
-  {
-    id: 'user_5',
-    name: 'Thầy Phạm Quốc Hưng',
-    email: 'hungpham.su@gmail.com',
-    avatar: '👨‍🏫',
-    school: 'Trường THCS Trưng Vương',
-    subject: 'Lịch sử và Địa lí',
-    role: 'teacher',
-    lessonPlansCreated: 15,
-    lastActive: '12/10/2026',
-  },
 ];
 
 export function getUsers(): User[] {
@@ -69,7 +58,15 @@ export function getUsers(): User[] {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
       return [...INITIAL_USERS];
     }
-    return JSON.parse(data) as User[];
+    const parsed = JSON.parse(data) as User[];
+    // Đảm bảo admin chuotbachchise@gmail.com luôn có mặt
+    const hasAdmin = parsed.some((u) => u.email.toLowerCase() === 'chuotbachchise@gmail.com');
+    if (!hasAdmin) {
+      const merged = [INITIAL_USERS[0], ...parsed];
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    }
+    return parsed;
   } catch {
     return [...INITIAL_USERS];
   }
@@ -79,8 +76,14 @@ export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return INITIAL_USERS[0];
   try {
     const data = localStorage.getItem(CURRENT_USER_KEY);
-    if (data) return JSON.parse(data) as User;
-    // Mặc định đăng nhập với tài khoản Admin Thầy Đỗ Tiến Sỹ
+    if (data) {
+      const u = JSON.parse(data) as User;
+      if (u.email.toLowerCase() === 'chuotbachchise@gmail.com') {
+        return { ...u, name: 'admin', role: 'admin' };
+      }
+      return u;
+    }
+    // Mặc định đăng nhập tài khoản admin: chuotbachchise@gmail.com
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(INITIAL_USERS[0]));
     return INITIAL_USERS[0];
   } catch {
@@ -90,32 +93,52 @@ export function getCurrentUser(): User | null {
 
 export function loginWithGmail(email: string, name: string, role: UserRole = 'teacher'): User {
   const users = getUsers();
-  const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const lowerEmail = email.trim().toLowerCase();
+  const isAdminEmail = lowerEmail === 'chuotbachchise@gmail.com';
+  const effectiveRole: UserRole = isAdminEmail ? 'admin' : role;
+  const effectiveName = isAdminEmail ? 'admin' : (name.trim() || 'Giáo viên');
+
+  const existing = users.find((u) => u.email.toLowerCase() === lowerEmail);
 
   if (existing) {
-    const updated = { ...existing, lastActive: 'Vừa xong' };
+    const updated: User = {
+      ...existing,
+      name: effectiveName,
+      role: effectiveRole,
+      lastActive: 'Vừa xong',
+    };
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updated));
     return updated;
   }
 
   const newUser: User = {
     id: `user_${Date.now()}`,
-    name,
-    email,
-    avatar: role === 'admin' ? '👨‍💼' : '👨‍🏫',
-    school: 'Trường THCS & THPT Chu Văn An',
-    subject: 'Toán học',
-    role,
+    name: effectiveName,
+    email: lowerEmail,
+    avatar: effectiveRole === 'admin' ? '🛡️' : '👨‍🏫',
+    school: effectiveRole === 'admin' ? 'Hệ thống Quản trị Giáo dục Toàn quốc' : 'Trường Tiểu học & THCS',
+    subject: effectiveRole === 'admin' ? 'Quản trị viên' : 'Giáo viên bộ môn',
+    role: effectiveRole,
     lessonPlansCreated: 1,
     lastActive: 'Vừa xong',
   };
 
   const updatedList = [newUser, ...users];
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedList));
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedList));
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+  } catch {
+    // Bỏ qua lỗi localStorage
+  }
+
   return newUser;
 }
 
 export function logoutUser(): void {
-  localStorage.removeItem(CURRENT_USER_KEY);
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  } catch {
+    // Bỏ qua lỗi
+  }
 }
