@@ -1,15 +1,18 @@
 {
   "status": "success",
-  "task": "Nâng cấp giao diện trắng sạch, ô nhập trắng, admin chuotbachchise@gmail.com, slide 8 thẻ chi tiết kèm lời chào mừng và cảm ơn, ô tải file Word",
+  "task": "Tích hợp đa động cơ AI vào ứng dụng (Google Gemini, OpenAI ChatGPT, Anthropic Claude, DeepSeek, AI Sư Phạm Tích Hợp) cho người dùng tự do lựa chọn theo ý thích",
   "attempt": 1,
   "files_modified": [
-    "src/components/form-admin-section.tsx",
+    "src/contracts/app.schema.ts",
+    "src/constants/ai-models.ts",
+    "src/services/ai-router.ts",
+    "src/components/ai/form-ai-section.tsx",
     "src/components/lesson-form.tsx",
-    "src/services/user-service.ts",
-    "src/app/page.tsx",
-    "src/app/api/lesson-plan/route.ts",
+    "src/components/lesson-result.tsx",
     "src/services/pedagogical-generator.ts",
+    "src/services/word-parser.ts",
     "src/services/word-to-plan.ts",
+    "src/app/api/lesson-plan/route.ts",
     "scripts/visual-check.ts",
     "PROJECT_STATE.md"
   ],
