@@ -2,6 +2,7 @@ import type { LessonPlanOutput, PedagogicalActivity, SlideItem } from '../contra
 import type { ParsedWordResult } from './word-parser';
 import { convertParsedToLessonInput } from './word-parser';
 import { getSlideImageUrl } from './slide-image-service';
+import { normalizeNfc } from './text-normalizer';
 
 export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
   const metadata = convertParsedToLessonInput(parsed);

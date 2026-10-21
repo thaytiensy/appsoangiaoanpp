@@ -126,7 +126,11 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
       {activeTab === 'khbd' ? (
         <EditableKhbd plan={plan} onUpdatePlan={onUpdatePlan} />
       ) : (
-        <EditableSlides slides={plan.slides} />
+        <EditableSlides
+          slides={plan.slides}
+          subject={plan.metadata.subject}
+          topic={plan.metadata.topic}
+        />
       )}
     </div>
   );

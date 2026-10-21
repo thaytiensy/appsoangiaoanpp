@@ -1,85 +1,97 @@
 import type { LessonInput, LessonPlanOutput } from '../contracts/app.schema';
 import { getSlideImageUrl } from './slide-image-service';
+import { normalizeNfc } from './text-normalizer';
 
 export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
   const isElementary = input.grade <= 5;
-  const standardTitle = isElementary ? 'CÔNG VĂN 2345/BGDĐT-GDTH' : 'CÔNG VĂN 5512/BGDĐT-GDTrH';
+  const standardDoc = isElementary ? 'CÔNG VĂN 2345/BGDĐT-GDTH' : 'CÔNG VĂN 5512/BGDĐT-GDTrH';
+  const act1Name = isElementary ? 'Hoạt động 1: Khởi động (Kết nối bài học)' : 'Hoạt động 1: Mở đầu / Khởi động';
+  const act2Name = isElementary ? 'Hoạt động 2: Khám phá (Hình thành kiến thức mới)' : 'Hoạt động 2: Hình thành kiến thức mới';
+  const act3Name = isElementary ? 'Hoạt động 3: Luyện tập, thực hành' : 'Hoạt động 3: Luyện tập & Củng cố';
+  const act4Name = isElementary ? 'Hoạt động 4: Vận dụng, trải nghiệm' : 'Hoạt động 4: Vận dụng & Mở rộng';
+
+  const cleanTopic = normalizeNfc(input.topic);
+  const cleanSubject = normalizeNfc(input.subject);
 
   const rawSlides = [
     {
       slideNumber: 1,
-      title: `${input.topic.toUpperCase()}`,
+      title: `${cleanTopic.toUpperCase()}`,
       bulletPoints: [
-        `Môn: ${input.subject} - Khối: Lớp ${input.grade}`,
+        `Môn: ${cleanSubject} - Khối: Lớp ${input.grade}`,
         `Bộ sách: ${input.textbook}`,
         `Giáo viên giảng dạy: ${input.teacherName}`,
         `Đơn vị: ${input.schoolName}`,
       ],
-      visualNote: `Hình nền nhận diện thương hiệu bộ sách ${input.textbook}, biểu trưng môn ${input.subject}.`,
-      speakerNotes: `Chào mừng toàn thể quý Thầy Cô và các em học sinh đến với tiết học ${input.subject} hôm nay.`,
+      visualNote: `Hình ảnh minh họa chân thực chủ đề ${cleanTopic}, phong cách sư phạm chuẩn 16:9.`,
+      speakerNotes: `Chào mừng toàn thể quý Thầy Cô và các em học sinh đến với tiết học ${cleanSubject} hôm nay.`,
     },
     {
       slideNumber: 2,
       title: 'MỤC TIÊU BÀI HỌC',
       bulletPoints: [
-        `Kiến thức: Nắm vững cốt lõi bài học "${input.topic}"`,
-        `Năng lực: Rèn luyện năng lực tự học, hợp tác và giải quyết vấn đề`,
-        `Phẩm chất: Phát triển tính chăm chỉ, trách nhiệm và tư duy khoa học`,
+        `Kiến thức: Làm chủ kiến thức trọng tâm bài học "${cleanTopic}"`,
+        `Năng lực: Rèn luyện năng lực tự chủ, giải quyết vấn đề và hợp tác nhóm`,
+        `Phẩm chất: Bồi dưỡng tinh thần trách nhiệm, yêu thích khám phá và chăm chỉ`,
       ],
-      visualNote: `Sơ đồ hình phễu hoặc 3 khối thẻ màu sắc tương phản nổi bật.`,
-      speakerNotes: `Trong bài học này, chúng ta sẽ cùng nhau hoàn thành 3 mục tiêu trọng tâm sau đây.`,
+      visualNote: 'Sơ đồ mục tiêu 3 thành phần: Kiến thức, Năng lực và Phẩm chất.',
+      speakerNotes: `Trong bài học này, chúng ta sẽ cùng nhau thực hiện 3 mục tiêu cốt lõi sau.`,
     },
     {
       slideNumber: 3,
-      title: '1. KHỞI ĐỘNG: KHÁM PHÁ TÌNH HUỐNG',
+      title: `${act1Name.toUpperCase()}`,
       bulletPoints: [
-        `Tình huống thực tế dẫn nhập vào bài mới`,
-        `Câu hỏi gợi mở: Quan sát và tìm mối liên hệ`,
-        `Thời gian suy nghĩ và trao đổi cặp: 2 phút`,
+        `Quan sát hình ảnh thực tiễn mở đầu bài học "${cleanTopic}"`,
+        `Nêu cảm nhận và phát hiện tình huống cần giải quyết`,
+        `Thảo luận nhanh cặp đôi trong thời gian 2 - 3 phút`,
       ],
-      visualNote: `Hình ảnh minh họa tình huống sinh động, câu hỏi đặt trong khung hội thoại nổi bật.`,
-      speakerNotes: `Các em hãy cùng quan sát hình ảnh trên màn chiếu và suy nghĩ giải quyết tình huống sau.`,
+      visualNote: `Hình ảnh tình huống gợi mở sinh động về ${cleanTopic}.`,
+      speakerNotes: `Thầy/cô mời các em quan sát màn chiếu và suy nghĩ trả lời câu hỏi khởi động.`,
     },
     {
       slideNumber: 4,
-      title: '2. HÌNH THÀNH KIẾN THỨC MỚI',
+      title: `${act2Name.toUpperCase()}`,
       bulletPoints: [
-        `Khái niệm và quy tắc trọng tâm của "${input.topic}"`,
-        `Ví dụ minh họa chi tiết và các trường hợp đặc biệt`,
-        `Ghi nhớ cốt lõi theo SGK ${input.textbook}`,
+        `Khám phá nội dung trọng tâm và bản chất của "${cleanTopic}"`,
+        `Thực hiện nhiệm vụ học tập trên Phiếu học tập số 1`,
+        `Rút ra quy tắc, kết luận cốt lõi ghi nhớ vào vở`,
       ],
-      visualNote: `Bảng so sánh 2 cột hoặc khối hộp công thức/quy tắc được viền sáng.`,
-      speakerNotes: `Đây là nội dung cốt lõi của bài học, thầy/cô mời các em chú ý theo dõi các bước chứng minh.`,
+      visualNote: 'Bảng tổng hợp hoặc sơ đồ kiến thức cốt lõi.',
+      speakerNotes: `Đây là phần trọng tâm của bài học, các nhóm tập trung thảo luận và hoàn thiện sản phẩm.`,
     },
     {
       slideNumber: 5,
-      title: '3. LUYỆN TẬP & BÀI TẬP THỰC HÀNH',
+      title: `${act3Name.toUpperCase()}`,
       bulletPoints: [
-        `Bài tập 1: Bài tập nhận biết và củng cố nhanh`,
-        `Bài tập 2: Vận dụng quy tắc giải quyết bài toán tiêu chuẩn`,
-        `Lưu ý các lỗi sai thường gặp khi làm bài`,
+        `Vận dụng kiến thức giải quyết bài tập thực hành`,
+        `Rèn luyện kỹ năng thực hành và thảo luận đối chiếu kết quả`,
+        `Chỉnh sửa và lưu ý các điểm cần tránh khi làm bài`,
       ],
-      visualNote: `Khung bài tập chia 2 cột Đề bài và Gợi ý các bước giải quyết.`,
-      speakerNotes: `Bây giờ chúng ta sẽ cùng áp dụng kiến thức vừa học vào làm các bài tập sau vào vở.`,
+      visualNote: 'Khung bài tập thực hành chia các bước giải tiêu chuẩn.',
+      speakerNotes: `Bây giờ các em sẽ thực hành vận dụng vào các bài tập theo phiếu học tập số 2.`,
     },
     {
       slideNumber: 6,
-      title: '4. VẬN DỤNG & DẶN DÒ VỀ NHÀ',
+      title: `${act4Name.toUpperCase()}`,
       bulletPoints: [
-        `Nhiệm vụ thực tế liên hệ kiến thức với đời sống hàng ngày`,
-        `Ôn tập lại các nội dung đã học trong bài`,
-        `Đọc và chuẩn bị trước nội dung bài học tiết sau`,
+        `Liên hệ thực tế đời sống xung quanh chủ đề "${cleanTopic}"`,
+        `Thực hiện dự án nhỏ / bài tập sáng tạo tại gia đình`,
+        `Chuẩn bị dụng cụ và học liệu cho tiết học tiếp theo`,
       ],
-      visualNote: `Icon ngôi sao thành tích, đồng hồ nhắc nhở và hình ảnh ứng dụng thực tế.`,
-      speakerNotes: `Bài học hôm nay khép lại tại đây, các em nhớ hoàn thành nhiệm vụ vận dụng tại nhà.`,
+      visualNote: 'Hình ảnh ứng dụng thực tế phong phú trong đời sống gia đình và xã hội.',
+      speakerNotes: `Về nhà các em nhớ hoàn thành nhiệm vụ vận dụng và chia sẻ cùng người thân nhé.`,
     },
   ];
 
   const slides = rawSlides.map((s) => ({
     ...s,
+    title: normalizeNfc(s.title),
+    bulletPoints: s.bulletPoints.map((bp) => normalizeNfc(bp)),
+    visualNote: normalizeNfc(s.visualNote),
+    speakerNotes: normalizeNfc(s.speakerNotes),
     imageUrl: getSlideImageUrl({
-      subject: input.subject,
-      topic: input.topic,
+      subject: cleanSubject,
+      topic: cleanTopic,
       slideTitle: s.title,
       slideNumber: s.slideNumber,
     }),
@@ -87,68 +99,72 @@ export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
 
   return {
     id: `lp_${Date.now()}`,
-    metadata: input,
+    metadata: {
+      ...input,
+      topic: cleanTopic,
+      subject: cleanSubject,
+    },
     objectives: {
-      knowledge: `Học sinh nắm vững các khái niệm, quy tắc và bản chất cốt lõi của chủ đề "${input.topic}"; vận dụng thành thạo vào giải quyết các bài tập và tình huống học tập theo yêu cầu cần đạt của Chương trình GDPT 2018 bộ sách ${input.textbook}.`,
-      coreCompetencies: `Năng lực tự chủ và tự học (tự giác tìm hiểu tài liệu SGK); Năng lực giao tiếp và hợp tác (thảo luận nhóm tích cực); Năng lực giải quyết vấn đề và sáng tạo (đề xuất cách làm mới).`,
-      specificCompetencies: `Năng lực đặc thù bộ môn ${input.subject}: tư duy ngôn ngữ/toán học/khoa học, mô hình hóa tình huống thực tiễn, phân tích dữ liệu và trình bày logic sản phẩm học tập.`,
-      qualities: `Chăm chỉ, trung thực trong học tập; tinh thần trách nhiệm trong làm việc nhóm; tình yêu khoa học và ý thức vận dụng tri thức vào đời sống.`,
+      knowledge: normalizeNfc(`Học sinh nắm vững các khái niệm, quy tắc và bản chất cốt lõi của chủ đề "${cleanTopic}"; vận dụng thành thạo vào giải quyết các bài tập và tình huống học tập theo yêu cầu cần đạt của Chương trình GDPT 2018 bộ sách ${input.textbook}.`),
+      coreCompetencies: normalizeNfc(`Năng lực tự chủ và tự học (tự giác tìm hiểu tài liệu SGK); Năng lực giao tiếp và hợp tác (thảo luận nhóm tích cực); Năng lực giải quyết vấn đề và sáng tạo (đề xuất cách làm mới).`),
+      specificCompetencies: normalizeNfc(`Năng lực đặc thù bộ môn ${cleanSubject}: tư duy môn học, mô hình hóa tình huống thực tiễn, phân tích dữ liệu và trình bày logic sản phẩm học tập.`),
+      qualities: normalizeNfc(`Chăm chỉ, trung thực trong học tập; tinh thần trách nhiệm trong làm việc nhóm; tình yêu khoa học và ý thức vận dụng tri thức vào đời sống.`),
     },
     materials: {
-      teacherPreparation: `Kế hoạch bài dạy (${standardTitle}); Bài giảng điện tử PowerPoint 16:9; Phiếu học tập số 1, 2; Thiết bị dạy học và hình ảnh minh họa SGK ${input.textbook}.`,
-      studentPreparation: `Sách giáo khoa ${input.subject} Lớp ${input.grade} (${input.textbook}); Vở ghi chép; Đồ dùng học tập; Đọc trước nội dung bài "${input.topic}".`,
+      teacherPreparation: normalizeNfc(`Kế hoạch bài dạy (${standardDoc}); Bài giảng điện tử PowerPoint 16:9; Phiếu học tập số 1, 2; Thiết bị dạy học và hình ảnh minh họa SGK ${input.textbook}.`),
+      studentPreparation: normalizeNfc(`Sách giáo khoa ${cleanSubject} Lớp ${input.grade} (${input.textbook}); Vở ghi chép; Đồ dùng học tập; Đọc trước nội dung bài "${cleanTopic}".`),
     },
     activities: [
       {
-        stepName: 'Hoạt động 1: Mở đầu / Khởi động',
+        stepName: act1Name,
         duration: '5 - 7 phút',
-        objective: `Kích hoạt kiến thức nền tảng, tạo tâm thế hào hứng và nhu cầu nhận thức khám phá bài học "${input.topic}".`,
-        content: `Giáo viên đưa ra tình huống thực tế / câu đố / trò chơi học tập liên quan đến nội dung "${input.topic}".`,
-        product: `Câu trả lời của học sinh, sự hào hứng và tâm thế sẵn sàng tiếp nhận nhiệm vụ học tập mới.`,
+        objective: normalizeNfc(`Kích hoạt kiến thức nền tảng, tạo tâm thế hào hứng và nhu cầu nhận thức khám phá bài học "${cleanTopic}".`),
+        content: normalizeNfc(`Giáo viên đưa ra tình huống thực tế / trò chơi học tập liên quan đến nội dung "${cleanTopic}".`),
+        product: normalizeNfc(`Câu trả lời của học sinh, sự hào hứng và tâm thế sẵn sàng tiếp nhận nhiệm vụ học tập mới.`),
         implementation: {
-          transferTask: `GV trình chiếu Slide khởi động, nêu tình huống/câu hỏi gợi mở và phổ biến thể lệ thảo luận nhanh theo cặp.`,
-          performTask: `HS quan sát, suy nghĩ cá nhân trong 1 phút, sau đó thảo luận nhanh cùng bạn bên cạnh để tìm câu trả lời.`,
-          reportDiscuss: `GV mời đại diện 2 - 3 cặp HS trình bày câu trả lời; các học sinh khác lắng nghe, nhận xét và bổ sung ý kiến.`,
-          concludeJudge: `GV nhận xét, tuyên dương các câu trả lời sáng tạo, khéo léo dẫn dắt kết nối trực tiếp vào bài mới: "${input.topic}".`,
+          transferTask: normalizeNfc(`GV trình chiếu Slide khởi động, nêu tình huống/câu hỏi gợi mở và phổ biến thể lệ thảo luận nhanh theo cặp.`),
+          performTask: normalizeNfc(`HS quan sát, suy nghĩ cá nhân trong 1 phút, sau đó thảo luận nhanh cùng bạn bên cạnh để tìm câu trả lời.`),
+          reportDiscuss: normalizeNfc(`GV mời đại diện 2 - 3 cặp HS trình bày câu trả lời; các học sinh khác lắng nghe, nhận xét và bổ sung ý kiến.`),
+          concludeJudge: normalizeNfc(`GV nhận xét, tuyên dương các câu trả lời sáng tạo, khéo léo dẫn dắt kết nối trực tiếp vào bài mới: "${cleanTopic}".`),
         },
       },
       {
-        stepName: 'Hoạt động 2: Hình thành kiến thức mới',
+        stepName: act2Name,
         duration: '20 - 25 phút',
-        objective: `Học sinh chủ động khám phá, chiếm lĩnh định nghĩa, quy tắc và kiến thức trọng tâm của bài học.`,
-        content: `Nghiên cứu tài liệu SGK ${input.textbook}, thực hiện các câu hỏi khám phá và hoàn thành Phiếu học tập số 1.`,
-        product: `Nội dung hoàn chỉnh trên Phiếu học tập số 1, vở ghi cá nhân và phần trình bày bảng nhóm của học sinh.`,
+        objective: normalizeNfc(`Học sinh chủ động khám phá, chiếm lĩnh định nghĩa, quy tắc và kiến thức trọng tâm của bài học.`),
+        content: normalizeNfc(`Nghiên cứu tài liệu SGK ${input.textbook}, thực hiện các câu hỏi khám phá và hoàn thành Phiếu học tập số 1.`),
+        product: normalizeNfc(`Nội dung hoàn chỉnh trên Phiếu học tập số 1, vở ghi cá nhân và phần trình bày bảng nhóm của học sinh.`),
         implementation: {
-          transferTask: `GV chia lớp thành các nhóm (4 - 6 HS), phát Phiếu học tập số 1 và giao nhiệm vụ nghiên cứu SGK tìm hiểu các nội dung trọng tâm.`,
-          performTask: `Các nhóm phân công nhiệm vụ, đọc tài liệu, trao đổi, phản biện và thống nhất ghi kết quả thảo luận vào bảng nhóm.`,
-          reportDiscuss: `Đại diện 1 nhóm lên bảng trình bày kết quả; các nhóm khác đối chiếu, đặt câu hỏi phản biện và bổ sung.`,
-          concludeJudge: `GV nhận xét quá trình làm việc của các nhóm, chính xác hóa kiến thức, chốt lại quy tắc/kết luận quan trọng để HS ghi vở.`,
+          transferTask: normalizeNfc(`GV chia lớp thành các nhóm (4 - 6 HS), phát Phiếu học tập số 1 và giao nhiệm vụ nghiên cứu SGK tìm hiểu các nội dung trọng tâm.`),
+          performTask: normalizeNfc(`Các nhóm phân công nhiệm vụ, đọc tài liệu, trao đổi, phản biện và thống nhất ghi kết quả thảo luận vào bảng nhóm.`),
+          reportDiscuss: normalizeNfc(`Đại diện 1 nhóm lên bảng trình bày kết quả; các nhóm khác đối chiếu, đặt câu hỏi phản biện và bổ sung.`),
+          concludeJudge: normalizeNfc(`GV nhận xét quá trình làm việc của các nhóm, chính xác hóa kiến thức, chốt lại quy tắc/kết luận quan trọng để HS ghi vở.`),
         },
       },
       {
-        stepName: 'Hoạt động 3: Luyện tập & Củng cố',
+        stepName: act3Name,
         duration: '8 - 10 phút',
-        objective: `Học sinh củng cố kiến thức vừa học, rèn luyện kỹ năng thực hành giải các bài tập mẫu và bài tập phân hóa.`,
-        content: `Hệ thống bài tập trắc nghiệm nhanh và bài tập tự luận cơ bản trong SGK ${input.textbook}.`,
-        product: `Bài làm chính xác của học sinh trong vở bài tập, kết quả phản hồi trên bảng phụ hoặc thẻ trắc nghiệm.`,
+        objective: normalizeNfc(`Học sinh củng cố kiến thức vừa học, rèn luyện kỹ năng thực hành giải các bài tập mẫu và bài tập phân hóa.`),
+        content: normalizeNfc(`Hệ thống bài tập trắc nghiệm nhanh và bài tập tự luận cơ bản trong SGK ${input.textbook}.`),
+        product: normalizeNfc(`Bài làm chính xác của học sinh trong vở bài tập, kết quả phản hồi trên bảng phụ hoặc thẻ trắc nghiệm.`),
         implementation: {
-          transferTask: `GV giao hệ thống bài tập luyện tập từ dễ đến nâng cao, yêu cầu học sinh làm độc lập vào vở.`,
-          performTask: `HS làm bài cá nhân; GV đi quan sát, hướng dẫn kịp thời cho những học sinh gặp khó khăn.`,
-          reportDiscuss: `GV gọi học sinh lên bảng chữa bài, yêu cầu giải thích rõ các bước thực hiện; cả lớp theo dõi và nhận xét.`,
-          concludeJudge: `GV chốt đáp án đúng, chỉ rõ các lỗi sai thường gặp cần tránh và tuyên dương các bài làm chuẩn xác.`,
+          transferTask: normalizeNfc(`GV giao hệ thống bài tập luyện tập từ dễ đến nâng cao, yêu cầu học sinh làm độc lập vào vở.`),
+          performTask: normalizeNfc(`HS làm bài cá nhân; GV đi quan sát, hướng dẫn kịp thời cho những học sinh gặp khó khăn.`),
+          reportDiscuss: normalizeNfc(`GV gọi học sinh lên bảng chữa bài, yêu cầu giải thích rõ các bước thực hiện; cả lớp theo dõi và nhận xét.`),
+          concludeJudge: normalizeNfc(`GV chốt đáp án đúng, chỉ rõ các lỗi sai thường gặp cần tránh và tuyên dương các bài làm chuẩn xác.`),
         },
       },
       {
-        stepName: 'Hoạt động 4: Vận dụng & Mở rộng',
+        stepName: act4Name,
         duration: '3 - 5 phút',
-        objective: `Vận dụng kiến thức bài học để giải quyết vấn đề trong thực tế đời sống; phát triển tư duy sáng tạo.`,
-        content: `Nhiệm vụ thực hành / dự án nhỏ vận dụng kiến thức "${input.topic}" vào cuộc sống gia đình và xã hội.`,
-        product: `Sản phẩm tìm tòi, bài viết thu hoạch hoặc báo cáo ngắn gọn nộp vào tiết học tiếp theo.`,
+        objective: normalizeNfc(`Vận dụng kiến thức bài học để giải quyết vấn đề trong thực tế đời sống; phát triển tư duy sáng tạo.`),
+        content: normalizeNfc(`Nhiệm vụ thực hành / dự án nhỏ vận dụng kiến thức "${cleanTopic}" vào cuộc sống gia đình và xã hội.`),
+        product: normalizeNfc(`Sản phẩm tìm tòi, bài viết thu hoạch hoặc báo cáo ngắn gọn nộp vào tiết học tiếp theo.`),
         implementation: {
-          transferTask: `GV giao nhiệm vụ vận dụng thực tế về nhà; hướng dẫn tiêu chí đánh giá sản phẩm và cách thức thu thập dữ liệu.`,
-          performTask: `HS ghi chép nhiệm vụ vào vở, lập kế hoạch thực hiện tại nhà cùng sự hỗ trợ của người thân hoặc nhóm bạn.`,
-          reportDiscuss: `HS sẽ nộp sản phẩm hoặc báo cáo ngắn gọn vào đầu tiết học tiếp theo.`,
-          concludeJudge: `GV dặn dò học sinh chuẩn bị bài học mới, hướng dẫn tài liệu đọc thêm trên trang học liệu điện tử.`,
+          transferTask: normalizeNfc(`GV giao nhiệm vụ vận dụng thực tế về nhà; hướng dẫn tiêu chí đánh giá sản phẩm và cách thức thu thập dữ liệu.`),
+          performTask: normalizeNfc(`HS ghi chép nhiệm vụ vào vở, lập kế hoạch thực hiện tại nhà cùng sự hỗ trợ của người thân hoặc nhóm bạn.`),
+          reportDiscuss: normalizeNfc(`HS sẽ nộp sản phẩm hoặc báo cáo ngắn gọn vào đầu tiết học tiếp theo.`),
+          concludeJudge: normalizeNfc(`GV dặn dò học sinh chuẩn bị bài học mới, hướng dẫn tài liệu đọc thêm trên trang học liệu điện tử.`),
         },
       },
     ],

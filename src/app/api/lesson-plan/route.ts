@@ -3,17 +3,23 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LessonInputSchema, LessonPlanOutputSchema, type LessonPlanOutput } from '@/contracts/app.schema';
 import { generatePedagogicalPlan } from '@/services/pedagogical-generator';
 import { getSlideImageUrl } from '@/services/slide-image-service';
+import { normalizeNfc } from '@/services/text-normalizer';
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
     const rawBody: unknown = await req.json();
-    const input = LessonInputSchema.parse(rawBody);
+    const parsedInput = LessonInputSchema.parse(rawBody);
+
+    const input = {
+      ...parsedInput,
+      topic: normalizeNfc(parsedInput.topic),
+      subject: normalizeNfc(parsedInput.subject),
+    };
 
     const clientKey = req.headers.get('x-gemini-api-key')?.trim();
     const envKey = process.env.GEMINI_API_KEY?.trim();
     const apiKey = clientKey || (envKey && envKey !== 'your_api_key_here' ? envKey : '');
 
-    // Nếu có API Key hợp lệ, thử gọi Gemini API trước
     if (apiKey) {
       try {
         const standardDoc = input.grade <= 5 ? 'Công văn 2345/BGDĐT-GDTH' : 'Công văn 5512/BGDĐT-GDTrH';
@@ -27,15 +33,19 @@ export async function POST(req: Request): Promise<NextResponse> {
         });
 
         const prompt = `
-Bạn là chuyên gia sư phạm hàng đầu Việt Nam. Hãy soạn Kế hoạch bài dạy (Giáo án) theo chuẩn ${standardDoc} và Cấu trúc Slide PowerPoint 16:9 cho bài học sau:
+Bạn là chuyên gia sư phạm hàng đầu Việt Nam. Hãy soạn Kế hoạch bài dạy theo chuẩn ${standardDoc} và Dàn ý Slide 16:9 cho bài học sau:
 - Môn học: ${input.subject} - Lớp: ${input.grade}
 - Bộ sách giáo khoa: ${input.textbook}
-- Tên bài học / Chủ đề: ${input.topic}
+- Tên bài dạy / Chủ đề: ${input.topic}
 - Thời lượng: ${input.durationMinutes} phút (${input.periodNumber})
 - Đơn vị: ${input.schoolName} - Tổ: ${input.facultyName} - GV: ${input.teacherName}
-- Ghi chú sư phạm: ${input.additionalNotes || 'Không có'}
+- Ghi chú: ${input.additionalNotes || 'Không có'}
 
-Trả về đúng JSON gồm: id, metadata, objectives (knowledge, coreCompetencies, specificCompetencies, qualities), materials (teacherPreparation, studentPreparation), activities (4 hoạt động: Mở đầu, Hình thành kiến thức, Luyện tập, Vận dụng, mỗi hoạt động có stepName, duration, objective, content, product, implementation: { transferTask, performTask, reportDiscuss, concludeJudge }), slides (mảng slide 16:9 với slideNumber, title, bulletPoints, visualNote, speakerNotes), createdAt.
+LƯU Ý QUAN TRỌNG:
+1. Trả về tiếng Việt chuẩn có dấu, dùng bảng mã Unicode dựng sẵn (NFC), tuyệt đối không để dấu bị tách rời hoặc chèn dấu nháy đơn vào chữ cái.
+2. Với Lớp 1-5 dùng chuẩn Công văn 2345 (Khởi động, Khám phá, Luyện tập, Vận dụng). Với Lớp 6-12 dùng Công văn 5512.
+3. Nội dung phải bám sát trực tiếp vào chủ đề "${input.topic}".
+Trả về đúng JSON theo cấu trúc LessonPlanOutput: id, metadata, objectives, materials, activities, slides (slideNumber, title, bulletPoints, visualNote, speakerNotes), createdAt.
 `.trim();
 
         const result = await model.generateContent(prompt);
@@ -44,10 +54,33 @@ Trả về đúng JSON gồm: id, metadata, objectives (knowledge, coreCompetenc
         const parsedData: unknown = JSON.parse(cleanJson);
         const validated: LessonPlanOutput = LessonPlanOutputSchema.parse(parsedData);
 
-        const enrichedWithImages: LessonPlanOutput = {
+        const enriched: LessonPlanOutput = {
           ...validated,
+          objectives: {
+            knowledge: normalizeNfc(validated.objectives.knowledge),
+            coreCompetencies: normalizeNfc(validated.objectives.coreCompetencies),
+            specificCompetencies: normalizeNfc(validated.objectives.specificCompetencies),
+            qualities: normalizeNfc(validated.objectives.qualities),
+          },
+          activities: validated.activities.map((act) => ({
+            ...act,
+            stepName: normalizeNfc(act.stepName),
+            objective: normalizeNfc(act.objective),
+            content: normalizeNfc(act.content),
+            product: normalizeNfc(act.product),
+            implementation: {
+              transferTask: normalizeNfc(act.implementation.transferTask),
+              performTask: normalizeNfc(act.implementation.performTask),
+              reportDiscuss: normalizeNfc(act.implementation.reportDiscuss),
+              concludeJudge: normalizeNfc(act.implementation.concludeJudge),
+            },
+          })),
           slides: validated.slides.map((s) => ({
             ...s,
+            title: normalizeNfc(s.title),
+            bulletPoints: s.bulletPoints.map((bp) => normalizeNfc(bp)),
+            visualNote: normalizeNfc(s.visualNote),
+            speakerNotes: normalizeNfc(s.speakerNotes),
             imageUrl: s.imageUrl || getSlideImageUrl({
               subject: input.subject,
               topic: input.topic,
@@ -57,13 +90,12 @@ Trả về đúng JSON gồm: id, metadata, objectives (knowledge, coreCompetenc
           })),
         };
 
-        return NextResponse.json(enrichedWithImages);
+        return NextResponse.json(enriched);
       } catch (geminiError) {
         console.warn('[Gemini API Fallback] Chuyển tiếp sang Engine AI Sư Phạm Tích Hợp:', geminiError);
       }
     }
 
-    // Bỏ qua khóa API / Fallback an toàn: Dùng Engine Sư phạm chuẩn Bộ GD
     const fallbackPlan = generatePedagogicalPlan(input);
     return NextResponse.json(fallbackPlan);
   } catch (error) {
