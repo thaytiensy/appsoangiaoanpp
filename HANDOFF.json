@@ -1,21 +1,26 @@
 {
   "status": "success",
-  "task": "Thêm chức năng tải file giáo án Word lên tự động lọc tạo slide trình chiếu PowerPoint, tự động kiểm tra lỗi, trùng lặp và đưa lên GitHub + Vercel",
+  "task": "Xóa 2 nút trong hình, thêm chức năng chia sẻ miễn phí qua Gmail, luôn để app ở chế độ trắng, khi sinh ra slide sinh ra cả hình ảnh phù hợp với phần nội dung",
   "attempt": 1,
   "files_modified": [
-    "src/services/word-parser.ts",
+    "src/contracts/app.schema.ts",
+    "src/contracts/share.schema.ts",
+    "src/services/share-service.ts",
+    "src/services/slide-image-service.ts",
+    "src/services/pedagogical-generator.ts",
     "src/services/word-to-plan.ts",
-    "src/services/quality-audit.ts",
     "src/services/pptx-exporter.ts",
-    "src/components/lesson/word-upload-modal.tsx",
-    "src/components/deploy/cloud-deploy-modal.tsx",
-    "src/app/api/deploy/push/route.ts",
+    "src/app/api/lesson-plan/route.ts",
+    "src/components/share/share-modal.tsx",
+    "src/components/lesson/editable-slides.tsx",
     "src/components/lesson-result.tsx",
     "src/app/page.tsx",
-    "vercel.json",
+    "src/app/layout.tsx",
+    "src/app/globals.css",
+    "scripts/visual-check.ts",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Hoàn tất bàn giao nghiệm thu tính năng tải Word bóc tách Slide và đồng bộ GitHub / Vercel"
+  "next_step": "Bàn giao nghiệm thu giao diện nền trắng, chức năng chia sẻ Gmail miễn phí và slide tích hợp hình ảnh AI"
 }
