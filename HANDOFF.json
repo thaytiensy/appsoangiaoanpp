@@ -1,26 +1,18 @@
 {
   "status": "success",
-  "task": "Xóa 2 nút trong hình, thêm chức năng chia sẻ miễn phí qua Gmail, luôn để app ở chế độ trắng, khi sinh ra slide sinh ra cả hình ảnh phù hợp với phần nội dung",
+  "task": "Nâng cấp giao diện trắng sạch, ô nhập trắng, admin chuotbachchise@gmail.com, slide 8 thẻ chi tiết kèm lời chào mừng và cảm ơn, ô tải file Word",
   "attempt": 1,
   "files_modified": [
-    "src/contracts/app.schema.ts",
-    "src/contracts/share.schema.ts",
-    "src/services/share-service.ts",
-    "src/services/slide-image-service.ts",
+    "src/components/form-admin-section.tsx",
+    "src/components/lesson-form.tsx",
+    "src/services/user-service.ts",
+    "src/app/page.tsx",
+    "src/app/api/lesson-plan/route.ts",
     "src/services/pedagogical-generator.ts",
     "src/services/word-to-plan.ts",
-    "src/services/pptx-exporter.ts",
-    "src/app/api/lesson-plan/route.ts",
-    "src/components/share/share-modal.tsx",
-    "src/components/lesson/editable-slides.tsx",
-    "src/components/lesson-result.tsx",
-    "src/app/page.tsx",
-    "src/app/layout.tsx",
-    "src/app/globals.css",
     "scripts/visual-check.ts",
-    "PROJECT_STATE.md",
-    "HANDOFF.json"
+    "PROJECT_STATE.md"
   ],
   "errors": [],
-  "next_step": "Bàn giao nghiệm thu giao diện nền trắng, chức năng chia sẻ Gmail miễn phí và slide tích hợp hình ảnh AI"
+  "next_step": "Ready for production"
 }

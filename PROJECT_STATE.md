@@ -41,16 +41,22 @@
 - [x] Trụ cột 4: Giao thức bàn giao (`HANDOFF.json`), UI khởi đầu chuẩn GDPT (`src/app/page.tsx`) & Kiểm tra thị giác (`scripts/visual-check.ts`)
 - [x] Tách biệt triệt để cache Webpack: build dùng `.next-verify` độc lập, dev dùng `.next`
 - [x] Sprint 2: Mở rộng Data Contract GDPT 2018 (Lớp 1-12), độc quyền bộ sách "Kết nối tri thức với cuộc sống", API sinh giáo án chuẩn CV 5512/2345, giao diện Kế hoạch bài dạy & Slide 16:9
-- [x] Đăng nhập Gmail & Quyền Admin xem bảng điều khiển tổng hợp người dùng (`src/contracts/user.schema.ts`, `src/services/user-service.ts`, `src/components/auth/user-profile-button.tsx`, `src/components/auth/admin-dashboard-modal.tsx`)
-- [x] Sprint Tải Giáo Án Word ➔ Tự động bóc tách tạo Slide PowerPoint 16:9 & Đồng bộ GitHub / Vercel.
-- [x] Sprint Nâng Cấp Giao Diện Trắng & Chia Sẻ Gmail & Sinh Ảnh AI Minh Họa:
-  - Loại bỏ hoàn toàn 2 nút thừa trên header ("Tải file Word (.docx)" và "GitHub & Vercel") theo đúng yêu cầu hình chụp.
-  - Thêm chức năng "Chia sẻ miễn phí cho người dùng khác bằng Gmail" (`src/contracts/share.schema.ts`, `src/services/share-service.ts`, `src/components/share/share-modal.tsx`) với liên kết mở Gmail soạn thư tự động (`mail.google.com/mail/?view=cm...`), quản lý quyền 'viewer' / 'editor' và sao chép liên kết.
-  - Cố định ứng dụng luôn ở chế độ Trắng (Pure White Theme) tại `src/app/layout.tsx`, `src/app/globals.css`, canvas Slide `src/components/lesson/editable-slides.tsx` và file PPTX `src/services/pptx-exporter.ts`.
-  - Tự động sinh hình ảnh AI minh họa phù hợp nội dung từng Slide (`src/services/slide-image-service.ts`, `src/services/pedagogical-generator.ts`, `src/services/word-to-plan.ts`, `src/app/api/lesson-plan/route.ts`).
-  - Hiển thị trực quan hình ảnh minh họa trên khung Slide 16:9 kèm chú thích độ phân giải HD.
-  - Kiểm định 4 tầng `verify.sh` thành công 100%, đẩy mã nguồn lên GitHub `origin/master`.
+- [x] Đăng nhập Gmail & Quyền Admin:
+  - Tên admin: `admin`, Gmail admin: `chuotbachchise@gmail.com`
+  - Quản trị viên theo dõi toàn bộ danh sách giáo viên & kế hoạch bài dạy đã tạo.
+- [x] Làm sạch hoàn toàn Form nhập liệu (Ô trắng):
+  - Xóa sạch mọi dữ liệu gán sẵn trong state và cache `localStorage`.
+  - Placeholder đổi thành gợi ý nhập trung tính, không chứa tên cụ thể.
+  - Thêm nút "Xóa trắng các ô" cho giáo viên linh hoạt thao tác.
+- [x] Cấu trúc Slide PowerPoint 16:9 chi tiết:
+  - Slide 1: Chào mừng quý Thầy Cô giáo và các em học sinh tham dự tiết học.
+  - Slide 8: Lời tri ân sâu sắc, biểu dương tinh thần học tập, dặn dò bài mới và lời chúc sức khỏe.
+  - Khung slide nền trắng tinh tế, hình ảnh minh họa chân thực theo chủ đề bài dạy.
+- [x] Tải File Word Mẫu (.docx) tạo Slide tự động:
+  - Khung tải file Word tích hợp ngay trên form chính, kéo thả hoặc chọn file từ máy tính.
+  - Tự động bóc tách Mục tiêu, Tiến trình 4 hoạt động và lọc trùng lặp.
+- [x] Kiểm định 4 tầng `verify.sh` thành công 100%, commit & push GitHub `origin/master`.
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Đã hoàn thành 100% các yêu cầu: xóa 2 nút, chia sẻ Gmail miễn phí, khóa chế độ trắng toàn diện, sinh ảnh minh họa AI phù hợp nội dung slide.
+- **In-Progress**: Đã hoàn thành 100% tất cả các yêu cầu.
 - **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng/file.
