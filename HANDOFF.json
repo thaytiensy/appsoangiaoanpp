@@ -1,18 +1,21 @@
 {
   "status": "success",
-  "task": "Bỏ qua khóa API thủ công, tích hợp Engine AI Sư phạm chuẩn Bộ GD tự động + Đăng nhập Gmail & Quyền Admin xem bảng điều khiển tổng hợp người dùng",
+  "task": "Thêm chức năng tải file giáo án Word lên tự động lọc tạo slide trình chiếu PowerPoint, tự động kiểm tra lỗi, trùng lặp và đưa lên GitHub + Vercel",
   "attempt": 1,
   "files_modified": [
-    "src/contracts/user.schema.ts",
-    "src/services/pedagogical-generator.ts",
-    "src/services/user-service.ts",
-    "src/components/auth/user-profile-button.tsx",
-    "src/components/auth/admin-dashboard-modal.tsx",
-    "src/app/api/lesson-plan/route.ts",
+    "src/services/word-parser.ts",
+    "src/services/word-to-plan.ts",
+    "src/services/quality-audit.ts",
+    "src/services/pptx-exporter.ts",
+    "src/components/lesson/word-upload-modal.tsx",
+    "src/components/deploy/cloud-deploy-modal.tsx",
+    "src/app/api/deploy/push/route.ts",
+    "src/components/lesson-result.tsx",
     "src/app/page.tsx",
+    "vercel.json",
     "PROJECT_STATE.md",
     "HANDOFF.json"
   ],
   "errors": [],
-  "next_step": "Chạy bash verify.sh để xác thực 4 tầng và chạy visual check kiểm tra giao diện Gmail & Admin Dashboard"
+  "next_step": "Hoàn tất bàn giao nghiệm thu tính năng tải Word bóc tách Slide và đồng bộ GitHub / Vercel"
 }

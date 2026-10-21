@@ -7,7 +7,7 @@
 
 ## 2. Approved Libraries & Tools
 - **Bridge & AI Loop**: `@google/generative-ai`, `zod`, `@playwright/test`, `dotenv`, `tsx`
-- **Frontend & App Core**: `next` (15.1.7 / 15.5.27), `react` (19.0.0), `react-dom`, `typescript` (5.7.3), `lucide-react`
+- **Frontend & App Core**: `next` (15.1.7 / 15.5.27), `react` (19.0.0), `react-dom`, `typescript` (5.7.3), `lucide-react`, `pptxgenjs`, `jszip`
 - **Styling**: `tailwindcss` (4.0.6)
 
 ## 3. Data Contracts Locked
@@ -20,10 +20,10 @@
   - 100% môn học GDPT 2018 đầy đủ theo quy định Bộ GD&ĐT.
   - Khóa bộ sách giáo khoa duy nhất: "Kết nối tri thức với cuộc sống".
 - `src/contracts/app.schema.ts`:
-  - `LessonInputSchema`: Thông tin hành chính (Trường, Tổ chuyên môn, GV, Năm học, Ngày soạn/dạy) + Cấu hình bài dạy (Lớp 1-12, Môn học, Tiết PPCT, Thời lượng, Tên bài, Ghi chú).
+  - `LessonInputSchema`: Thông tin hành chính + Cấu hình bài dạy (Lớp 1-12, Môn học, Tiết PPCT, Thời lượng, Tên bài, Ghi chú).
   - `ObjectivesSchema`: Kiến thức, Năng lực chung, Năng lực đặc thù, Phẩm chất.
   - `MaterialsSchema`: Thiết bị dạy học của Giáo viên và Học sinh.
-  - `PedagogicalActivitySchema`: 4 hoạt động CV 5512/2345 (Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng) với 4 bước tổ chức (Chuyển giao, Thực hiện, Báo cáo thảo luận, Kết luận nhận định).
+  - `PedagogicalActivitySchema`: 4 hoạt động CV 5512/2345 (Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng).
   - `SlideItemSchema`: Cấu trúc slide 16:9 (slideNumber, title, bulletPoints, visualNote, speakerNotes).
   - `LessonPlanOutputSchema`: Trọn bộ giáo án và slide tích hợp.
 - `src/contracts/bridge.schema.ts`:
@@ -38,8 +38,15 @@
 - [x] Trụ cột 4: Giao thức bàn giao (`HANDOFF.json`), UI khởi đầu chuẩn GDPT (`src/app/page.tsx`) & Kiểm tra thị giác (`scripts/visual-check.ts`)
 - [x] Tách biệt triệt để cache Webpack: build dùng `.next-verify` độc lập, dev dùng `.next`
 - [x] Sprint 2: Mở rộng Data Contract GDPT 2018 (Lớp 1-12), độc quyền bộ sách "Kết nối tri thức với cuộc sống", API sinh giáo án chuẩn CV 5512/2345, giao diện Kế hoạch bài dạy & Slide 16:9
-- [x] [2026-10-17 23:35:00] Bỏ qua khóa API thủ công, tích hợp Engine AI Sư phạm chuẩn Bộ GD tự động + Đăng nhập Gmail & Quyền Admin xem bảng điều khiển tổng hợp người dùng (`src/contracts/user.schema.ts`, `src/services/pedagogical-generator.ts`, `src/services/user-service.ts`, `src/components/auth/user-profile-button.tsx`, `src/components/auth/admin-dashboard-modal.tsx`, `src/app/api/lesson-plan/route.ts`, `src/app/page.tsx`)
+- [x] Đăng nhập Gmail & Quyền Admin xem bảng điều khiển tổng hợp người dùng (`src/contracts/user.schema.ts`, `src/services/user-service.ts`, `src/components/auth/user-profile-button.tsx`, `src/components/auth/admin-dashboard-modal.tsx`)
+- [x] Sprint Tải Giáo Án Word ➔ Tự động bóc tách tạo Slide PowerPoint 16:9:
+  - Bóc tách file `.docx` tự động (`src/services/word-parser.ts`, `src/services/word-to-plan.ts`)
+  - Kiểm tra chất lượng & lọc sạch trùng lặp slide (`src/services/quality-audit.ts`)
+  - Xuất file `.pptx` thật 16:9 (`src/services/pptx-exporter.ts`, `src/components/lesson-result.tsx`)
+  - Modal tải file Word kéo thả tiện lợi (`src/components/lesson/word-upload-modal.tsx`)
+  - Đồng bộ 1-click lên GitHub repo `thaytiensy/appsoangiaoanpp` & tự động kích hoạt CI/CD Vercel (`src/app/api/deploy/push/route.ts`, `src/components/deploy/cloud-deploy-modal.tsx`, `vercel.json`)
+  - Kiểm định 4 tầng `verify.sh` toàn diện đạt 100% chuẩn xanh & commit an toàn lên GitHub origin/master.
 
 ## 5. In-Progress & Blockers
-- **In-Progress**: Đang hoàn tất thẩm định 4 tầng verify và kiểm tra giao diện đăng nhập Gmail / Admin Dashboard.
-- **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng.
+- **In-Progress**: Đã hoàn thành toàn diện tính năng tải file Word, lọc tạo slide PowerPoint, lọc trùng lặp và đồng bộ GitHub/Vercel.
+- **Blockers**: Không có. Toàn bộ mã nguồn tuân thủ 0 any và <= 200 dòng/file.

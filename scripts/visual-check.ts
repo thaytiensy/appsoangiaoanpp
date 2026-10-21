@@ -9,7 +9,7 @@ function ensurePreviewDir(): void {
   }
 }
 
-test.describe('Visual Verification Clean Slate (Home Page)', () => {
+test.describe('Visual Verification Clean Slate (Home Page & Modals)', () => {
   test.beforeAll(() => {
     ensurePreviewDir();
   });
@@ -23,6 +23,34 @@ test.describe('Visual Verification Clean Slate (Home Page)', () => {
 
     await page.screenshot({
       path: '.preview/desktop-latest.png',
+      fullPage: true,
+    });
+  });
+
+  test('Chụp ảnh màn hình Modal Tải Word (.docx)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    await page.click('button:has-text("Tải file Word")');
+    await page.waitForSelector('text=Tải Giáo Án Word Lọc Slide PowerPoint');
+
+    await page.screenshot({
+      path: '.preview/word-modal.png',
+      fullPage: true,
+    });
+  });
+
+  test('Chụp ảnh màn hình Modal Đồng Bộ GitHub & Vercel', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+
+    await page.click('button:has-text("GitHub & Vercel")');
+    await page.waitForSelector('text=Đưa Lên GitHub & Vercel');
+
+    await page.screenshot({
+      path: '.preview/deploy-modal.png',
       fullPage: true,
     });
   });
