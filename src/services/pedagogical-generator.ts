@@ -2,7 +2,7 @@ import type { LessonInput, LessonPlanOutput } from '../contracts/app.schema';
 import { getSlideImageUrl } from './slide-image-service';
 import { normalizeNfc } from './text-normalizer';
 
-export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
+export function generatePedagogicalPlan(input: LessonInput, customGeneratedBy?: string): LessonPlanOutput {
   const isElementary = input.grade <= 5;
   const standardDoc = isElementary ? 'CÔNG VĂN 2345/BGDĐT-GDTH' : 'CÔNG VĂN 5512/BGDĐT-GDTrH';
   const act1 = isElementary ? 'Hoạt động 1: Khởi động (Kết nối bài học)' : 'Hoạt động 1: Mở đầu / Khởi động';
@@ -122,11 +122,7 @@ export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
 
   return {
     id: `lp_${Date.now()}`,
-    metadata: {
-      ...input,
-      topic: cleanTopic,
-      subject: cleanSubject,
-    },
+    metadata: { ...input, topic: cleanTopic, subject: cleanSubject },
     objectives: {
       knowledge: normalizeNfc(`Học sinh nắm vững các khái niệm, quy tắc và bản chất cốt lõi của chủ đề "${cleanTopic}"; vận dụng thành thạo vào giải quyết các bài tập và tình huống học tập theo yêu cầu cần đạt của Chương trình GDPT 2018 bộ sách ${input.textbook}.`),
       coreCompetencies: normalizeNfc(`Năng lực tự chủ và tự học (tự giác tìm hiểu tài liệu SGK); Năng lực giao tiếp và hợp tác (thảo luận nhóm tích cực); Năng lực giải quyết vấn đề và sáng tạo (đề xuất cách làm mới).`),
@@ -192,6 +188,7 @@ export function generatePedagogicalPlan(input: LessonInput): LessonPlanOutput {
       },
     ],
     slides,
+    generatedBy: customGeneratedBy || 'AI Sư Phạm Tích Hợp (Chuẩn GDPT 2018)',
     createdAt: new Date().toISOString(),
   };
 }

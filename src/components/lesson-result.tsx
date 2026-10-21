@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Presentation, ArrowLeft, Download, CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { FileText, Presentation, ArrowLeft, CheckCircle2, Loader2, Mail, Cpu } from 'lucide-react';
 import type { LessonPlanOutput } from '../contracts/app.schema';
 import { EditableKhbd } from './lesson/editable-khbd';
 import { EditableSlides } from './lesson/editable-slides';
@@ -73,7 +73,12 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
         </div>
 
         {/* Nút hành động Chia sẻ Gmail & Xuất PowerPoint */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-900 text-xs font-semibold">
+            <Cpu className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{plan.generatedBy || 'Google Gemini 2.5 Flash'}</span>
+          </div>
+
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-medium">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>Chuẩn 5512 • 0 trùng lặp</span>
@@ -102,27 +107,16 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
             ) : exportSuccess ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                <span>Đã tải xong .pptx!</span>
+                <span>Đã tải file .pptx!</span>
               </>
             ) : (
-              <>
-                <Download className="w-3.5 h-3.5" />
-                <span>Tải PowerPoint (.pptx)</span>
-              </>
+              <span>Xuất PowerPoint 16:9 (.pptx)</span>
             )}
           </button>
         </div>
       </div>
 
-      {/* Modal Chia Sẻ Miễn Phí Qua Gmail */}
-      <ShareModal
-        isOpen={isShareOpen}
-        onClose={() => setIsShareOpen(false)}
-        lessonId={plan.id}
-        lessonTitle={plan.metadata.topic}
-      />
-
-      {/* Nội dung Tab hiển thị và chỉnh sửa trực tiếp */}
+      {/* Hiển thị Tab Kế hoạch bài dạy hoặc Slide */}
       {activeTab === 'khbd' ? (
         <EditableKhbd plan={plan} onUpdatePlan={onUpdatePlan} />
       ) : (
@@ -132,6 +126,14 @@ export function LessonResult({ plan, onReset, onUpdatePlan }: LessonResultProps)
           topic={plan.metadata.topic}
         />
       )}
+
+      {/* Modal Chia sẻ Gmail */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        lessonId={plan.id}
+        lessonTitle={plan.metadata.topic}
+      />
     </div>
   );
 }

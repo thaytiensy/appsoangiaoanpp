@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
-import { LessonInputSchema, type LessonInput } from '../contracts/app.schema';
+import { LessonInputSchema, type LessonInput, type AIProvider } from '../contracts/app.schema';
 import { FormAdminSection } from './form-admin-section';
 import { FormLessonSection } from './form-lesson-section';
+import { FormAiSection } from './ai/form-ai-section';
 
 interface LessonFormProps {
   readonly onSubmit: (data: LessonInput) => void;
@@ -30,9 +31,11 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
     durationMinutes: 35,
     topic: '',
     additionalNotes: '',
+    aiProvider: 'gemini',
+    aiModel: 'gemini-2.5-flash',
+    apiKey: '',
   });
 
-  // Tự động xóa sạch dữ liệu mẫu cũ trong cache trình duyệt để giữ ô trắng hoàn toàn
   useEffect(() => {
     try {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -80,6 +83,18 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
     setFormData((prev) => ({ ...prev, [key]: val }));
   };
 
+  const handleSelectAI = (provider: AIProvider, model: string): void => {
+    setFormData((prev) => ({
+      ...prev,
+      aiProvider: provider,
+      aiModel: model,
+    }));
+  };
+
+  const handleApiKeyChange = (apiKey: string): void => {
+    setFormData((prev) => ({ ...prev, apiKey }));
+  };
+
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     const result = LessonInputSchema.safeParse(formData);
@@ -99,6 +114,12 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
         formData={formData}
         onGradeChange={handleGradeChange}
         onChange={handleFieldChange}
+      />
+      <FormAiSection
+        selectedProvider={formData.aiProvider}
+        apiKey={formData.apiKey}
+        onSelectAI={handleSelectAI}
+        onApiKeyChange={handleApiKeyChange}
       />
       <div className="flex items-center justify-end">
         <button

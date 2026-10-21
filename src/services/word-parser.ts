@@ -144,10 +144,10 @@ export async function parseDocxFile(fileData: ArrayBuffer): Promise<ParsedWordRe
 
 export function convertParsedToLessonInput(parsed: ParsedWordResult): LessonInput {
   return {
-    departmentName: 'Phòng Giáo dục và Đào tạo',
-    schoolName: 'Trường THCS & THPT Chu Văn An',
+    departmentName: '',
+    schoolName: '',
     facultyName: `Tổ ${parsed.subject}`,
-    teacherName: 'Thầy Đỗ Tiến Sỹ',
+    teacherName: '',
     schoolYear: '2026 - 2027',
     prepareDate: new Date().toISOString().split('T')[0],
     teachDate: new Date().toISOString().split('T')[0],
@@ -158,5 +158,8 @@ export function convertParsedToLessonInput(parsed: ParsedWordResult): LessonInpu
     durationMinutes: 45,
     topic: parsed.topic,
     additionalNotes: 'Tự động bóc tách từ file giáo án Word và tối ưu hóa theo chuẩn Công văn 5512',
+    aiProvider: 'builtin',
+    aiModel: 'builtin',
+    apiKey: '',
   };
 }

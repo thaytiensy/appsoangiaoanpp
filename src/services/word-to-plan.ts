@@ -69,8 +69,8 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
       bulletPoints: [
         'CHÀO MỪNG QUÝ THẦY CÔ VÀ CÁC EM HỌC SINH THAM DỰ TIẾT HỌC!',
         `Môn học: ${metadata.subject} - Lớp ${metadata.grade} | Bộ sách: ${metadata.textbook}`,
-        `Giáo viên: ${metadata.teacherName}`,
-        `Đơn vị: ${metadata.schoolName}`,
+        `Giáo viên: ${metadata.teacherName || 'Giáo viên bộ môn'}`,
+        `Đơn vị: ${metadata.schoolName || 'Nhà trường'}`,
       ],
       visualNote: 'Hình ảnh bìa minh họa sống động liên quan đến chủ đề bài dạy',
       speakerNotes: `Chào mừng quý thầy cô và các em học sinh đến với tiết học ${metadata.topic}.`,
@@ -184,6 +184,7 @@ export function buildPlanFromWord(parsed: ParsedWordResult): LessonPlanOutput {
     },
     activities,
     slides,
+    generatedBy: 'Bóc Tách Giáo Án Word (.docx)',
     createdAt: new Date().toISOString(),
   };
 }

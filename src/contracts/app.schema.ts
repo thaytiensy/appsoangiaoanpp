@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const AIProviderSchema = z.enum(['gemini', 'openai', 'claude', 'deepseek', 'builtin']);
+export type AIProvider = z.infer<typeof AIProviderSchema>;
+
 export const LessonInputSchema = z.object({
   departmentName: z.string().default(''),
   schoolName: z.string().default(''),
@@ -15,6 +18,9 @@ export const LessonInputSchema = z.object({
   durationMinutes: z.number().int().positive().default(45),
   topic: z.string().min(1, 'Tên bài dạy không được để trống'),
   additionalNotes: z.string().default(''),
+  aiProvider: AIProviderSchema.default('gemini'),
+  aiModel: z.string().default('gemini-2.5-flash'),
+  apiKey: z.string().default(''),
 });
 
 export type LessonInput = z.infer<typeof LessonInputSchema>;
@@ -73,6 +79,7 @@ export const LessonPlanOutputSchema = z.object({
   materials: MaterialsSchema,
   activities: z.array(PedagogicalActivitySchema),
   slides: z.array(SlideItemSchema),
+  generatedBy: z.string().default('Google Gemini 2.5 Flash'),
   createdAt: z.string(),
 });
 
