@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Sparkles, AlertCircle, Mail } from 'lucide-react';
 import type { LessonInput, LessonPlanOutput } from '../contracts/app.schema';
 import type { User } from '../contracts/user.schema';
-import { getCurrentUser } from '../services/user-service';
+import { INITIAL_USERS, getCurrentUser } from '../services/user-service';
 import { LessonForm } from '../components/lesson-form';
 import { LessonResult } from '../components/lesson-result';
 import { QuickTemplates } from '../components/lesson/quick-templates';
@@ -15,7 +15,7 @@ import { ShareModal } from '../components/share/share-modal';
 import { WordUploadCard } from '../components/lesson/word-upload-card';
 
 export default function HomePage(): React.JSX.Element {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [plan, setPlan] = useState<LessonPlanOutput | null>(null);

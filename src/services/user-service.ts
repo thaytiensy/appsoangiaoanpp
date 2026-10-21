@@ -20,7 +20,7 @@ export const INITIAL_USERS: readonly User[] = [
     name: 'Cô Nguyễn Thị Mai',
     email: 'mainguyen.edu@gmail.com',
     avatar: '👩‍🏫',
-    school: 'Trường THCS Lê Quý Đôn',
+    school: 'Trường THCS Chu Văn An',
     subject: 'Ngữ văn',
     role: 'teacher',
     lessonPlansCreated: 24,
@@ -59,7 +59,6 @@ export function getUsers(): User[] {
       return [...INITIAL_USERS];
     }
     const parsed = JSON.parse(data) as User[];
-    // Đảm bảo admin chuotbachchise@gmail.com luôn có mặt
     const hasAdmin = parsed.some((u) => u.email.toLowerCase() === 'chuotbachchise@gmail.com');
     if (!hasAdmin) {
       const merged = [INITIAL_USERS[0], ...parsed];
@@ -72,22 +71,29 @@ export function getUsers(): User[] {
   }
 }
 
-export function getCurrentUser(): User | null {
-  if (typeof window === 'undefined') return INITIAL_USERS[0];
+export function getCurrentUser(): User {
+  const defaultAdmin = INITIAL_USERS[0];
+  if (typeof window === 'undefined') return defaultAdmin;
   try {
     const data = localStorage.getItem(CURRENT_USER_KEY);
-    if (data) {
-      const u = JSON.parse(data) as User;
-      if (u.email.toLowerCase() === 'chuotbachchise@gmail.com') {
-        return { ...u, name: 'admin', role: 'admin' };
-      }
-      return u;
+    if (!data) {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(defaultAdmin));
+      return defaultAdmin;
     }
-    // Mặc định đăng nhập tài khoản admin: chuotbachchise@gmail.com
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(INITIAL_USERS[0]));
-    return INITIAL_USERS[0];
+    const u = JSON.parse(data) as User;
+    if (u.role === 'admin' || u.email?.toLowerCase() === 'chuotbachchise@gmail.com') {
+      const fixedAdmin: User = {
+        ...defaultAdmin,
+        name: 'admin',
+        email: 'chuotbachchise@gmail.com',
+        role: 'admin',
+      };
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(fixedAdmin));
+      return fixedAdmin;
+    }
+    return u;
   } catch {
-    return INITIAL_USERS[0];
+    return defaultAdmin;
   }
 }
 

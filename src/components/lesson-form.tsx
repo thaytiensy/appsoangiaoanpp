@@ -32,16 +32,10 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
     additionalNotes: '',
   });
 
+  // Tự động xóa sạch dữ liệu mẫu cũ trong cache trình duyệt để giữ ô trắng hoàn toàn
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<LessonInput>;
-        // Chỉ nạp nếu người dùng đã tự lưu thông tin trước đó
-        if (parsed.schoolName || parsed.teacherName) {
-          setFormData((prev) => ({ ...prev, ...parsed }));
-        }
-      }
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch {
       // Bỏ qua lỗi localStorage
     }
@@ -54,17 +48,21 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
   }, [externalPreset]);
 
   const handleAdminChange = (key: keyof LessonInput, val: string): void => {
-    const updated = { ...formData, [key]: val };
-    setFormData(updated);
+    setFormData((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleResetAdmin = (): void => {
+    setFormData((prev) => ({
+      ...prev,
+      departmentName: '',
+      schoolName: '',
+      facultyName: '',
+      teacherName: '',
+      topic: '',
+      additionalNotes: '',
+    }));
     try {
-      const adminProfile = {
-        departmentName: updated.departmentName,
-        schoolName: updated.schoolName,
-        facultyName: updated.facultyName,
-        teacherName: updated.teacherName,
-        schoolYear: updated.schoolYear,
-      };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(adminProfile));
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch {
       // Bỏ qua lỗi localStorage
     }
@@ -92,7 +90,11 @@ export function LessonForm({ onSubmit, isLoading, externalPreset }: LessonFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <FormAdminSection formData={formData} onChange={handleAdminChange} />
+      <FormAdminSection
+        formData={formData}
+        onChange={handleAdminChange}
+        onResetAdmin={handleResetAdmin}
+      />
       <FormLessonSection
         formData={formData}
         onGradeChange={handleGradeChange}

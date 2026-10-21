@@ -1,20 +1,33 @@
 'use client';
 
-import { School, User, Calendar } from 'lucide-react';
+import { School, User, Calendar, RotateCcw } from 'lucide-react';
 import type { LessonInput } from '../contracts/app.schema';
 
 interface FormAdminSectionProps {
   readonly formData: LessonInput;
   readonly onChange: (key: keyof LessonInput, val: string) => void;
+  readonly onResetAdmin?: () => void;
 }
 
-export function FormAdminSection({ formData, onChange }: FormAdminSectionProps): React.JSX.Element {
+export function FormAdminSection({ formData, onChange, onResetAdmin }: FormAdminSectionProps): React.JSX.Element {
   return (
     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-        <School className="w-5 h-5 text-blue-600" />
-        <h2 className="text-base font-bold text-slate-800">1. Đơn vị công tác & Giáo viên bộ môn</h2>
-        <span className="text-xs text-slate-500 ml-auto hidden sm:inline">(Tự động ghi nhớ cho các lần soạn sau)</span>
+      <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <School className="w-5 h-5 text-blue-600" />
+          <h2 className="text-base font-bold text-slate-800">1. Đơn vị công tác & Giáo viên bộ môn</h2>
+        </div>
+        {onResetAdmin && (
+          <button
+            type="button"
+            onClick={onResetAdmin}
+            title="Xóa trắng các ô thông tin để nhập mới"
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 transition cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Xóa trắng các ô</span>
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
         <div>
@@ -23,10 +36,10 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             id="dept-name"
             type="text"
             aria-label="Cơ quan chủ quản"
-            placeholder="ví dụ: Phòng Giáo dục và Đào tạo..."
+            placeholder="Nhập cơ quan chủ quản (nếu có)..."
             value={formData.departmentName}
             onChange={(e) => onChange('departmentName', e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-800"
           />
         </div>
         <div>
@@ -36,10 +49,10 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Tên trường"
             required
-            placeholder="ví dụ: Trường PTDTBTTH Lê Quý Đôn..."
+            placeholder="Nhập tên trường học..."
             value={formData.schoolName}
             onChange={(e) => onChange('schoolName', e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium text-slate-800"
           />
         </div>
         <div>
@@ -49,10 +62,10 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Tổ chuyên môn"
             required
-            placeholder="ví dụ: Tổ Khối 2, Tổ Toán..."
+            placeholder="Nhập tên tổ chuyên môn..."
             value={formData.facultyName}
             onChange={(e) => onChange('facultyName', e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-800"
           />
         </div>
         <div>
@@ -64,10 +77,10 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             type="text"
             aria-label="Họ tên giáo viên"
             required
-            placeholder="ví dụ: Thầy Đỗ Tiến Sỹ..."
+            placeholder="Nhập họ và tên giáo viên..."
             value={formData.teacherName}
             onChange={(e) => onChange('teacherName', e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-slate-800"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-slate-800 bg-white"
           />
         </div>
         <div>
@@ -79,7 +92,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
             placeholder="2026 - 2027"
             value={formData.schoolYear}
             onChange={(e) => onChange('schoolYear', e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-800"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -93,7 +106,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
               aria-label="Ngày soạn bài"
               value={formData.prepareDate}
               onChange={(e) => onChange('prepareDate', e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-800"
             />
           </div>
           <div>
@@ -104,7 +117,7 @@ export function FormAdminSection({ formData, onChange }: FormAdminSectionProps):
               aria-label="Ngày thực hiện bài dạy"
               value={formData.teachDate}
               onChange={(e) => onChange('teachDate', e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-800"
             />
           </div>
         </div>

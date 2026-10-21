@@ -44,7 +44,7 @@ Bạn là chuyên gia sư phạm hàng đầu Việt Nam. Hãy soạn Kế hoạ
 LƯU Ý QUAN TRỌNG:
 1. Trả về tiếng Việt chuẩn có dấu, dùng bảng mã Unicode dựng sẵn (NFC), tuyệt đối không để dấu bị tách rời hoặc chèn dấu nháy đơn vào chữ cái.
 2. Với Lớp 1-5 dùng chuẩn Công văn 2345 (Khởi động, Khám phá, Luyện tập, Vận dụng). Với Lớp 6-12 dùng Công văn 5512.
-3. Nội dung phải bám sát trực tiếp vào chủ đề "${input.topic}".
+3. Dàn ý Slide 16:9 gồm 8 slide: Slide 1 Chào mừng quý Thầy Cô & học sinh; Slide 2 Mục tiêu; Slide 3 Khởi động; Slide 4 Khám phá; Slide 5 Ví dụ mẫu; Slide 6 Luyện tập; Slide 7 Vận dụng; Slide 8 Cảm ơn chân thành quý Thầy Cô và dặn dò.
 Trả về đúng JSON theo cấu trúc LessonPlanOutput: id, metadata, objectives, materials, activities, slides (slideNumber, title, bulletPoints, visualNote, speakerNotes), createdAt.
 `.trim();
 
@@ -98,8 +98,8 @@ Trả về đúng JSON theo cấu trúc LessonPlanOutput: id, metadata, objectiv
 
     const fallbackPlan = generatePedagogicalPlan(input);
     return NextResponse.json(fallbackPlan);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: `Lỗi xử lý sinh giáo án: ${message}` }, { status: 400 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Dữ liệu không hợp lệ: ${message}` }, { status: 400 });
   }
 }
