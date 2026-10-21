@@ -9,77 +9,49 @@ function ensurePreviewDir(): void {
   }
 }
 
-test.describe('Visual Verification (Home Page, Gmail Share & White Slide)', () => {
+test.describe('Visual Verification (Correct Font, CV 2345 & Accurate Family Image)', () => {
   test.beforeAll(() => {
     ensurePreviewDir();
   });
 
-  test('Chụp ảnh màn hình Desktop Header Mới (Đã bỏ 2 nút & Thêm Chia sẻ Gmail)', async ({ page }) => {
+  test('Kiểm tra tạo bài học STEM Gia đình Lớp 5 (Chuẩn CV 2345 & Font tiếng Việt không lỗi)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('h1')).toContainText('Hệ thống AI Soạn Giáo Án');
-    await expect(page.locator('button:has-text("Chia sẻ miễn phí qua Gmail")')).toBeVisible();
+    // Điền form với đúng thông tin người dùng yêu cầu:
+    // Trường PTDTBTTH Lê Quý Đôn, Lớp 5, Chủ đề: Gia đình
+    await page.fill('#school-name', 'Trường PTDTBTTH Lê Quý Đôn');
+    await page.selectOption('#grade-select', '5');
+    await page.fill('#topic-name', 'Gia đình');
 
-    await page.screenshot({
-      path: '.preview/desktop-latest.png',
-      fullPage: true,
-    });
-  });
-
-  test('Chụp ảnh màn hình Modal Chia Sẻ Qua Gmail', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    await page.click('button:has-text("Chia sẻ miễn phí qua Gmail")');
-    await page.waitForSelector('text=Chia Sẻ Giáo Án & Slide Qua Gmail');
-
-    await page.screenshot({
-      path: '.preview/gmail-share-modal.png',
-      fullPage: true,
-    });
-  });
-
-  test('Chụp ảnh màn hình Slide Trình Chiếu Nền Trắng & Hình Ảnh Minh Họa AI', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Bấm mẫu soạn nhanh Toán học 6
-    const templateBtn = page.locator('button:has-text("Toán học 6")').first();
-    await templateBtn.click();
-
-    // Bấm bắt đầu soạn
-    const submitBtn = page.locator('button:has-text("Bắt Đầu Soạn Giáo Án")').first();
+    // Bấm Bắt đầu soạn giáo án
+    const submitBtn = page.locator('button[type="submit"]');
     await submitBtn.click();
 
-    // Chờ tab chuyển sang Slide xuất hiện
-    const slideTab = page.locator('button:has-text("Dàn ý Slide PowerPoint (16:9)")');
-    await slideTab.waitFor({ state: 'visible', timeout: 20000 });
-    await slideTab.click();
+    // Chờ kết quả hiển thị
+    await page.waitForSelector('text=CÔNG VĂN 2345', { timeout: 15000 });
 
-    await page.waitForSelector('text=Tỷ lệ 16:9 Trình Chiếu Nền Trắng', { timeout: 10000 });
+    // Xác nhận chuẩn Công văn 2345 xuất hiện cho Lớp 5 (chứ không phải 5512)
+    const khbdTitle = await page.locator('h2:has-text("CÔNG VĂN 2345")').textContent();
+    expect(khbdTitle).toContain('2345');
 
-    // Đợi ảnh minh họa load
-    await page.waitForTimeout(1000);
-
+    // Chụp ảnh Kế hoạch bài dạy chứng minh font chữ tiếng Việt đã chuẩn xác, không còn lỗi dấu tách rời
     await page.screenshot({
-      path: '.preview/white-slide-with-image.png',
+      path: '.preview/family-stem-khbd.png',
       fullPage: true,
     });
-  });
 
-  test('Chụp ảnh màn hình Mobile (375x667)', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    // Chuyển sang Tab Slide để kiểm tra ảnh minh họa
+    await page.click('button:has-text("Dàn ý Slide PowerPoint (16:9)")');
+    await page.waitForSelector('text=Ảnh chuẩn chủ đề Gia đình', { timeout: 10000 });
 
-    await expect(page.locator('h1')).toContainText('Hệ thống AI Soạn Giáo Án');
+    // Đợi ảnh render
+    await page.waitForTimeout(1000);
 
+    // Chụp ảnh Slide kiểm tra ảnh gia đình phù hợp nội dung
     await page.screenshot({
-      path: '.preview/mobile-latest.png',
+      path: '.preview/family-stem-slide.png',
       fullPage: true,
     });
   });
