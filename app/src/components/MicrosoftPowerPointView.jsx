@@ -39,7 +39,8 @@ import {
   ZoomOut, 
   Sliders, 
   FileText, 
-  FolderOpen
+  FolderOpen,
+  Music
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { exportSmasPowerPoint } from '../services/smasExport';
@@ -69,20 +70,35 @@ export default function MicrosoftPowerPointView({
   const [isExporting, setIsExporting] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
 
-  // Hidden File Inputs for Uploading Files & Images
+  // Hidden File Inputs for Uploading Files, Images & Audios
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const audioInputRef = useRef(null);
+  const slideAudioRef = useRef(null);
 
-  // Formatting Toolbar State
+  // Typography, Font Family & Size
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [titleFontSize, setTitleFontSize] = useState(26);
+  const [bodyFontSize, setBodyFontSize] = useState(16);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [textAlign, setTextAlign] = useState('left');
+
+  // Slide Dimension / Aspect Ratio: '16:9' (Widescreen) vs '4:3' (Standard)
+  const [slideAspectRatio, setSlideAspectRatio] = useState('16:9');
+  const [imageFitMode, setImageFitMode] = useState('contain'); // 'contain' | 'cover'
 
   // Slide Layout: 'standard' | 'large-image' | 'title-only' | 'comparison'
   const [slideLayout, setSlideLayout] = useState('standard');
 
   // Slide Theme Background: 'white' | 'cream' | 'blue' | 'peach' | 'dark'
   const [slideTheme, setSlideTheme] = useState('cream');
+
+  // Audio / Music Player State
+  const [isPlayingSlideAudio, setIsPlayingSlideAudio] = useState(false);
+  const [ambientMusicEnabled, setAmbientMusicEnabled] = useState(false);
+  const ambientAudioContextRef = useRef(null);
+  const ambientTimerRef = useRef(null);
 
   // Slide Show Presentation Mode (F5)
   const [isSlideShowMode, setIsSlideShowMode] = useState(false);
@@ -103,6 +119,7 @@ export default function MicrosoftPowerPointView({
   // Presenter Notes Drawer
   const [showNotesDrawer, setShowNotesDrawer] = useState(true);
   const [zoomArtworkModal, setZoomArtworkModal] = useState(false);
+  const [zoomedImageSrc, setZoomedImageSrc] = useState(null);
 
   // Canvas Refs
   const penCanvasRef = useRef(null);
@@ -118,15 +135,137 @@ export default function MicrosoftPowerPointView({
     }
   }, [selectedUnit]);
 
-  // Clean up timers
+  // Clean up timers & audio
   useEffect(() => {
     return () => {
+      if (ambientAudioContextRef.current) {
+        ambientAudioContextRef.current.close().catch(() => {});
+        ambientAudioContextRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearInterval(ambientTimerRef.current);
+      }
       if (autoLectureTimerRef.current) {
         clearInterval(autoLectureTimerRef.current);
       }
       ttsService.stop();
     };
   }, []);
+
+  // When changing slides, stop playing audio of previous slide & sync font/ratio
+  useEffect(() => {
+    if (slideAudioRef.current) {
+      slideAudioRef.current.pause();
+      setIsPlayingSlideAudio(false);
+    }
+    const s = slides[currentSlideIndex];
+    if (s?.fontFamily) setFontFamily(s.fontFamily);
+    if (s?.titleFontSize) setTitleFontSize(s.titleFontSize);
+    if (s?.bodyFontSize) setBodyFontSize(s.bodyFontSize);
+    if (s?.slideSize) setSlideAspectRatio(s.slideSize);
+  }, [currentSlideIndex, slides]);
+
+  // Audio Playback Handler for Embedded Slide Music
+  const togglePlaySlideAudio = () => {
+    if (!slideAudioRef.current) return;
+    if (isPlayingSlideAudio) {
+      slideAudioRef.current.pause();
+      setIsPlayingSlideAudio(false);
+    } else {
+      slideAudioRef.current.play().then(() => {
+        setIsPlayingSlideAudio(true);
+      }).catch(err => console.warn('Không thể phát audio slide:', err));
+    }
+  };
+
+  // Upload custom audio / song from computer onto current slide
+  const handleUploadAudioForCurrentSlide = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const audioUrl = evt.target.result;
+      setSlides(prev => {
+        const next = [...prev];
+        const s = { ...next[currentSlideIndex] };
+        s.audio = {
+          name: file.name,
+          url: audioUrl,
+          type: file.type || 'audio/mpeg'
+        };
+        next[currentSlideIndex] = s;
+        return next;
+      });
+      showSaveToastNotification(`Đã gắn âm thanh/bài hát: ${file.name} vào slide này!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Web Audio Soft Ambient Classroom Music (Nhạc nền mĩ thuật nhẹ nhàng)
+  const toggleAmbientMusic = () => {
+    if (ambientMusicEnabled) {
+      if (ambientAudioContextRef.current) {
+        ambientAudioContextRef.current.close().catch(() => {});
+        ambientAudioContextRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearInterval(ambientTimerRef.current);
+        ambientTimerRef.current = null;
+      }
+      setAmbientMusicEnabled(false);
+      showSaveToastNotification('Đã tắt nhạc nền mĩ thuật.');
+    } else {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        ambientAudioContextRef.current = ctx;
+
+        const chords = [
+          [261.63, 329.63, 392.00], // C major (Do - Mi - Sol)
+          [220.00, 261.63, 329.63], // A minor (La - Do - Mi)
+          [174.61, 220.00, 261.63], // F major (Fa - La - Do)
+          [196.00, 246.94, 293.66]  // G major (Sol - Si - Re)
+        ];
+        let chordIdx = 0;
+
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.06, ctx.currentTime);
+        masterGain.connect(ctx.destination);
+
+        const playNextChord = () => {
+          if (!ambientAudioContextRef.current || ambientAudioContextRef.current.state === 'closed') return;
+          const currentNotes = chords[chordIdx % chords.length];
+          chordIdx++;
+
+          currentNotes.forEach(freq => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+            gain.gain.setValueAtTime(0.001, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1.2);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 5.0);
+          });
+        };
+
+        playNextChord();
+        ambientTimerRef.current = setInterval(playNextChord, 4800);
+
+        setAmbientMusicEnabled(true);
+        showSaveToastNotification('🎵 Đã bật nhạc nền sáng tạo mĩ thuật êm dịu!');
+      } catch (err) {
+        console.error('Không thể bật Web Audio:', err);
+      }
+    }
+  };
 
   const currentSlide = slides[currentSlideIndex] || slides[0] || {};
 
@@ -160,7 +299,16 @@ export default function MicrosoftPowerPointView({
         if (result.slides && result.slides.length > 0) {
           setSlides(result.slides);
           setCurrentSlideIndex(0);
-          showSaveToastNotification(`Đã mở và nạp thành công ${result.slides.length} slide từ tệp: ${file.name}!`);
+          if (result.slideSize) {
+            setSlideAspectRatio(result.slideSize);
+          }
+          if (result.slides[0]?.fontFamily) {
+            setFontFamily(result.slides[0].fontFamily);
+          }
+          if (result.slides[0]?.titleFontSize) {
+            setTitleFontSize(result.slides[0].titleFontSize);
+          }
+          showSaveToastNotification(`Đã mở và nạp thành công ${result.slides.length} slide (${result.slideSize || '16:9'}) từ tệp: ${file.name}!`);
           confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
         } else {
           alert('Không tìm thấy nội dung slide hợp lệ trong tệp PowerPoint này.');
@@ -597,6 +745,13 @@ export default function MicrosoftPowerPointView({
         accept="image/*"
         className="hidden"
       />
+      <input
+        type="file"
+        ref={audioInputRef}
+        onChange={handleUploadAudioForCurrentSlide}
+        accept="audio/*"
+        className="hidden"
+      />
 
       {/* 1. MICROSOFT 365 POWERPOINT TOP BAR */}
       <div className="bg-[#D24726] text-white px-4 py-2 flex items-center justify-between border-b border-[#B9381A] shadow-sm flex-wrap gap-2">
@@ -618,8 +773,22 @@ export default function MicrosoftPowerPointView({
           </div>
         </div>
 
-        {/* Quick Top Actions: Upload, Presentation F5, Export PPTX, Save */}
-        <div className="flex items-center gap-2">
+        {/* Quick Top Actions: Upload, Ambient Music, Presentation F5, Export PPTX, Save */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* NÚT BẬT / TẮT NHẠC NỀN MĨ THUẬT */}
+          <button
+            onClick={toggleAmbientMusic}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm transition ${
+              ambientMusicEnabled
+                ? 'bg-amber-400 text-amber-950 ring-2 ring-white animate-pulse'
+                : 'bg-white/20 hover:bg-white/30 text-white'
+            }`}
+            title="Bật/Tắt nhạc nền sáng tạo mĩ thuật êm dịu cho học sinh tập trung vẽ tranh"
+          >
+            <Music className="w-3.5 h-3.5" />
+            <span>{ambientMusicEnabled ? 'Nhạc Nền: BẬT 🎵' : 'Nhạc Nền Mĩ Thuật'}</span>
+          </button>
+
           {/* NÚT TẢI LÊN TỆP TỪ MÁY TÍNH */}
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -748,8 +917,8 @@ export default function MicrosoftPowerPointView({
               </button>
             </div>
 
-            {/* Layout Switcher */}
-            <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
+            {/* Layout & Aspect Ratio */}
+            <div className="flex items-center gap-2 pr-3 border-r border-gray-200">
               <span className="text-[11px] font-bold text-gray-400">Bố Cục:</span>
               <select
                 value={slideLayout}
@@ -760,10 +929,77 @@ export default function MicrosoftPowerPointView({
                 <option value="large-image">Tranh Tiêu Điểm Lớn</option>
                 <option value="title-only">Bìa / Tiêu Đề</option>
               </select>
+
+              {/* Tỷ Lệ Màn Hình Slide (16:9 vs 4:3) */}
+              <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border">
+                <button
+                  onClick={() => {
+                    setSlideAspectRatio('16:9');
+                    updateCurrentSlide('slideSize', '16:9');
+                  }}
+                  className={`px-2 py-1 rounded text-[11px] font-black transition ${
+                    slideAspectRatio === '16:9' ? 'bg-[#D24726] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title="Tỷ lệ 16:9 (Màn hình rộng, TV & máy chiếu hiện đại)"
+                >
+                  16:9
+                </button>
+                <button
+                  onClick={() => {
+                    setSlideAspectRatio('4:3');
+                    updateCurrentSlide('slideSize', '4:3');
+                  }}
+                  className={`px-2 py-1 rounded text-[11px] font-black transition ${
+                    slideAspectRatio === '4:3' ? 'bg-[#D24726] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title="Tỷ lệ 4:3 (Màn hình chuẩn cổ điển)"
+                >
+                  4:3
+                </button>
+              </div>
             </div>
 
-            {/* Font & Text Formatting Tools */}
+            {/* Font & Typography Settings */}
             <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
+              {/* Chọn Phông Chữ Slide */}
+              <select
+                value={fontFamily}
+                onChange={(e) => {
+                  setFontFamily(e.target.value);
+                  updateCurrentSlide('fontFamily', e.target.value);
+                }}
+                className="p-1.5 rounded-lg border border-gray-300 font-black text-xs bg-white outline-none"
+                title="Phông chữ của bài giảng"
+              >
+                <option value="Arial">Arial (Chuẩn)</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Calibri">Calibri (Office 365)</option>
+                <option value="Segoe UI">Segoe UI</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Be Vietnam Pro">Be Vietnam Pro</option>
+                <option value="Comic Sans MS">Comic Sans MS (Học sinh)</option>
+              </select>
+
+              {/* Chọn Cỡ Chữ Tiêu Đề */}
+              <select
+                value={titleFontSize}
+                onChange={(e) => {
+                  const sz = Number(e.target.value);
+                  setTitleFontSize(sz);
+                  updateCurrentSlide('titleFontSize', sz);
+                }}
+                className="p-1.5 rounded-lg border border-gray-300 font-bold text-xs bg-white outline-none"
+                title="Cỡ chữ tiêu đề"
+              >
+                <option value={20}>20pt</option>
+                <option value={24}>24pt</option>
+                <option value={28}>28pt</option>
+                <option value={32}>32pt</option>
+                <option value={36}>36pt</option>
+                <option value={42}>42pt</option>
+              </select>
+
               <button
                 onClick={() => setIsBold(prev => !prev)}
                 className={`p-1.5 rounded-lg font-black transition ${
@@ -828,7 +1064,14 @@ export default function MicrosoftPowerPointView({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-black text-xs transition shadow-xs"
             >
               <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-              <span>📷 Tải Ảnh Mẫu Lên (Từ Máy Tính)</span>
+              <span>📷 Tải Thêm Ảnh Mẫu Lên Slide</span>
+            </button>
+            <button
+              onClick={() => audioInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-black text-xs transition shadow-xs"
+            >
+              <Music className="w-3.5 h-3.5 text-amber-600" />
+              <span>🎵 Chèn Âm Thanh / Bài Hát (.mp3, .wav)</span>
             </button>
             <button
               onClick={addBulletPoint}
@@ -849,12 +1092,40 @@ export default function MicrosoftPowerPointView({
 
         {/* TAB: THIẾT KẾ (DESIGN) */}
         {activeRibbonTab === 'design' && (
-          <div className="flex items-center gap-3 flex-wrap w-full">
-            <span className="font-bold text-gray-700 flex items-center gap-1">
-              <Palette className="w-3.5 h-3.5 text-[#D24726]" />
-              <span>Màu Nền Slide:</span>
-            </span>
+          <div className="flex items-center gap-4 flex-wrap w-full">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-gray-700">Tỷ lệ Slide:</span>
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border">
+                <button
+                  onClick={() => {
+                    setSlideAspectRatio('16:9');
+                    updateCurrentSlide('slideSize', '16:9');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                    slideAspectRatio === '16:9' ? 'bg-[#D24726] text-white shadow-xs' : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📐 16:9 (Màn Hình Rộng)
+                </button>
+                <button
+                  onClick={() => {
+                    setSlideAspectRatio('4:3');
+                    updateCurrentSlide('slideSize', '4:3');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                    slideAspectRatio === '4:3' ? 'bg-[#D24726] text-white shadow-xs' : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📐 4:3 (Màn Hình Chuẩn)
+                </button>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-700 flex items-center gap-1">
+                <Palette className="w-3.5 h-3.5 text-[#D24726]" />
+                <span>Màu Nền:</span>
+              </span>
               {[
                 { id: 'white', label: 'Trắng Sáng', color: '#FFFFFF' },
                 { id: 'cream', label: 'Vàng Kem (SGK)', color: '#FFFBEB' },
@@ -1114,19 +1385,31 @@ export default function MicrosoftPowerPointView({
 
         {/* CENTER SLIDE STAGE */}
         <div className="flex-1 p-3 sm:p-6 flex flex-col items-center justify-between overflow-y-auto">
-          {/* Real 16:9 Slide Canvas */}
+          {/* Real Slide Canvas with Dynamic Aspect Ratio & Fonts */}
           <div 
             ref={slideContainerRef}
-            className="w-full max-w-4xl aspect-[16/9] rounded-2xl shadow-xl border border-gray-300 p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all"
+            className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-3xl aspect-[4/3]' : 'max-w-4xl aspect-video'} rounded-2xl shadow-xl border border-gray-300 p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all`}
             style={{
               backgroundColor: activeTheme.bg,
               color: activeTheme.text,
-              fontFamily: 'Nunito, sans-serif'
+              fontFamily: `${fontFamily}, sans-serif`
             }}
           >
+            {/* Hidden HTML5 Audio Player for Slide Audio */}
+            {currentSlide.audio && (
+              <audio
+                ref={slideAudioRef}
+                src={currentSlide.audio.url}
+                onPlay={() => setIsPlayingSlideAudio(true)}
+                onPause={() => setIsPlayingSlideAudio(false)}
+                onEnded={() => setIsPlayingSlideAudio(false)}
+                className="hidden"
+              />
+            )}
+
             {/* Slide Header: Phase & Editable Title */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <input
                   type="text"
                   value={currentSlide.phase || ''}
@@ -1135,9 +1418,11 @@ export default function MicrosoftPowerPointView({
                   style={{ color: activeTheme.accent }}
                   placeholder="Nhập giai đoạn hoạt động..."
                 />
-                <span className="text-xs font-bold opacity-60">
-                  Slide {currentSlideIndex + 1} / {slides.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold opacity-60">
+                    Slide {currentSlideIndex + 1} / {slides.length} ({slideAspectRatio})
+                  </span>
+                </div>
               </div>
 
               {/* Editable Slide Title */}
@@ -1145,13 +1430,15 @@ export default function MicrosoftPowerPointView({
                 type="text"
                 value={currentSlide.title || ''}
                 onChange={(e) => updateCurrentSlide('title', e.target.value)}
-                className="w-full text-lg sm:text-2xl font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
+                className="w-full font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
                 placeholder="Nhập tiêu đề hoạt động..."
                 style={{
                   color: activeTheme.text,
+                  fontSize: `${titleFontSize}px`,
                   fontWeight: isBold ? '900' : '700',
                   fontStyle: isItalic ? 'italic' : 'normal',
-                  textAlign: textAlign
+                  textAlign: textAlign,
+                  lineHeight: '1.2'
                 }}
               />
 
@@ -1161,10 +1448,48 @@ export default function MicrosoftPowerPointView({
                   type="text"
                   value={currentSlide.subtitle || ''}
                   onChange={(e) => updateCurrentSlide('subtitle', e.target.value)}
-                  className="w-full text-xs sm:text-sm font-bold bg-transparent border-b border-transparent hover:border-gray-400 outline-none transition mt-1 opacity-80"
-                  style={{ color: activeTheme.accent }}
+                  className="w-full font-bold bg-transparent border-b border-transparent hover:border-gray-400 outline-none transition mt-1 opacity-80"
+                  style={{ 
+                    color: activeTheme.accent,
+                    fontSize: `${bodyFontSize}px`
+                  }}
                   placeholder="Nhập mục tiêu hoạt động..."
                 />
+              )}
+
+              {/* EMBEDDED SLIDE AUDIO / MUSIC WIDGET */}
+              {currentSlide.audio && (
+                <div className="my-2 p-2 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-xl shadow-md flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <button
+                      onClick={togglePlaySlideAudio}
+                      className="w-7 h-7 rounded-full bg-white text-[#D24726] font-black flex items-center justify-center shadow hover:scale-105 active:scale-95 transition shrink-0"
+                      title={isPlayingSlideAudio ? 'Tạm dừng' : 'Phát âm thanh slide'}
+                    >
+                      {isPlayingSlideAudio ? '⏸' : '▶'}
+                    </button>
+                    <div className="min-w-0">
+                      <span className="font-extrabold block truncate max-w-[280px]">
+                        🎵 {currentSlide.audio.name || 'Bản nhạc slide mĩ thuật'}
+                      </span>
+                      <span className="text-[10px] text-white/80 font-medium">
+                        {isPlayingSlideAudio ? 'Đang phát âm nhạc slide ılıılı' : 'Bấm để phát bài hát / âm thanh'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => {
+                        if (slideAudioRef.current) slideAudioRef.current.pause();
+                        updateCurrentSlide('audio', null);
+                      }}
+                      className="p-1 hover:bg-white/20 rounded text-white/80 hover:text-white transition"
+                      title="Gỡ âm thanh này"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1184,8 +1509,11 @@ export default function MicrosoftPowerPointView({
                           rows={2}
                           value={bullet}
                           onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
-                          className="w-full text-xs sm:text-sm bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
-                          style={{ color: activeTheme.text }}
+                          className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
+                          style={{ 
+                            color: activeTheme.text,
+                            fontSize: `${bodyFontSize}px`
+                          }}
                           placeholder="Nội dung bước thực hành..."
                         />
                         <button
@@ -1200,14 +1528,14 @@ export default function MicrosoftPowerPointView({
                   </div>
                 </div>
 
-                {/* Right Column: Visual Artwork Card with Upload Button */}
+                {/* Right Column: Visual Artwork Card with Multi-Image Support */}
                 <div 
                   className="md:col-span-5 p-3 rounded-2xl border-2 shadow-sm flex flex-col justify-between"
                   style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-black uppercase" style={{ color: activeTheme.accent }}>
-                      🎨 Tranh Thị Phạm
+                      🎨 Tranh Thị Phạm {currentSlide.images?.length > 1 ? `(${currentSlide.images.length} ảnh)` : ''}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -1219,7 +1547,10 @@ export default function MicrosoftPowerPointView({
                         <span>Đổi Ảnh</span>
                       </button>
                       <button
-                        onClick={() => setZoomArtworkModal(true)}
+                        onClick={() => {
+                          setZoomedImageSrc(currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl);
+                          setZoomArtworkModal(true);
+                        }}
                         className="p-1 hover:bg-white rounded-lg transition"
                         title="Phóng to tranh"
                       >
@@ -1228,17 +1559,47 @@ export default function MicrosoftPowerPointView({
                     </div>
                   </div>
 
-                  <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
-                    <img
-                      src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                      alt="Tranh mẫu"
-                      className="max-h-full max-w-full object-contain rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = './teacher.jpg';
-                      }}
-                    />
-                  </div>
+                  {/* Multi-image Gallery */}
+                  {currentSlide.images && currentSlide.images.length > 1 ? (
+                    <div className="space-y-1.5">
+                      <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-1.5 relative group">
+                        <img
+                          src={currentSlide.visualArt?.imageUrl || currentSlide.images[0]?.url || './teacher.jpg'}
+                          alt="Tranh mẫu chính"
+                          className="max-h-full max-w-full object-contain rounded-lg"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                        {currentSlide.images.map((img, imgIdx) => (
+                          <button
+                            key={img.id || imgIdx}
+                            onClick={() => {
+                              updateCurrentSlide('visualArt', { title: img.name, imageUrl: img.url });
+                            }}
+                            className={`w-12 h-10 rounded-lg overflow-hidden border-2 shrink-0 transition ${
+                              (currentSlide.visualArt?.imageUrl === img.url || (!currentSlide.visualArt?.imageUrl && imgIdx === 0))
+                                ? 'border-[#D24726] ring-2 ring-[#D24726]/40 scale-105'
+                                : 'border-gray-300 hover:border-gray-400 opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
+                      <img
+                        src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                        alt="Tranh mẫu"
+                        className="max-h-full max-w-full object-contain rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = './teacher.jpg';
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <p className="text-[11px] font-bold text-center mt-1.5 truncate opacity-90">
                     {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
@@ -1393,17 +1754,21 @@ export default function MicrosoftPowerPointView({
 
           {/* Centered Large Slide Canvas */}
           <div 
-            className="w-full max-w-5xl aspect-[16/9] rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden"
-            style={{ backgroundColor: activeTheme.bg, color: activeTheme.text }}
+            className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-4xl aspect-[4/3]' : 'max-w-5xl aspect-video'} rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden`}
+            style={{ 
+              backgroundColor: activeTheme.bg, 
+              color: activeTheme.text,
+              fontFamily: `${fontFamily}, sans-serif`
+            }}
           >
             <div>
               <p className="text-xs sm:text-sm font-black uppercase tracking-wider mb-1" style={{ color: activeTheme.accent }}>
-                {currentSlide.phase}
+                {currentSlide.phase} ({slideAspectRatio})
               </p>
-              <h2 className="text-2xl sm:text-4xl font-black">
+              <h2 className="font-black" style={{ fontSize: `${Math.max(24, titleFontSize + 4)}px`, lineHeight: '1.2' }}>
                 {currentSlide.title}
               </h2>
-              <p className="text-sm sm:text-base font-bold mt-2 opacity-80">
+              <p className="font-bold mt-2 opacity-80" style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>
                 {currentSlide.subtitle}
               </p>
             </div>
@@ -1413,14 +1778,14 @@ export default function MicrosoftPowerPointView({
                 {(currentSlide.bullets || []).map((b, idx) => (
                   <div key={idx} className="flex items-start gap-2.5 text-sm sm:text-lg font-bold">
                     <span className="font-black text-xl" style={{ color: activeTheme.accent }}>•</span>
-                    <span>{b}</span>
+                    <span style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>{b}</span>
                   </div>
                 ))}
               </div>
 
               <div className="md:col-span-5 p-4 rounded-2xl border" style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}>
                 <img
-                  src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                  src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
                   alt="Tranh mẫu"
                   className="w-full aspect-[4/3] object-contain rounded-xl bg-white p-2 shadow-sm"
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = './teacher.jpg'; }}
@@ -1459,6 +1824,19 @@ export default function MicrosoftPowerPointView({
               <ChevronRight className="w-5 h-5" />
             </button>
             <div className="h-5 w-px bg-white/20 mx-1" />
+            
+            {/* Nút phát nhạc slide trong trình chiếu */}
+            {currentSlide.audio && (
+              <button
+                onClick={togglePlaySlideAudio}
+                className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-rose-500 text-white font-black rounded-xl text-xs flex items-center gap-1.5 transition shadow"
+                title="Bật/Tắt âm nhạc chèn trong slide"
+              >
+                <Music className="w-4 h-4" />
+                <span>{isPlayingSlideAudio ? 'Tạm Dừng Nhạc' : 'Phát Nhạc Slide 🎵'}</span>
+              </button>
+            )}
+
             <button
               onClick={speakCurrentSlideOnly}
               className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-amber-950 font-black rounded-xl text-xs flex items-center gap-1.5 transition"
@@ -1479,7 +1857,10 @@ export default function MicrosoftPowerPointView({
                 {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
               </h3>
               <button
-                onClick={() => setZoomArtworkModal(false)}
+                onClick={() => {
+                  setZoomArtworkModal(false);
+                  setZoomedImageSrc(null);
+                }}
                 className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
               >
                 ✕
@@ -1487,7 +1868,7 @@ export default function MicrosoftPowerPointView({
             </div>
             <div className="w-full aspect-[4/3] bg-gray-50 rounded-2xl overflow-hidden flex items-center justify-center p-4 border border-gray-200">
               <img
-                src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                src={zoomedImageSrc || currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
                 alt="Phóng to tranh"
                 className="max-h-full max-w-full object-contain rounded-xl"
               />

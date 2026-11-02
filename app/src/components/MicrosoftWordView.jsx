@@ -32,7 +32,8 @@ import {
   Highlighter, 
   Undo, 
   Redo, 
-  Maximize
+  Maximize,
+  Music
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { exportSmasWord } from '../services/smasExport';
@@ -88,6 +89,11 @@ export default function MicrosoftWordView({
   const [isAutoLecturing, setIsAutoLecturing] = useState(false);
   const [activeActivityIndex, setActiveActivityIndex] = useState(0);
 
+  // Background Ambient Music (Nhạc nền mĩ thuật nhẹ nhàng)
+  const [ambientMusicEnabled, setAmbientMusicEnabled] = useState(false);
+  const ambientAudioContextRef = useRef(null);
+  const ambientTimerRef = useRef(null);
+
   // History for Undo / Redo
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -103,6 +109,83 @@ export default function MicrosoftWordView({
       stopLecture();
     }
   }, [selectedUnit, selectedGrade]);
+
+  // Clean up ambient audio on unmount
+  useEffect(() => {
+    return () => {
+      if (ambientAudioContextRef.current) {
+        ambientAudioContextRef.current.close().catch(() => {});
+        ambientAudioContextRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearInterval(ambientTimerRef.current);
+        ambientTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const toggleAmbientMusic = () => {
+    if (ambientMusicEnabled) {
+      if (ambientAudioContextRef.current) {
+        ambientAudioContextRef.current.close().catch(() => {});
+        ambientAudioContextRef.current = null;
+      }
+      if (ambientTimerRef.current) {
+        clearInterval(ambientTimerRef.current);
+        ambientTimerRef.current = null;
+      }
+      setAmbientMusicEnabled(false);
+      showSaveToastNotification('Đã tắt nhạc nền mĩ thuật.');
+    } else {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        ambientAudioContextRef.current = ctx;
+
+        const chords = [
+          [261.63, 329.63, 392.00], // C major (Đô - Mi - Sol)
+          [220.00, 261.63, 329.63], // A minor (La - Đô - Mi)
+          [174.61, 220.00, 261.63], // F major (Fa - La - Đô)
+          [196.00, 246.94, 293.66]  // G major (Sol - Si - Rê)
+        ];
+        let chordIdx = 0;
+
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.06, ctx.currentTime);
+        masterGain.connect(ctx.destination);
+
+        const playNextChord = () => {
+          if (!ambientAudioContextRef.current || ambientAudioContextRef.current.state === 'closed') return;
+          const currentNotes = chords[chordIdx % chords.length];
+          chordIdx++;
+
+          currentNotes.forEach(freq => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+            gain.gain.setValueAtTime(0.001, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1.2);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 4.8);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 4.9);
+          });
+        };
+
+        playNextChord();
+        ambientTimerRef.current = setInterval(playNextChord, 4800);
+
+        setAmbientMusicEnabled(true);
+        showSaveToastNotification('🎵 Đã bật nhạc nền sáng tạo mĩ thuật êm dịu!');
+      } catch (err) {
+        console.error('Không thể bật Web Audio:', err);
+      }
+    }
+  };
 
   const showSaveToastNotification = (msg) => {
     setSaveToast(msg || 'Đã lưu thay đổi vào Kế hoạch bài dạy!');
@@ -391,6 +474,20 @@ export default function MicrosoftWordView({
 
         {/* Quick Top Actions: Upload, Print, Export Word, Save */}
         <div className="flex items-center gap-2">
+          {/* NÚT BẬT / TẮT NHẠC NỀN MĨ THUẬT */}
+          <button
+            onClick={toggleAmbientMusic}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm transition ${
+              ambientMusicEnabled
+                ? 'bg-amber-400 text-amber-950 ring-2 ring-white animate-pulse'
+                : 'bg-white/20 hover:bg-white/30 text-white'
+            }`}
+            title="Bật/Tắt nhạc nền sáng tạo mĩ thuật êm dịu cho học sinh tập trung vẽ tranh"
+          >
+            <Music className="w-3.5 h-3.5" />
+            <span>{ambientMusicEnabled ? 'Nhạc Nền: BẬT 🎵' : 'Nhạc Nền Mĩ Thuật'}</span>
+          </button>
+
           {/* NÚT TẢI LÊN GIÁO ÁN TỪ MÁY TÍNH */}
           <button
             onClick={() => docxInputRef.current?.click()}
@@ -490,6 +587,11 @@ export default function MicrosoftWordView({
                 <option value="Nunito">Nunito (Thân thiện Tiểu học)</option>
                 <option value="Arial">Arial</option>
                 <option value="Calibri">Calibri</option>
+                <option value="Segoe UI">Segoe UI</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Be Vietnam Pro">Be Vietnam Pro</option>
+                <option value="Comic Sans MS">Comic Sans MS (Nét vẽ vui nhộn)</option>
               </select>
 
               <select
@@ -497,11 +599,15 @@ export default function MicrosoftWordView({
                 onChange={(e) => setFontSize(Number(e.target.value))}
                 className="p-1.5 rounded-lg border border-gray-300 text-xs font-bold bg-gray-50 outline-none"
               >
+                <option value={10}>10 pt</option>
                 <option value={11}>11 pt</option>
                 <option value={12}>12 pt</option>
                 <option value={13}>13 pt (Chuẩn)</option>
                 <option value={14}>14 pt</option>
                 <option value={16}>16 pt</option>
+                <option value={18}>18 pt</option>
+                <option value={20}>20 pt</option>
+                <option value={24}>24 pt</option>
               </select>
             </div>
 
@@ -794,7 +900,14 @@ export default function MicrosoftWordView({
             <div 
               contentEditable 
               suppressContentEditableWarning 
-              className="outline-none focus:ring-2 focus:ring-blue-400 p-4 min-h-[650px] text-left leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:border [&_table]:border-black [&_td]:border [&_td]:border-black [&_td]:p-2.5 [&_th]:border [&_th]:border-black [&_th]:p-2.5 [&_th]:bg-gray-100 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-lg [&_h3]:font-bold [&_p]:my-2 [&_img]:max-w-full [&_img]:my-3 [&_img]:rounded-md [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+              style={{
+                fontFamily: fontFamily,
+                fontSize: `${fontSize}pt`,
+                textAlign: textAlign,
+                lineHeight: lineHeight,
+                color: textColor
+              }}
+              className="outline-none focus:ring-2 focus:ring-blue-400 p-4 min-h-[650px] text-left leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:border [&_table]:border-black [&_td]:border [&_td]:border-black [&_td]:p-2.5 [&_th]:border [&_th]:border-black [&_th]:p-2.5 [&_th]:bg-gray-100 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-lg [&_h3]:font-bold [&_p]:my-2 [&_img]:max-w-full [&_img]:h-auto [&_img]:object-contain [&_img]:my-3 [&_img]:rounded-xl [&_img]:shadow-md [&_img]:border [&_img]:border-gray-200 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
               dangerouslySetInnerHTML={{ __html: uploadedDocHtml }}
             />
           ) : (

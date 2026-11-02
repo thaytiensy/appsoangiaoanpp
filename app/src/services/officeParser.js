@@ -28,6 +28,41 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
       throw new Error('Tệp không chứa cấu trúc slide PowerPoint hợp lệ.');
     }
 
+    // 0. Xác định tỷ lệ màn hình Slide (16:9 widescreen vs 4:3 standard)
+    let detectedSlideSize = '16:9';
+    if (zip.file('ppt/presentation.xml')) {
+      try {
+        const presXml = await zip.file('ppt/presentation.xml').async('text');
+        const szMatch = presXml.match(/<p:sldSz\s+cx="(\d+)"\s+cy="(\d+)"/);
+        if (szMatch) {
+          const cx = parseInt(szMatch[1], 10);
+          const cy = parseInt(szMatch[2], 10);
+          if (cy > 0 && (cx / cy) < 1.5) {
+            detectedSlideSize = '4:3';
+          }
+        }
+      } catch (e) {
+        console.warn('Lỗi đọc tỷ lệ slide trong presentation.xml:', e);
+      }
+    }
+
+    // Quét toàn bộ kho media tìm các tệp âm thanh / âm nhạc (.mp3, .wav, .m4a, .ogg)
+    const allAudioPaths = Object.keys(zip.files).filter(p => /^ppt\/media\/.*\.(mp3|wav|m4a|ogg|aac|wma)$/i.test(p));
+    const audioCache = {};
+    for (const ap of allAudioPaths) {
+      try {
+        const filename = ap.split('/').pop();
+        const b64 = await zip.file(ap).async('base64');
+        const ext = filename.split('.').pop().toLowerCase();
+        const mime = ext === 'wav' ? 'audio/wav' : (ext === 'ogg' ? 'audio/ogg' : 'audio/mpeg');
+        audioCache[filename] = {
+          name: filename,
+          url: `data:${mime};base64,${b64}`,
+          type: mime
+        };
+      } catch (e) {}
+    }
+
     // Sắp xếp thứ tự tự nhiên của slide: slide1, slide2, ..., slide10
     slidePaths.sort((a, b) => {
       const na = parseInt(a.match(/slide(\d+)\.xml/)?.[1] || '0', 10);
@@ -49,7 +84,30 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         return tMatches.map(t => t.replace(/<[^>]+>/g, '')).join('');
       }).map(s => s.trim()).filter(s => s.length > 0);
 
-      // 2. Phân loại Tiêu đề & Nội dung
+      // 2. Trích xuất Font chữ và cỡ chữ thực tế từ OpenXML (<a:rPr typeface=... sz=...>)
+      let slideFont = null;
+      const fontMatches = slideXml.match(/typeface="([^"+][^"]+)"/g) || [];
+      for (const fm of fontMatches) {
+        const fn = fm.replace(/typeface="|"/g, '').trim();
+        if (fn && !fn.startsWith('+') && !fn.includes('theme') && fn.length > 2) {
+          slideFont = fn;
+          break;
+        }
+      }
+
+      let titleSz = 26;
+      let bodySz = 16;
+      const szMatches = slideXml.match(/sz="(\d+)"/g) || [];
+      if (szMatches.length > 0) {
+        const pSz = parseInt(szMatches[0].replace(/sz="|"/g, ''), 10) / 100;
+        if (pSz >= 16 && pSz <= 60) titleSz = Math.round(pSz);
+      }
+      if (szMatches.length > 1) {
+        const pSz2 = parseInt(szMatches[1].replace(/sz="|"/g, ''), 10) / 100;
+        if (pSz2 >= 12 && pSz2 <= 30) bodySz = Math.round(pSz2);
+      }
+
+      // 3. Phân loại Tiêu đề & Nội dung
       let title = `Slide ${i + 1}`;
       let subtitle = 'Nội dung bài giảng mĩ thuật';
       let bullets = [];
@@ -65,40 +123,54 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         bullets = ['Nội dung trang trình chiếu'];
       }
 
-      // 3. Trích xuất hình ảnh minh họa từ tệp quan hệ (.rels)
-      let extractedImageUrl = null;
+      // 4. Trích xuất TOÀN BỘ hình ảnh & tệp âm thanh minh họa từ tệp quan hệ (.rels)
+      const slideImages = [];
+      let slideAudio = null;
       const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
+
       if (zip.file(relsPath)) {
         try {
           const relsXml = await zip.file(relsPath).async('text');
           const targetMatches = relsXml.match(/Target="([^"]+)"/g) || [];
           for (const tm of targetMatches) {
             const rawTarget = tm.replace(/Target="|"/g, '');
-            if (rawTarget.includes('media/') && (
-              rawTarget.endsWith('.png') ||
-              rawTarget.endsWith('.jpg') ||
-              rawTarget.endsWith('.jpeg') ||
-              rawTarget.endsWith('.webp') ||
-              rawTarget.endsWith('.gif')
-            )) {
-              const filename = rawTarget.split('/').pop();
+            const filename = rawTarget.split('/').pop();
+
+            // Nhận diện ảnh (.png, .jpg, .jpeg, .webp, .gif)
+            if (rawTarget.includes('media/') && /\.(png|jpg|jpeg|webp|gif)$/i.test(filename)) {
               const mediaPath = `ppt/media/${filename}`;
               const mediaFile = zip.file(mediaPath);
               if (mediaFile) {
                 const b64 = await mediaFile.async('base64');
                 const ext = filename.split('.').pop().toLowerCase();
                 const mime = ext === 'png' ? 'image/png' : (ext === 'gif' ? 'image/gif' : 'image/jpeg');
-                extractedImageUrl = `data:${mime};base64,${b64}`;
-                break; // lấy ảnh chính đầu tiên của slide
+                slideImages.push({
+                  id: `img_${slideNum}_${slideImages.length + 1}`,
+                  name: filename,
+                  url: `data:${mime};base64,${b64}`
+                });
+              }
+            }
+
+            // Nhận diện âm thanh / bài hát / nhạc nền (.mp3, .wav, .m4a, .ogg)
+            if (rawTarget.includes('media/') && /\.(mp3|wav|m4a|ogg|aac|wma)$/i.test(filename)) {
+              if (audioCache[filename]) {
+                slideAudio = audioCache[filename];
               }
             }
           }
         } catch (e) {
-          console.warn('Không thể đọc ảnh trong slide rels:', e);
+          console.warn('Lỗi đọc rels của slide:', e);
         }
       }
 
-      // 4. Trích xuất ghi chú của giáo viên (Speaker Notes)
+      // Nếu slide chưa có audio riêng nhưng tệp bài giảng có nhạc
+      if (!slideAudio && allAudioPaths.length > 0 && i === 0) {
+        const firstAudioName = allAudioPaths[0].split('/').pop();
+        slideAudio = audioCache[firstAudioName];
+      }
+
+      // 5. Trích xuất ghi chú của giáo viên (Speaker Notes)
       let speakerNote = null;
       const notesPaths = [
         `ppt/notesSlides/notesSlide${slideNum}.xml`,
@@ -134,10 +206,16 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         subtitle: subtitle,
         teacherLecture: speakerNote,
         bullets: bullets.length > 0 ? bullets : ['Nội dung hoạt động mĩ thuật'],
+        fontFamily: slideFont || 'Arial',
+        titleFontSize: titleSz,
+        bodyFontSize: bodySz,
+        slideSize: detectedSlideSize,
+        images: slideImages,
         visualArt: {
           title: title,
-          imageUrl: extractedImageUrl || './teacher.jpg'
-        }
+          imageUrl: slideImages[0]?.url || './teacher.jpg'
+        },
+        audio: slideAudio
       });
     }
 
@@ -145,6 +223,8 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
       success: true,
       slides: parsedSlides,
       total: parsedSlides.length,
+      slideSize: detectedSlideSize,
+      allAudios: Object.values(audioCache),
       fileName: file?.name || 'PowerPoint_Presentation.pptx'
     };
   } catch (error) {
