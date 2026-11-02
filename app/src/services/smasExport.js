@@ -421,4 +421,159 @@ export async function exportSmasPowerPoint({
   const fileName = `Bai_Giang_PowerPoint_SMAS_Viettel_Lop_${grade}_${unit.id}.pptx`;
   await pptx.writeFile({ fileName });
   return fileName;
-}
+};
+
+// 3. XUẤT KẾ HOẠCH BÀI DẠY WORD (.doc / .docx) CHUẨN CÔNG VĂN 2345 & SMAS VIETTEL
+export const exportSmasWord = ({
+  unit,
+  teacher = { name: 'Thầy Cọ Nhí', title: 'Thầy giáo' },
+  grade = 1,
+  plan = unit?.wordLessonPlan,
+  schoolName = 'Trường Tiểu Học Tân Phong'
+}) => {
+  if (!plan) return null;
+
+  const teacherName = teacher?.name || 'Thầy Cọ Nhí';
+  const activities = plan.activities || [];
+
+  const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset="utf-8">
+      <title>${plan.title}</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.35; color: #000; margin: 2cm 2cm 2cm 2.5cm; }
+        h1 { font-size: 16pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 12px 0 4px 0; color: #b91c1c; }
+        h2 { font-size: 14pt; font-weight: bold; text-align: center; margin: 4px 0 16px 0; color: #1e3a8a; }
+        h3 { font-size: 13pt; font-weight: bold; text-transform: uppercase; margin-top: 14px; margin-bottom: 6px; color: #0f172a; }
+        h4 { font-size: 13pt; font-weight: bold; font-style: italic; margin-top: 8px; margin-bottom: 4px; }
+        p { margin: 4px 0; text-align: justify; }
+        ul { margin: 4px 0 8px 24px; padding: 0; }
+        li { margin-bottom: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12pt; }
+        th, td { border: 1px solid #000; padding: 7px 9px; vertical-align: top; }
+        th { background-color: #f1f5f9; text-align: center; font-weight: bold; }
+        .meta-table { border: none; margin-bottom: 12px; }
+        .meta-table td { border: none; padding: 2px 4px; }
+        .smas-badge { background: #eff6ff; padding: 8px 12px; border: 1.5px solid #93c5fd; margin-bottom: 14px; border-radius: 4px; font-size: 10.5pt; color: #1e3a8a; }
+      </style>
+    </head>
+    <body>
+      <table class="meta-table">
+        <tr>
+          <td style="width: 50%; text-align: center;">
+            <b>${schoolName.toUpperCase()}</b><br/>
+            <b>TỔ CHUYÊN MÔN KHỐI ${grade}</b><br/>
+            <i>Mã KHBD SMAS: SMAS_KHBD_MT${grade}_${unit.id}</i>
+          </td>
+          <td style="width: 50%; text-align: center;">
+            <b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><br/>
+            <b>Độc lập - Tự do - Hạnh phúc</b><br/>
+            <i>------------------------------------</i>
+          </td>
+        </tr>
+      </table>
+
+      <div class="smas-badge">
+        <b>HỆ THỐNG QUẢN LÝ NHÀ TRƯỜNG SMAS VIETTEL (smas.edu.vn) • QUẢN LÝ GIÁO ÁN ĐIỆN TỬ</b><br/>
+        Kế hoạch bài dạy chuẩn Công văn 2345/BGDĐT-GDTH • Bộ sách Kết nối tri thức với cuộc sống môn Mĩ thuật Lớp ${grade}
+      </div>
+
+      <h1>${plan.title}</h1>
+      <h2>${plan.unit}</h2>
+      <p style="text-align: center; font-style: italic; margin-bottom: 16px;">
+        Bộ sách: Kết nối tri thức với cuộc sống • Môn: Mĩ thuật Lớp ${grade} • Thời lượng: ${plan.duration || unit.duration || '1 - 2 tiết'}
+      </p>
+
+      <h3>I. YÊU CẦU CẦN ĐẠT (MỤC TIÊU BÀI DẠY)</h3>
+      <p>Sau bài học này, học sinh đạt được:</p>
+      <ul>
+        ${(plan.objectives || []).map(obj => `<li>${obj}</li>`).join('')}
+      </ul>
+
+      <h3>II. ĐỒ DÙNG DẠY HỌC</h3>
+      <p><b>1. Giáo viên:</b> ${plan.preparations?.teacher || 'Kế hoạch bài dạy, bài giảng PowerPoint điện tử số SMAS, máy tính, tranh mẫu SGK, vật mẫu trực quan.'}</p>
+      <p><b>2. Học sinh:</b> ${plan.preparations?.students || 'Vở thực hành mĩ thuật Lớp ' + grade + ', bút chì, tẩy, hộp màu sáp, giấy thủ công, kéo, hồ dán.'}</p>
+
+      <h3>III. CÁC HOẠT ĐỘNG DẠY HỌC CHỦ YẾU</h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">Hoạt động của giáo viên</th>
+            <th style="width: 25%;">Hoạt động của học sinh</th>
+            <th style="width: 30%;">Nội dung trọng tâm & Gợi mở</th>
+            <th style="width: 20%;">Thời lượng & ĐDDH</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${activities.map((act) => `
+            <tr>
+              <td>
+                <b>${act.phase}</b><br/>
+                ${act.objective ? `<i>Mục tiêu: ${act.objective}</i><br/>` : ''}
+                ${act.teacherAct || ''}
+              </td>
+              <td>${act.studentAct || 'Lắng nghe, quan sát, thảo luận nhóm và thực hành sáng tạo.'}</td>
+              <td>
+                ${act.teacherQuestions && act.teacherQuestions.length > 0 ? `
+                  <b>Câu hỏi sư phạm:</b>
+                  <ul>${act.teacherQuestions.map(q => `<li>${q}</li>`).join('')}</ul>
+                ` : ''}
+                ${act.visualNotes ? `<p><b>Thị phạm:</b> ${act.visualNotes}</p>` : ''}
+              </td>
+              <td style="text-align: center;">
+                <b>${act.duration || '7-10 phút'}</b><br/>
+                <i>Tranh mẫu, Vở TH</i>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <h3>IV. ĐIỀU CHỈNH SAU BÀI DẠY</h3>
+      <p>.....................................................................................................................................................................</p>
+      <p>.....................................................................................................................................................................</p>
+
+      ${plan.integrations ? `
+        <h3>V. NỘI DUNG TÍCH HỢP LIÊN MÔN</h3>
+        <p>• <b>Tích hợp Âm nhạc & Đời sống:</b> ${plan.integrations.music || 'Hát các bài hát về chủ đề mĩ thuật tạo không khí hào hứng.'}</p>
+        <p>• <b>Giáo dục STEAM & Bảo vệ môi trường:</b> ${plan.integrations.steam || 'Khuyến khích tái chế bìa carton, gân lá rụng làm sản phẩm sáng tạo.'}</p>
+      ` : ''}
+
+      <table class="meta-table" style="margin-top: 35px;">
+        <tr>
+          <td style="width: 33%; text-align: center;">
+            <b>BAN GIÁM HIỆU DUYỆT</b><br/>
+            <i>(Ký duyệt điện tử SMAS)</i>
+            <br/><br/><br/><br/>
+          </td>
+          <td style="width: 33%; text-align: center;">
+            <b>TỔ TRƯỞNG CHUYÊN MÔN</b><br/>
+            <i>(Ký và ghi rõ họ tên)</i>
+            <br/><br/><br/><br/>
+          </td>
+          <td style="width: 34%; text-align: center;">
+            <i>Ngày ..... tháng ..... năm 202...</i><br/>
+            <b>GIÁO VIÊN SOẠN BÀI</b><br/>
+            <i>(Ký và ghi rõ họ tên)</i><br/><br/>
+            <b>${teacherName}</b>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob([htmlContent], { type: 'application/msword;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const fileName = `Giao_An_Word_SMAS_Viettel_Lop_${grade}_${unit.id}.doc`;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return fileName;
+};
+

@@ -152,9 +152,49 @@ export default function SmasExcelView({
   };
 
   return (
-    <div className={`flex flex-col gap-5 max-w-7xl mx-auto p-3 sm:p-6 bg-white rounded-3xl shadow-xl border-4 border-emerald-300 ${isTvMode ? 'text-base' : ''}`}>
-      {/* 1. Header Banner Chuẩn SMAS Viettel */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-700 p-5 sm:p-6 rounded-2xl text-white shadow-md flex items-center justify-between flex-wrap gap-4">
+    <div className={`flex flex-col gap-4 max-w-7xl mx-auto p-3 sm:p-6 bg-white rounded-3xl shadow-xl border-4 border-[#107C41] ${isTvMode ? 'text-base' : ''}`}>
+      {/* 1. MICROSOFT 365 EXCEL TOP BAR */}
+      <div className="bg-[#107C41] text-white px-4 py-2 rounded-2xl flex items-center justify-between border-b border-[#0b5e31] shadow-sm flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-[#0b5e31] px-2.5 py-1 rounded-xl text-xs font-black shadow-inner">
+            <span className="w-5 h-5 rounded-lg bg-white text-[#107C41] font-black flex items-center justify-center text-xs shadow-xs">
+              X
+            </span>
+            <span>Excel</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-xs sm:text-sm tracking-tight text-white/95">
+              So_Danh_Gia_Mi_Thuat_Lop_{grade}_{className}.xlsx - Excel (SMAS Viettel)
+            </span>
+            <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-white/80 bg-white/15 px-2 py-0.5 rounded-md font-semibold">
+              <CheckCircle2 className="w-3 h-3 text-emerald-300" /> Chuẩn Thông tư 27/2020/TT-BGDĐT
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportTemplate}
+            className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl border border-white/20 transition flex items-center gap-1.5"
+            title="Tải biểu mẫu Excel trắng chuẩn SMAS để điền thủ công"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Mẫu Trắng SMAS</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs rounded-xl shadow-md hover:scale-105 active:scale-95 transition flex items-center gap-1.5"
+            title="Xuất file Excel (.xlsx) chuẩn cấu trúc import của SMAS Viettel"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Xuất Excel (.xlsx) SMAS</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Header Banner Chuẩn SMAS Viettel */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 p-5 rounded-2xl text-white shadow-md flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-13 h-13 sm:w-14 sm:h-14 bg-white/10 rounded-2xl border-2 border-emerald-300 flex items-center justify-center text-3xl shadow-inner backdrop-blur-md shrink-0">
             📊
@@ -177,24 +217,15 @@ export default function SmasExcelView({
           </div>
         </div>
 
-        {/* Nút Xuất File Excel Chính */}
+        {/* Quick Action: AI Tự Động Sinh Nhận Xét */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={handleExportTemplate}
-            className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-black text-xs rounded-xl border border-white/30 transition flex items-center gap-1.5"
-            title="Tải biểu mẫu Excel trắng chuẩn SMAS để điền thủ công"
+            onClick={handleAiGenerateAllComments}
+            className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2"
+            title="Sử dụng AI sinh ngẫu nhiên nhận xét chuẩn Thông tư 27 không trùng lặp cho cả lớp"
           >
-            <Download className="w-4 h-4" />
-            <span>Tải Mẫu Trắng SMAS</span>
-          </button>
-
-          <button
-            onClick={handleExportExcel}
-            className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 animate-pulse"
-            title="Xuất file Excel (.xlsx) chuẩn cấu trúc import của SMAS Viettel"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Xuất File Excel (.xlsx) SMAS Viettel</span>
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>AI Tự Động Điền Nhận Xét</span>
           </button>
         </div>
       </div>
