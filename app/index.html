@@ -75,7 +75,7 @@
     <!-- Auto-Update & Cache Purge Engine -->
     <script>
       (function() {
-        const CURRENT_APP_BUILD = '2.6.0-female-lecture-auto';
+        const CURRENT_APP_BUILD = '3.0.0-smas-viettel-powerpoint-word-excel';
         const previousBuild = localStorage.getItem('ARTED_APP_BUILD_ID');
         if (previousBuild !== CURRENT_APP_BUILD) {
           localStorage.setItem('ARTED_APP_BUILD_ID', CURRENT_APP_BUILD);
@@ -90,7 +90,7 @@
 
         // Global recovery if a dynamic chunk fails to load due to stale cache
         window.addEventListener('error', function(e) {
-          if (e && e.message && (e.message.indexOf('Loading chunk') !== -1 || e.message.indexOf('Unexpected token') !== -1)) {
+          if (e && e.message && (e.message.indexOf('Loading chunk') !== -1 || e.message.indexOf('Unexpected token') !== -1 || e.message.indexOf('Failed to fetch') !== -1)) {
             console.warn('Phát hiện lỗi nạp module phiên bản cũ, đang tự động làm mới...');
             if ('caches' in window) {
               caches.keys().then(function(names) {
@@ -102,6 +102,47 @@
               window.location.reload();
             }
           }
+        });
+
+        // Anti-Blank Screen Watchdog: If #root is still completely empty after 2.5s, render a recovery prompt
+        window.addEventListener('DOMContentLoaded', function() {
+          setTimeout(function() {
+            const root = document.getElementById('root');
+            if (root && root.children.length === 0) {
+              root.innerHTML = `
+                <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: Nunito, sans-serif; padding: 20px; text-align: center;">
+                  <div style="background: white; padding: 32px; border-radius: 28px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-width: 500px; border: 3px solid #fde68a;">
+                    <div style="font-size: 54px; margin-bottom: 12px;">🎨</div>
+                    <h2 style="font-size: 22px; font-weight: 900; color: #e11d48; margin: 0 0 10px 0;">
+                      ART AI: Sẵn Sàng Bản Cập Nhật Mới!
+                    </h2>
+                    <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin-bottom: 24px;">
+                      Hệ thống vừa tích hợp bộ học liệu số <b>PowerPoint, Word, Excel chuẩn SMAS Viettel</b> và <b>Giọng Cô Hoài My</b>. Bấm nút dưới để nạp giao diện mới nhất:
+                    </p>
+                    <button id="btn-force-reload" style="background: linear-gradient(to right, #f43f5e, #fb923c); color: white; border: none; padding: 14px 28px; border-radius: 18px; font-weight: 900; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);">
+                      🚀 Tải Lại Ngay Phiên Bản Mới
+                    </button>
+                  </div>
+                </div>
+              `;
+              const btn = document.getElementById('btn-force-reload');
+              if (btn) {
+                btn.onclick = function() {
+                  localStorage.removeItem('ARTED_APP_BUILD_ID');
+                  sessionStorage.clear();
+                  if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                      Promise.all(names.map(function(n) { return caches.delete(n); })).then(function() {
+                        window.location.reload(true);
+                      });
+                    });
+                  } else {
+                    window.location.reload(true);
+                  }
+                };
+              }
+            }
+          }, 2500);
         });
       })();
     </script>
@@ -115,34 +156,9 @@
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js').then((reg) => {
             console.log('PWA Service Worker registered:', reg.scope);
-            
-            // Check for update on every page load
             reg.update();
-
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing;
-              if (installingWorker) {
-                installingWorker.onstatechange = () => {
-                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version installed! Take over immediately
-                    console.log('Phiên bản mới đã sẵn sàng. Tự động áp dụng...');
-                    installingWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
-                };
-              }
-            };
           }).catch((err) => {
-            console.log('PWA SW registration failed:', err);
-          });
-
-          // Reload when new service worker takes control
-          let refreshing = false;
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (!refreshing) {
-              refreshing = true;
-              window.location.reload();
-            }
+            console.log('PWA SW registration non-fatal:', err);
           });
         });
       }

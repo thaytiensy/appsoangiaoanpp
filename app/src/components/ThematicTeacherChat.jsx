@@ -35,12 +35,16 @@ import {
   ZoomOut,
   X,
   Sliders,
-  Monitor
+  Monitor,
+  Table,
+  FileSpreadsheet
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { KET_NOI_TRI_THUC_DATA } from '../data/ketNoiTriThucCurriculum';
 import { generateTeacherResponse } from '../services/gemini';
 import { ttsService } from '../services/tts';
+import SmasExcelView from './SmasExcelView';
+import { exportSmasPowerPoint } from '../services/smasExport';
 
 export default function ThematicTeacherChat({ 
   apiKey, 
@@ -54,7 +58,8 @@ export default function ThematicTeacherChat({
 }) {
   const [selectedGrade, setSelectedGrade] = useState(1);
   const [selectedUnit, setSelectedUnit] = useState(KET_NOI_TRI_THUC_DATA[0]);
-  const [viewMode, setViewMode] = useState('powerpoint'); // 'powerpoint' | 'word' | 'chat'
+  const [viewMode, setViewMode] = useState('powerpoint'); // 'powerpoint' | 'word' | 'excel' | 'chat'
+  const [isExportingPptx, setIsExportingPptx] = useState(false);
   
   // PowerPoint Slide & Presentation State
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -698,7 +703,8 @@ export default function ThematicTeacherChat({
           <tr>
             <td style="width: 50%; text-align: center;">
               <b>TRƯỜNG TIỂU HỌC: .......................................</b><br/>
-              <b>TỔ CHUYÊN MÔN KHỐI ${selectedGrade}</b>
+              <b>TỔ CHUYÊN MÔN KHỐI ${selectedGrade}</b><br/>
+              <i>Mã kế hoạch bài dạy SMAS: SMAS_KHBD_MT${selectedGrade}_${selectedUnit.id}</i>
             </td>
             <td style="width: 50%; text-align: center;">
               <b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><br/>
@@ -707,6 +713,11 @@ export default function ThematicTeacherChat({
             </td>
           </tr>
         </table>
+
+        <div style="background: #eff6ff; padding: 10px 14px; border: 1.5px solid #93c5fd; margin-bottom: 16px; border-radius: 6px; font-size: 11pt; color: #1e3a8a;">
+          <b>HỆ THỐNG QUẢN LÝ NHÀ TRƯỜNG SMAS VIETTEL (smas.edu.vn) • QUẢN LÝ GIÁO ÁN ĐIỆN TỬ</b><br/>
+          Kế hoạch bài dạy chuẩn Công văn 2345/BGDĐT-GDTH • Tích hợp liên môn GDPT 2018 môn Mĩ thuật
+        </div>
         
         <h1>${plan.title}</h1>
         <h2>${plan.unit}</h2>
@@ -826,12 +837,17 @@ export default function ThematicTeacherChat({
 
         <table class="meta-table" style="margin-top: 35px;">
           <tr>
-            <td style="width: 50%; text-align: center;">
+            <td style="width: 33%; text-align: center;">
               <b>BAN GIÁM HIỆU DUYỆT</b><br/>
+              <i>(Ký duyệt điện tử SMAS)</i>
+              <br/><br/><br/><br/>
+            </td>
+            <td style="width: 33%; text-align: center;">
+              <b>TỔ TRƯỞNG CHUYÊN MÔN</b><br/>
               <i>(Ký và ghi rõ họ tên)</i>
               <br/><br/><br/><br/>
             </td>
-            <td style="width: 50%; text-align: center;">
+            <td style="width: 34%; text-align: center;">
               <i>Ngày ..... tháng ..... năm 202...</i><br/>
               <b>GIÁO VIÊN SOẠN BÀI</b><br/>
               <i>(Ký và ghi rõ họ tên)</i><br/><br/>
@@ -847,10 +863,31 @@ export default function ThematicTeacherChat({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Giao_An_Mi_Thuat_Lop_${selectedGrade}_${selectedUnit.id}.doc`;
+    a.download = `Giao_An_SMAS_Viettel_Lop_${selectedGrade}_${selectedUnit.id}.doc`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  // Download PowerPoint (.pptx) Chuẩn Kho Học Liệu Số SMAS Viettel
+  const handleDownloadPptx = async () => {
+    setIsExportingPptx(true);
+    try {
+      await exportSmasPowerPoint({
+        unit: selectedUnit,
+        teacher,
+        grade: selectedGrade
+      });
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {
+      console.error('Lỗi khi xuất file PowerPoint SMAS:', e);
+    } finally {
+      setIsExportingPptx(false);
+    }
   };
 
   // Chat message sending
@@ -991,6 +1028,18 @@ export default function ThematicTeacherChat({
           >
             <FileText className="w-4 h-4" />
             <span>📄 Giáo Án Word (CV 2345)</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('excel')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition ${
+              viewMode === 'excel'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-white hover:text-emerald-600'
+            }`}
+          >
+            <Table className="w-4 h-4" />
+            <span>📊 Đánh Giá Excel (SMAS Viettel)</span>
           </button>
 
           <button
@@ -1179,6 +1228,17 @@ export default function ThematicTeacherChat({
                     >
                       <Sliders className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Điều Khiển</span>
+                    </button>
+
+                    {/* Nút Xuất PowerPoint (.pptx) Kho Học Liệu SMAS Viettel */}
+                    <button
+                      onClick={handleDownloadPptx}
+                      disabled={isExportingPptx}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm disabled:opacity-50"
+                      title="Tải bài giảng số PowerPoint (.pptx) chuẩn Kho học liệu SMAS Viettel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{isExportingPptx ? 'Đang tạo...' : 'Tải PPTX (SMAS)'}</span>
                     </button>
 
                     {/* Fullscreen F5 Toggle */}
@@ -1986,6 +2046,16 @@ export default function ThematicTeacherChat({
                     </button>
 
                     <button
+                      onClick={handleDownloadPptx}
+                      disabled={isExportingPptx}
+                      className="hidden sm:flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition shadow disabled:opacity-50"
+                      title="Tải PowerPoint (.pptx) Chuẩn SMAS Viettel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{isExportingPptx ? 'Đang tạo...' : 'Tải PPTX (SMAS)'}</span>
+                    </button>
+
+                    <button
                       onClick={goToNextSlide}
                       disabled={currentSlideIndex === slides.length - 1}
                       className="flex items-center gap-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 font-black rounded-xl text-xs sm:text-sm shadow transition"
@@ -2364,7 +2434,7 @@ export default function ThematicTeacherChat({
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-600" />
                   <span className="font-black text-sm text-blue-950">
-                    Kế Hoạch Bài Dạy Mĩ Thuật Chuẩn Công Văn 2345/BGDĐT-GDTH
+                    Kế Hoạch Bài Dạy Chuẩn Công Văn 2345 & SMAS Viettel (smas.edu.vn)
                   </span>
                 </div>
 
@@ -2388,7 +2458,7 @@ export default function ThematicTeacherChat({
                     title="Tải giáo án Word (.doc) về máy tính"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Tải Giáo Án (.doc)</span>
+                    <span>Tải Giáo Án Word (.doc) Chuẩn SMAS Viettel</span>
                   </button>
                 </div>
               </div>
@@ -2618,7 +2688,17 @@ export default function ThematicTeacherChat({
             </div>
           )}
 
-          {/* VIEW 3: 2-WAY TEACHER CHAT */}
+          {/* VIEW 3: EXCEL SMAS VIETTEL (THÔNG TƯ 27/2020/TT-BGDĐT) */}
+          {viewMode === 'excel' && (
+            <SmasExcelView
+              selectedGrade={selectedGrade}
+              selectedUnit={selectedUnit}
+              teacher={teacher}
+              isTvMode={isTvMode}
+            />
+          )}
+
+          {/* VIEW 4: 2-WAY TEACHER CHAT */}
           {viewMode === 'chat' && (
             <div className="bg-white rounded-3xl shadow-xl border-4 border-rose-200 overflow-hidden flex flex-col h-[600px]">
               {/* Chat Header */}

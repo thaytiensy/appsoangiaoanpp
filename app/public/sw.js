@@ -1,12 +1,13 @@
-// ART AI Progressive Web App Service Worker (Network-First Auto-Update Strategy)
-const CACHE_VERSION = 'art-ai-v2.6-live-' + Date.now();
+// ART AI Progressive Web App Service Worker (Bulletproof Auto-Update Strategy)
+const CACHE_VERSION = 'art-ai-smas-v3.0.0';
 const STATIC_ASSETS = [
+  '/',
   '/teacher.jpg',
   '/teacher_female.jpg',
   '/manifest.json'
 ];
 
-// Install: Cache essential assets & take over immediately
+// Install: Cache essential core shell & skip waiting
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
@@ -18,14 +19,14 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Activate: Purge ALL previous versions of cache and claim clients immediately
+// Activate: Purge ALL obsolete caches & claim clients immediately
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_VERSION) {
-            console.log('Xóa bộ nhớ đệm cũ:', key);
+            console.log('Purging obsolete cache:', key);
             return caches.delete(key);
           }
         })
@@ -41,55 +42,35 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Fetch: NEVER cache index.html or navigation requests with Cache-First!
-// Always fetch HTML / navigation from network so user gets the latest build automatically.
+// Fetch: NEVER block, hijack or break dynamic Vite modules!
+// All scripts, styles and assets are fetched directly from network.
+// Only fallback to cached root if completely offline on navigation.
 self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+
   const url = new URL(e.request.url);
 
-  // 1. Bypass dynamic API calls
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
+  // Bypass dynamic API routes
+  if (url.pathname.startsWith('/api/')) return;
 
-  // 2. Navigation / HTML Document requests: NETWORK FIRST
-  if (
-    e.request.mode === 'navigate' ||
-    e.request.destination === 'document' ||
-    url.pathname === '/' ||
-    url.pathname.endsWith('.html')
-  ) {
+  // For HTML navigation: Network-first with offline fallback
+  if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
             caches.open(CACHE_VERSION).then((cache) => cache.put(e.request, clone));
           }
-          return networkResponse;
+          return response;
         })
         .catch(() => {
-          // Fallback to cached index.html only when user is completely offline
-          return caches.match('/index.html') || caches.match('/');
+          return caches.match('/') || caches.match('/index.html');
         })
     );
     return;
   }
 
-  // 3. Static assets & scripts: Stale-While-Revalidate or Network-First
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(e.request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
-
-      // Return cached immediately if available, otherwise wait for network
-      return cachedResponse || fetchPromise;
-    })
-  );
+  // All other assets: Let browser fetch natively
+  return;
 });
