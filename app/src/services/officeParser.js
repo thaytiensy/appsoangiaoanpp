@@ -200,6 +200,25 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         speakerNote = `${teacherPronoun} chào các con! Ở trang trình chiếu này, chúng ta cùng tìm hiểu: "${title}". ${keyPoints ? 'Các con lưu ý: ' + keyPoints : ''}`;
       }
 
+      // Nhận diện loại bố cục thông minh cho từng Slide (Trò chơi, Mục tiêu, Toàn cảnh Slide):
+      const allTextCombined = `${title} ${subtitle} ${bullets.join(' ')}`.toLowerCase();
+      const isGame = allTextCombined.includes('game') || 
+                     allTextCombined.includes('con đường đến thành công') || 
+                     allTextCombined.includes('trò chơi') ||
+                     allTextCombined.includes('khởi động');
+      
+      const isInfographicGoal = allTextCombined.includes('mục tiêu') && 
+                                (allTextCombined.includes('ngắn hạn') || allTextCombined.includes('dài hạn'));
+
+      let detectedLayout = 'standard';
+      if (isGame) {
+        detectedLayout = 'interactive-game';
+      } else if (isInfographicGoal) {
+        detectedLayout = 'infographic-goals';
+      } else if (slideImages.length > 0) {
+        detectedLayout = 'full-slide';
+      }
+
       parsedSlides.push({
         phase: `Slide ${i + 1}`,
         title: title,
@@ -210,12 +229,15 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         titleFontSize: titleSz,
         bodyFontSize: bodySz,
         slideSize: detectedSlideSize,
+        layout: detectedLayout,
+        isGame: isGame,
         images: slideImages,
         visualArt: {
           title: title,
           imageUrl: slideImages[0]?.url || './teacher.jpg'
         },
-        audio: slideAudio
+        audio: slideAudio,
+        textBoxes: []
       });
     }
 

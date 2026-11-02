@@ -51,12 +51,90 @@ import {
   Lightbulb,
   MessageSquare,
   BookOpen,
-  Monitor
+  Monitor,
+  Gamepad2,
+  Trophy
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { exportSmasPowerPoint } from '../services/smasExport';
 import { ttsService } from '../services/tts';
 import { parsePptxFile } from '../services/officeParser';
+
+// Dữ liệu Bàn Cờ Trò Chơi Tương Tác: Con Đường Đến Thành Công
+export const GAME_STATIONS = [
+  {
+    id: 0,
+    name: "Vạch Xuất Phát",
+    icon: "🏁",
+    color: "from-amber-400 to-orange-500",
+    desc: "Cả lớp sẵn sàng xuất phát!"
+  },
+  {
+    id: 1,
+    name: "Trạm 1: Tự Tin",
+    icon: "💡",
+    color: "from-emerald-400 to-teal-600",
+    question: "Đố các con: Ba màu cơ bản (màu gốc) trong mĩ thuật là những màu nào?",
+    options: [
+      { text: "A. Đỏ - Vàng - Lam", isCorrect: true },
+      { text: "B. Hồng - Tím - Đen", isCorrect: false },
+      { text: "C. Xanh lá - Cam - Nâu", isCorrect: false }
+    ],
+    hint: "Ba màu này không thể pha ra từ màu khác, nhưng có thể pha thành vô số màu mới!"
+  },
+  {
+    id: 2,
+    name: "Trạm 2: Sáng Tạo",
+    icon: "🎨",
+    color: "from-sky-400 to-blue-600",
+    question: "Khi pha trộn màu ĐỎ và màu VÀNG với tỉ lệ bằng nhau, ta sẽ thu được màu gì?",
+    options: [
+      { text: "A. Màu Xanh Lá", isCorrect: false },
+      { text: "B. Màu Cam", isCorrect: true },
+      { text: "C. Màu Tím", isCorrect: false }
+    ],
+    hint: "Màu quả cam chín mọng rất ngon ngọt!"
+  },
+  {
+    id: 3,
+    name: "Trạm 3: Vượt Trội",
+    icon: "🚀",
+    color: "from-purple-400 to-indigo-600",
+    question: "Bố cục cân đối, hài hòa trong tranh vẽ có vai trò gì quan trọng nhất?",
+    options: [
+      { text: "A. Giúp bức tranh rõ trọng tâm và đẹp mắt", isCorrect: true },
+      { text: "B. Làm cho tranh bị lệch sang một bên", isCorrect: false },
+      { text: "C. Để tranh không có chỗ vẽ thêm", isCorrect: false }
+    ],
+    hint: "Trọng tâm bài vẽ luôn cần nổi bật và hài hòa!"
+  },
+  {
+    id: 4,
+    name: "Trạm 4: Bứt Phá",
+    icon: "🌟",
+    color: "from-rose-400 to-pink-600",
+    question: "Nét vẽ cong uốn lượn thường gợi cho người xem cảm giác gì?",
+    options: [
+      { text: "A. Cứng nhắc, gãy khúc", isCorrect: false },
+      { text: "B. Mềm mại, uyển chuyển như sóng nước", isCorrect: true },
+      { text: "C. Nặng nề, u ám", isCorrect: false }
+    ],
+    hint: "Như sóng biển hoặc mây trôi trên trời!"
+  },
+  {
+    id: 5,
+    name: "Đích Đến Thành Công!",
+    icon: "🏆",
+    color: "from-amber-500 to-yellow-400",
+    question: "Chúc mừng các con đã về đích xuất sắc! Bí quyết để học giỏi và sáng tạo mĩ thuật là gì?",
+    options: [
+      { text: "A. Có mục tiêu – Có động lực – Có kết quả!", isCorrect: true },
+      { text: "B. Ngại thực hành vẽ", isCorrect: false },
+      { text: "C. Không chia sẻ ý tưởng với bạn", isCorrect: false }
+    ],
+    hint: "Đúng với phương châm trong tiết học hôm nay!"
+  }
+];
 
 // Mẫu Slide 12 Mục Tiêu Học Tập (Chuẩn trực quan hệt như ảnh mẫu người dùng gửi)
 export const SAMPLE_GOAL_SLIDE = {
@@ -133,20 +211,36 @@ export default function MicrosoftPowerPointView({
   const audioInputRef = useRef(null);
   const slideAudioRef = useRef(null);
 
-  // Typography, Font Family & Size
+  // Typography, Font Family & Size (Khớp Microsoft Office)
   const [fontFamily, setFontFamily] = useState('Arial');
   const [titleFontSize, setTitleFontSize] = useState(26);
   const [bodyFontSize, setBodyFontSize] = useState(16);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
   const [textAlign, setTextAlign] = useState('left');
+  const [textColor, setTextColor] = useState('#1E293B');
+  const [highlightColor, setHighlightColor] = useState('transparent');
+  const [selectedTextBoxId, setSelectedTextBoxId] = useState(null);
 
   // Slide Dimension / Aspect Ratio: '16:9' (Widescreen) vs '4:3' (Standard)
   const [slideAspectRatio, setSlideAspectRatio] = useState('16:9');
   const [imageFitMode, setImageFitMode] = useState('contain'); // 'contain' | 'cover'
 
-  // Slide Layout: 'standard' | 'large-image' | 'title-only' | 'comparison'
-  const [slideLayout, setSlideLayout] = useState('standard');
+  // Slide Layout: 'full-slide' | 'interactive-game' | 'infographic-goals' | 'standard' | 'large-image' | 'title-only'
+  const [slideLayout, setSlideLayout] = useState('full-slide');
+
+  // Interactive Game State ("Con đường đến thành công" & Trò chơi bài giảng)
+  const [gamePlayerPosition, setGamePlayerPosition] = useState(0);
+  const [isDiceRolling, setIsDiceRolling] = useState(false);
+  const [diceValue, setDiceValue] = useState(1);
+  const [gameScore, setGameScore] = useState(0);
+  const [activeGameChallenge, setActiveGameChallenge] = useState(null);
+  const [showGameOriginalImage, setShowGameOriginalImage] = useState(false);
+
+  // Slide Navigation & Transition
+  const thumbnailRefs = useRef([]);
+  const [slideTransition, setSlideTransition] = useState('fade'); // 'fade' | 'slide' | 'zoom' | 'push' | 'none'
 
   // Slide Theme Background: 'white' | 'cream' | 'blue' | 'peach' | 'dark'
   const [slideTheme, setSlideTheme] = useState('cream');
@@ -230,18 +324,185 @@ export default function MicrosoftPowerPointView({
     };
   }, []);
 
-  // When changing slides, stop playing audio of previous slide & sync font/ratio
+  // When changing slides, stop playing audio, sync layout, scroll thumbnail, and sync font/ratio
   useEffect(() => {
     if (slideAudioRef.current) {
       slideAudioRef.current.pause();
       setIsPlayingSlideAudio(false);
     }
     const s = slides[currentSlideIndex];
-    if (s?.fontFamily) setFontFamily(s.fontFamily);
-    if (s?.titleFontSize) setTitleFontSize(s.titleFontSize);
-    if (s?.bodyFontSize) setBodyFontSize(s.bodyFontSize);
-    if (s?.slideSize) setSlideAspectRatio(s.slideSize);
+    if (s) {
+      if (s.fontFamily) setFontFamily(s.fontFamily);
+      if (s.titleFontSize) setTitleFontSize(s.titleFontSize);
+      if (s.bodyFontSize) setBodyFontSize(s.bodyFontSize);
+      if (s.slideSize) setSlideAspectRatio(s.slideSize);
+      if (s.textColor) setTextColor(s.textColor);
+
+      // Tự động nhận diện và áp dụng đúng bố cục tương ứng
+      if (s.layout) {
+        setSlideLayout(s.layout);
+      } else if (s.isGame || s.title?.toLowerCase().includes('game') || s.title?.toLowerCase().includes('con đường đến thành công')) {
+        setSlideLayout('interactive-game');
+      } else if (s.images && s.images.length > 0) {
+        setSlideLayout('full-slide');
+      } else {
+        setSlideLayout('standard');
+      }
+    }
+
+    // Tự động cuộn danh sách thumbnail bên trái đến đúng slide đang xem
+    if (thumbnailRefs.current[currentSlideIndex]) {
+      thumbnailRefs.current[currentSlideIndex].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
   }, [currentSlideIndex, slides]);
+
+  // Điều hướng chuyển Slide toàn diện bằng bàn phím (Mũi tên, PageUp/Down, Space, F5)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        setCurrentSlideIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setCurrentSlideIndex(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setCurrentSlideIndex(slides.length - 1);
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        setIsSlideShowMode(true);
+      } else if (e.key === 'Escape' && isSlideShowMode) {
+        setIsSlideShowMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [slides.length, isSlideShowMode]);
+
+  // Quản lý Hộp Văn Bản Tự Do Trên Slide (Khớp Microsoft PowerPoint)
+  const handleAddTextBox = () => {
+    const newBox = {
+      id: `tb_${Date.now()}`,
+      text: 'Nhập nội dung văn bản mới...',
+      x: 50,
+      y: 50,
+      fontSize: titleFontSize || 22,
+      fontFamily: fontFamily || 'Arial',
+      color: textColor || '#1E293B',
+      isBold: isBold,
+      isItalic: isItalic,
+      isUnderline: isUnderline,
+      textAlign: textAlign || 'left'
+    };
+    const updated = [...(currentSlide.textBoxes || []), newBox];
+    updateCurrentSlide('textBoxes', updated);
+    setSelectedTextBoxId(newBox.id);
+    showSaveToastNotification('Đã chèn hộp văn bản mới lên slide!');
+  };
+
+  const updateTextBox = (boxId, field, value) => {
+    const updated = (currentSlide.textBoxes || []).map(b => {
+      if (b.id === boxId) return { ...b, [field]: value };
+      return b;
+    });
+    updateCurrentSlide('textBoxes', updated);
+  };
+
+  const deleteTextBox = (boxId) => {
+    const updated = (currentSlide.textBoxes || []).filter(b => b.id !== boxId);
+    updateCurrentSlide('textBoxes', updated);
+    if (selectedTextBoxId === boxId) setSelectedTextBoxId(null);
+  };
+
+  // Quản lý Trò Chơi Tương Tác: Con Đường Đến Thành Công
+  const handleRollDice = () => {
+    if (isDiceRolling) return;
+    setIsDiceRolling(true);
+
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(640, audioCtx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    } catch (e) {}
+
+    let count = 0;
+    const interval = setInterval(() => {
+      setDiceValue(Math.floor(Math.random() * 6) + 1);
+      count++;
+      if (count >= 8) {
+        clearInterval(interval);
+        const roll = Math.floor(Math.random() * 6) + 1;
+        setDiceValue(roll);
+        setIsDiceRolling(false);
+
+        setGamePlayerPosition(prev => {
+          const step = roll >= 4 ? 2 : 1;
+          const next = Math.min(GAME_STATIONS.length - 1, prev + step);
+          if (next === GAME_STATIONS.length - 1) {
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+          }
+          if (GAME_STATIONS[next].question) {
+            setTimeout(() => {
+              setActiveGameChallenge(GAME_STATIONS[next]);
+            }, 500);
+          }
+          return next;
+        });
+      }
+    }, 70);
+  };
+
+  const handleAnswerChallenge = (option) => {
+    if (option.isCorrect) {
+      setGameScore(prev => prev + 10);
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) {}
+      alert('🎉 Hoan hô! Câu trả lời chính xác, cả lớp được thưởng 10 sao! ⭐');
+      setActiveGameChallenge(null);
+    } else {
+      alert('Chưa chính xác rồi con ơi! Hãy quan sát gợi ý và chọn lại nhé! 😊');
+    }
+  };
+
+  const handleResetGame = () => {
+    setGamePlayerPosition(0);
+    setGameScore(0);
+    setActiveGameChallenge(null);
+    showSaveToastNotification('Đã bắt đầu lại trò chơi Con Đường Đến Thành Công!');
+  };
 
   // Audio Playback Handler for Embedded Slide Music
   const togglePlaySlideAudio = () => {
@@ -1037,37 +1298,37 @@ export default function MicrosoftPowerPointView({
 
       {/* 3. RIBBON TOOLBAR ACTION BOXES */}
       <div className="bg-white border-b border-gray-300 p-2 flex items-center justify-between flex-wrap gap-2 text-gray-700 text-xs">
-        {/* TAB: TRANG ĐẦU (HOME) */}
+        {/* TAB: TRANG ĐẦU (HOME) - CHUẨN MICROSOFT POWERPOINT VỚI ĐẦY ĐỦ CÔNG CỤ CHỮ & ĐOẠN VĂN */}
         {activeRibbonTab === 'home' && (
-          <div className="flex items-center gap-3 flex-wrap w-full justify-between">
-            {/* Slide Operations */}
-            <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
+          <div className="flex items-center gap-2.5 flex-wrap w-full justify-between">
+            {/* Nhóm 1: Thao Tác Trang Chiếu */}
+            <div className="flex items-center gap-1.5 pr-2.5 border-r border-gray-200">
               <button
                 onClick={handleAddNewSlide}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-black text-xs transition"
-                title="Thêm một slide mới vào bài giảng"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-black text-xs transition"
+                title="Thêm một trang chiếu mới"
               >
                 <Plus className="w-3.5 h-3.5 text-amber-700" />
                 <span>Thêm Slide</span>
               </button>
               <button
                 onClick={handleDuplicateSlide}
-                className="p-1.5 hover:bg-gray-100 rounded-xl transition text-gray-700"
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition text-gray-700"
                 title="Nhân bản slide hiện tại"
               >
                 <Copy className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleDeleteSlide}
-                className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-xl transition"
+                className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition"
                 title="Xóa slide hiện tại"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Layout & Aspect Ratio */}
-            <div className="flex items-center gap-2 pr-3 border-r border-gray-200">
+            {/* Nhóm 2: Bố Cục & Tỷ Lệ */}
+            <div className="flex items-center gap-1.5 pr-2.5 border-r border-gray-200">
               <span className="text-[11px] font-bold text-gray-400">Bố Cục:</span>
               <select
                 value={slideLayout}
@@ -1076,25 +1337,27 @@ export default function MicrosoftPowerPointView({
                   setSlideLayout(val);
                   updateCurrentSlide('layout', val);
                 }}
-                className="p-1.5 rounded-lg border border-gray-300 font-black text-xs bg-gray-50 outline-none"
+                className="h-8 px-2 rounded-lg border border-gray-300 font-black text-xs bg-gray-50 hover:border-[#C43E1C] outline-none"
               >
+                <option value="full-slide">🖼️ Toàn Cảnh Slide (Khớp 100% PPTX)</option>
+                <option value="interactive-game">🎮 Chơi Game Tương Tác (Bàn Cờ)</option>
                 <option value="infographic-goals">🎯 Mục Tiêu Học Tập (Như Ảnh Mẫu)</option>
-                <option value="standard">Tiêu chuẩn GDPT (2 Cột)</option>
+                <option value="standard">📝 Bố Cục Soạn Thảo (2 Cột)</option>
                 <option value="large-image">Tranh Tiêu Điểm Lớn</option>
                 <option value="title-only">Bìa / Tiêu Đề</option>
               </select>
 
-              {/* Tỷ Lệ Màn Hình Slide (16:9 vs 4:3) */}
-              <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border">
+              {/* Tỷ Lệ 16:9 vs 4:3 */}
+              <div className="flex items-center gap-0.5 bg-gray-100 p-0.5 rounded-lg border">
                 <button
                   onClick={() => {
                     setSlideAspectRatio('16:9');
                     updateCurrentSlide('slideSize', '16:9');
                   }}
-                  className={`px-2 py-1 rounded text-[11px] font-black transition ${
-                    slideAspectRatio === '16:9' ? 'bg-[#D24726] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
+                  className={`px-2 py-1 rounded text-[10px] font-black transition ${
+                    slideAspectRatio === '16:9' ? 'bg-[#C43E1C] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  title="Tỷ lệ 16:9 (Màn hình rộng, TV & máy chiếu hiện đại)"
+                  title="Tỷ lệ 16:9 (Màn hình rộng)"
                 >
                   16:9
                 </button>
@@ -1103,61 +1366,85 @@ export default function MicrosoftPowerPointView({
                     setSlideAspectRatio('4:3');
                     updateCurrentSlide('slideSize', '4:3');
                   }}
-                  className={`px-2 py-1 rounded text-[11px] font-black transition ${
-                    slideAspectRatio === '4:3' ? 'bg-[#D24726] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
+                  className={`px-2 py-1 rounded text-[10px] font-black transition ${
+                    slideAspectRatio === '4:3' ? 'bg-[#C43E1C] text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  title="Tỷ lệ 4:3 (Màn hình chuẩn cổ điển)"
+                  title="Tỷ lệ 4:3 (Màn hình chuẩn)"
                 >
                   4:3
                 </button>
               </div>
             </div>
 
-            {/* Font & Typography Settings */}
-            <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
-              {/* Chọn Phông Chữ Slide */}
+            {/* Nhóm 3: Phông Chữ (Font) Chuẩn Microsoft PowerPoint */}
+            <div className="flex items-center gap-1.5 pr-2.5 border-r border-gray-200">
               <select
                 value={fontFamily}
                 onChange={(e) => {
                   setFontFamily(e.target.value);
                   updateCurrentSlide('fontFamily', e.target.value);
                 }}
-                className="p-1.5 rounded-lg border border-gray-300 font-black text-xs bg-white outline-none"
-                title="Phông chữ của bài giảng"
+                className="h-8 px-2 rounded-lg border border-gray-300 font-bold text-xs bg-white hover:border-[#C43E1C] outline-none max-w-[130px]"
+                title="Phông chữ"
               >
-                <option value="Arial">Arial (Chuẩn)</option>
+                <option value="Arial">Arial</option>
                 <option value="Times New Roman">Times New Roman</option>
-                <option value="Calibri">Calibri (Office 365)</option>
+                <option value="Calibri">Calibri (Office)</option>
                 <option value="Segoe UI">Segoe UI</option>
+                <option value="Aptos">Aptos (Mới)</option>
+                <option value="Be Vietnam Pro">Be Vietnam Pro</option>
                 <option value="Montserrat">Montserrat</option>
                 <option value="Roboto">Roboto</option>
-                <option value="Be Vietnam Pro">Be Vietnam Pro</option>
                 <option value="Comic Sans MS">Comic Sans MS (Học sinh)</option>
               </select>
 
-              {/* Chọn Cỡ Chữ Tiêu Đề */}
-              <select
-                value={titleFontSize}
-                onChange={(e) => {
-                  const sz = Number(e.target.value);
-                  setTitleFontSize(sz);
-                  updateCurrentSlide('titleFontSize', sz);
-                }}
-                className="p-1.5 rounded-lg border border-gray-300 font-bold text-xs bg-white outline-none"
-                title="Cỡ chữ tiêu đề"
-              >
-                <option value={20}>20pt</option>
-                <option value={24}>24pt</option>
-                <option value={28}>28pt</option>
-                <option value={32}>32pt</option>
-                <option value={36}>36pt</option>
-                <option value={42}>42pt</option>
-              </select>
+              {/* Cỡ Chữ & Nút Tăng/Giảm (A^ / Av) */}
+              <div className="flex items-center gap-0.5">
+                <select
+                  value={titleFontSize}
+                  onChange={(e) => {
+                    const sz = Number(e.target.value);
+                    setTitleFontSize(sz);
+                    updateCurrentSlide('titleFontSize', sz);
+                  }}
+                  className="h-8 px-1 rounded-lg border border-gray-300 font-black text-xs bg-white hover:border-[#C43E1C] outline-none w-14"
+                  title="Cỡ chữ"
+                >
+                  {[12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48, 54, 60, 72, 80].map(sz => (
+                    <option key={sz} value={sz}>{sz}pt</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    const nextSz = Math.min(80, titleFontSize + 2);
+                    setTitleFontSize(nextSz);
+                    updateCurrentSlide('titleFontSize', nextSz);
+                  }}
+                  className="h-8 px-1.5 rounded-lg hover:bg-gray-100 font-black text-[11px] border border-gray-200 transition"
+                  title="Tăng cỡ chữ (A^)"
+                >
+                  A<span className="text-[9px] align-top">▲</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const nextSz = Math.max(10, titleFontSize - 2);
+                    setTitleFontSize(nextSz);
+                    updateCurrentSlide('titleFontSize', nextSz);
+                  }}
+                  className="h-8 px-1.5 rounded-lg hover:bg-gray-100 font-black text-[11px] border border-gray-200 transition"
+                  title="Giảm cỡ chữ (Av)"
+                >
+                  A<span className="text-[9px] align-bottom">▼</span>
+                </button>
+              </div>
 
+              <div className="h-5 w-px bg-gray-300 mx-0.5" />
+
+              {/* Đậm, Nghiêng, Gạch chân */}
               <button
                 onClick={() => setIsBold(prev => !prev)}
-                className={`p-1.5 rounded-lg font-black transition ${
-                  isBold ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-400' : 'hover:bg-gray-100'
+                className={`h-8 w-8 rounded-lg font-black transition flex items-center justify-center ${
+                  isBold ? 'bg-[#C43E1C]/15 text-[#C43E1C] ring-1 ring-[#C43E1C]' : 'hover:bg-gray-100 text-gray-700'
                 }`}
                 title="In đậm (Bold)"
               >
@@ -1165,87 +1452,166 @@ export default function MicrosoftPowerPointView({
               </button>
               <button
                 onClick={() => setIsItalic(prev => !prev)}
-                className={`p-1.5 rounded-lg italic font-black transition ${
-                  isItalic ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-400' : 'hover:bg-gray-100'
+                className={`h-8 w-8 rounded-lg italic font-black transition flex items-center justify-center ${
+                  isItalic ? 'bg-[#C43E1C]/15 text-[#C43E1C] ring-1 ring-[#C43E1C]' : 'hover:bg-gray-100 text-gray-700'
                 }`}
                 title="In nghiêng (Italic)"
               >
                 <Italic className="w-3.5 h-3.5" />
               </button>
-              <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsUnderline(prev => !prev)}
+                className={`h-8 w-8 rounded-lg underline font-black transition flex items-center justify-center ${
+                  isUnderline ? 'bg-[#C43E1C]/15 text-[#C43E1C] ring-1 ring-[#C43E1C]' : 'hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Gạch chân (Underline)"
+              >
+                <Underline className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Màu Phông Chữ (Bảng Màu Office) */}
+              <div className="relative group">
                 <button
-                  onClick={() => setTextAlign('left')}
-                  className={`p-1.5 rounded-lg transition ${textAlign === 'left' ? 'bg-gray-200 text-black' : 'hover:bg-gray-100'}`}
-                  title="Căn trái"
+                  className="h-8 px-2 rounded-lg hover:bg-gray-100 border border-gray-200 flex flex-col items-center justify-center transition"
+                  title="Màu phông chữ"
                 >
-                  <AlignLeft className="w-3.5 h-3.5" />
+                  <span className="font-black text-xs leading-none">A</span>
+                  <span className="w-4 h-1 rounded-full mt-0.5 shadow-2xs" style={{ backgroundColor: textColor }} />
                 </button>
-                <button
-                  onClick={() => setTextAlign('center')}
-                  className={`p-1.5 rounded-lg transition ${textAlign === 'center' ? 'bg-gray-200 text-black' : 'hover:bg-gray-100'}`}
-                  title="Căn giữa"
-                >
-                  <AlignCenter className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setTextAlign('right')}
-                  className={`p-1.5 rounded-lg transition ${textAlign === 'right' ? 'bg-gray-200 text-black' : 'hover:bg-gray-100'}`}
-                  title="Căn phải"
-                >
-                  <AlignRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="absolute top-full left-0 mt-1 hidden group-hover:flex items-center gap-1 bg-white p-2 rounded-xl shadow-xl border border-gray-300 z-30">
+                  {['#000000', '#C43E1C', '#1D4ED8', '#047857', '#B45309', '#6D28D9', '#E11D48', '#FFFFFF'].map(c => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setTextColor(c);
+                        updateCurrentSlide('textColor', c);
+                      }}
+                      className="w-5 h-5 rounded-full border border-gray-300 hover:scale-125 transition"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Group: Thêm Văn Bản & Khóa Giọng Giảng Bài AI */}
-            <div className="flex items-center gap-2">
+            {/* Nhóm 4: Căn Lề Đoạn Văn (Paragraph) */}
+            <div className="flex items-center gap-1 pr-2.5 border-r border-gray-200">
+              <button
+                onClick={() => setTextAlign('left')}
+                className={`h-8 w-8 rounded-lg transition flex items-center justify-center ${textAlign === 'left' ? 'bg-gray-200 font-black' : 'hover:bg-gray-100'}`}
+                title="Căn trái"
+              >
+                <AlignLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setTextAlign('center')}
+                className={`h-8 w-8 rounded-lg transition flex items-center justify-center ${textAlign === 'center' ? 'bg-gray-200 font-black' : 'hover:bg-gray-100'}`}
+                title="Căn giữa"
+              >
+                <AlignCenter className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setTextAlign('right')}
+                className={`h-8 w-8 rounded-lg transition flex items-center justify-center ${textAlign === 'right' ? 'bg-gray-200 font-black' : 'hover:bg-gray-100'}`}
+                title="Căn phải"
+              >
+                <AlignRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setTextAlign('justify')}
+                className={`h-8 w-8 rounded-lg transition flex items-center justify-center ${textAlign === 'justify' ? 'bg-gray-200 font-black' : 'hover:bg-gray-100'}`}
+                title="Căn đều hai bên"
+              >
+                <AlignJustify className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Nhóm 5: Hộp Văn Bản & Thao Tác Chữ Tự Do */}
+            <div className="flex items-center gap-1.5 pr-2.5 border-r border-gray-200">
+              <button
+                onClick={handleAddTextBox}
+                className="h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-black text-xs flex items-center gap-1.5 transition shadow-2xs"
+                title="Chèn hộp văn bản tự do trực tiếp lên slide"
+              >
+                <Type className="w-3.5 h-3.5 text-[#C43E1C]" />
+                <span>🔤 Hộp Văn Bản</span>
+              </button>
               <button
                 onClick={addBulletPoint}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl font-bold text-xs transition"
+                className="h-8 px-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg font-bold text-xs transition"
+                title="Thêm dòng nội dung vào slide"
               >
-                <Type className="w-3.5 h-3.5" />
-                <span>+ Thêm Dòng</span>
+                <span>+ Dòng</span>
               </button>
+            </div>
 
-              {/* NÚT CHUYỂN ĐỔI GIỌNG NÓI RÕ RÀNG */}
+            {/* Nhóm 6: Giọng Nói AI & Âm Nhạc */}
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => handleSwitchVoice()}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black border transition shadow-xs ${
+                className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-black border transition shadow-xs ${
                   selectedVoice === 'female'
                     ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100'
                     : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
                 }`}
-                title="Bấm để chuyển đổi giữa Giọng Thầy Cọ Nhí (Nam) và Cô Hoài My (Nữ) - Khóa giọng 100%"
+                title="Chuyển đổi Giọng Thầy Cọ Nhí (Nam) và Cô Hoài My (Nữ)"
               >
                 <span>{selectedVoice === 'female' ? '👩‍🏫' : '👨‍🏫'}</span>
-                <span className="hidden sm:inline">{selectedVoice === 'female' ? 'Cô Hoài My (Nữ)' : 'Thầy Cọ Nhí (Nam)'}</span>
+                <span className="hidden sm:inline">{selectedVoice === 'female' ? 'Cô Hoài My' : 'Thầy Cọ Nhí'}</span>
                 <span className="text-[10px] opacity-60">⇄</span>
               </button>
 
-              {/* Nút Giảng Bài Slide Này */}
               <button
                 onClick={speakCurrentSlideOnly}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition ${
+                className={`h-8 flex items-center gap-1 px-2.5 rounded-lg font-bold text-xs transition ${
                   isSpeaking ? 'bg-rose-600 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
                 title="Nghe Thầy/Cô AI đọc bài giảng slide này"
               >
                 <Volume2 className="w-3.5 h-3.5" />
-                <span>{isSpeaking ? 'Dừng Đọc' : 'Đọc Slide'}</span>
+                <span className="hidden sm:inline">{isSpeaking ? 'Dừng' : 'Đọc'}</span>
               </button>
 
-              {/* Nút Nhạc Nền Mĩ Thuật */}
               <button
                 onClick={toggleAmbientMusic}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-black text-xs transition ${
+                className={`h-8 flex items-center gap-1 px-2 rounded-lg font-black text-xs transition ${
                   ambientMusicEnabled ? 'bg-amber-400 text-amber-950 animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
-                title="Bật/Tắt nhạc nền sáng tạo mĩ thuật êm dịu"
+                title="Bật/Tắt nhạc nền sáng tạo"
               >
                 <Music className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{ambientMusicEnabled ? 'Nhạc: BẬT 🎵' : 'Nhạc Nền'}</span>
               </button>
             </div>
+          </div>
+        )}
+
+        {/* TAB: CHUYỂN TIẾP (TRANSITIONS) */}
+        {activeRibbonTab === 'transitions' && (
+          <div className="flex items-center gap-3 flex-wrap w-full py-0.5">
+            <span className="font-bold text-xs text-gray-500">Hiệu Ứng Chuyển Đổi Slide:</span>
+            {[
+              { id: 'none', label: 'Không', icon: '⏹' },
+              { id: 'fade', label: 'Mờ Dần (Fade)', icon: '🌫️' },
+              { id: 'slide', label: 'Trượt Ngang (Slide)', icon: '⏩' },
+              { id: 'push', label: 'Đẩy Lên (Push)', icon: '⏫' },
+              { id: 'zoom', label: 'Thu Phóng (Zoom)', icon: '🔍' }
+            ].map(tr => (
+              <button
+                key={tr.id}
+                onClick={() => {
+                  setSlideTransition(tr.id);
+                  showSaveToastNotification(`Đã chọn hiệu ứng chuyển slide: ${tr.label}`);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition ${
+                  slideTransition === tr.id
+                    ? 'bg-[#C43E1C] text-white border-[#C43E1C] shadow-xs'
+                    : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-300'
+                }`}
+              >
+                <span>{tr.icon}</span>
+                <span>{tr.label}</span>
+              </button>
+            ))}
           </div>
         )}
 
@@ -1512,14 +1878,19 @@ export default function MicrosoftPowerPointView({
           {slides.map((s, idx) => {
             const isCurrent = currentSlideIndex === idx;
             const isGoalSlide = s.layout === 'infographic-goals';
+            const isGameSlide = s.layout === 'interactive-game' || s.isGame || s.title?.toLowerCase().includes('game') || s.title?.toLowerCase().includes('con đường đến thành công');
             const displaySlideNum = isGoalSlide ? (s.slideNumber || 12) : (idx + 1);
 
             return (
               <div
                 key={idx}
+                ref={el => thumbnailRefs.current[idx] = el}
                 onClick={() => {
                   setCurrentSlideIndex(idx);
                   if (s.layout) setSlideLayout(s.layout);
+                  else if (isGameSlide) setSlideLayout('interactive-game');
+                  else if (s.images && s.images.length > 0) setSlideLayout('full-slide');
+                  else setSlideLayout('standard');
                 }}
                 className="flex items-start gap-1.5 cursor-pointer group"
               >
@@ -1562,6 +1933,20 @@ export default function MicrosoftPowerPointView({
                       {/* Mini Bottom Quote */}
                       <div className="bg-rose-100/90 border border-rose-300 rounded text-[4.5px] font-black text-rose-700 text-center truncate">
                         Có mục tiêu – Có kết quả! 🏆
+                      </div>
+                    </div>
+                  ) : isGameSlide ? (
+                    <div className="w-full h-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-1 flex flex-col justify-between text-white text-[6px] select-none overflow-hidden rounded">
+                      <div className="flex items-center justify-between font-black">
+                        <span>🎲 GAME</span>
+                        <span>⭐</span>
+                      </div>
+                      <p className="font-black text-center truncate text-[5px] bg-black/30 rounded py-0.5 px-1">
+                        {s.title || 'Con Đường Thành Công'}
+                      </p>
+                      <div className="flex items-center justify-between text-[5px]">
+                        <span>🏁 Xuất phát</span>
+                        <span>🏆 Đích</span>
                       </div>
                     </div>
                   ) : (s.visualArt?.imageUrl && s.visualArt?.imageUrl !== './teacher.jpg') || (s.images?.[0]?.url) ? (
@@ -1611,203 +1996,544 @@ export default function MicrosoftPowerPointView({
         </div>
 
         {/* CENTER SLIDE STAGE */}
-        <div className="flex-1 p-3 sm:p-6 flex flex-col items-center justify-between overflow-y-auto">
-          {/* Real Slide Canvas with Dynamic Aspect Ratio & Fonts */}
-          <div 
-            ref={slideContainerRef}
-            className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-3xl aspect-[4/3]' : 'max-w-4xl aspect-video'} rounded-2xl shadow-xl border border-gray-300 p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all`}
-            style={{
-              backgroundColor: activeTheme.bg,
-              color: activeTheme.text,
-              fontFamily: `${fontFamily}, sans-serif`
-            }}
-          >
-            {/* Hidden HTML5 Audio Player for Slide Audio */}
-            {currentSlide.audio && (
-              <audio
-                ref={slideAudioRef}
-                src={currentSlide.audio.url}
-                onPlay={() => setIsPlayingSlideAudio(true)}
-                onPause={() => setIsPlayingSlideAudio(false)}
-                onEnded={() => setIsPlayingSlideAudio(false)}
-                className="hidden"
-              />
-            )}
+        <div className="flex-1 p-3 sm:p-6 flex flex-col items-center justify-between overflow-y-auto relative">
+          {/* Top Quick Layout Pill Toolbar */}
+          <div className="mb-2 flex items-center justify-between w-full max-w-4xl bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-gray-300 shadow-2xs text-xs font-bold text-gray-700">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-gray-400 text-[11px] font-bold shrink-0">Bố cục:</span>
+              <button
+                onClick={() => {
+                  setSlideLayout('full-slide');
+                  updateCurrentSlide('layout', 'full-slide');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                  slideLayout === 'full-slide' ? 'bg-[#C43E1C] text-white shadow-2xs' : 'hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Hiển thị toàn cảnh slide bài giảng (Khớp 100% tệp PPTX gốc)"
+              >
+                <span>🖼️ Toàn Cảnh Slide</span>
+              </button>
 
-            {/* CHẾ ĐỘ 1: BỐ CỤC INFOGRAPHIC MỤC TIÊU HỌC TẬP (CHUẨN HỆT NHƯ ẢNH MẪU NGƯỜI DÙNG GỬI) */}
-            {(currentSlide.layout === 'infographic-goals' || slideLayout === 'infographic-goals') ? (
-              <div className="relative w-full h-full flex flex-col justify-between p-2 sm:p-3.5 bg-gradient-to-b from-sky-50 via-emerald-50/30 to-amber-50/40 rounded-2xl border-4 border-dashed border-sky-400 overflow-hidden shadow-inner select-text">
-                {/* Decorative floating sparkles */}
-                <div className="absolute top-2 left-3 text-amber-400 text-base select-none animate-pulse">✨</div>
-                <div className="absolute top-2 right-4 text-amber-400 text-base select-none animate-pulse">⭐</div>
-                
-                {/* 1. Header Cloud with Characters */}
-                <div className="flex items-center justify-between gap-2 sm:gap-3 relative z-10">
-                  {/* Left Character: Cute girl with magnifying glass */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-pink-100 border-2 border-pink-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
-                      👧
-                    </div>
-                    <span className="text-[9px] font-black text-pink-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-pink-200 shadow-2xs">
-                      Quan sát 🔍
-                    </span>
-                  </div>
+              <button
+                onClick={() => {
+                  setSlideLayout('interactive-game');
+                  updateCurrentSlide('layout', 'interactive-game');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                  slideLayout === 'interactive-game' ? 'bg-amber-500 text-white shadow-2xs' : 'hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Bàn cờ trò chơi tương tác cho học sinh (Con đường đến thành công)"
+              >
+                <span>🎮 Chơi Game Tương Tác</span>
+              </button>
 
-                  {/* Center Cloud Title */}
-                  <div className="flex-1 bg-white/95 rounded-2xl sm:rounded-3xl p-2 sm:p-3 border-2 border-rose-300 shadow-sm text-center max-w-lg mx-auto">
-                    <input
-                      type="text"
-                      value={currentSlide.title || 'Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó'}
-                      onChange={(e) => updateCurrentSlide('title', e.target.value)}
-                      className="w-full text-center font-black text-rose-600 outline-none bg-transparent leading-snug text-xs sm:text-sm md:text-base"
-                      placeholder="Nhập câu hỏi gợi mở / tiêu đề slide..."
-                    />
-                  </div>
+              <button
+                onClick={() => {
+                  setSlideLayout('infographic-goals');
+                  updateCurrentSlide('layout', 'infographic-goals');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                  slideLayout === 'infographic-goals' ? 'bg-emerald-600 text-white shadow-2xs' : 'hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Đồ họa Mục tiêu ngắn hạn & dài hạn chuẩn ảnh mẫu"
+              >
+                <span>🎯 Mục Tiêu Học Tập</span>
+              </button>
 
-                  {/* Right Character: Cute boy with graduation cap */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-sky-100 border-2 border-sky-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
-                      🎓
-                    </div>
-                    <span className="text-[9px] font-black text-sky-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-sky-200 shadow-2xs">
-                      Mục tiêu 🎯
-                    </span>
-                  </div>
-                </div>
+              <button
+                onClick={() => {
+                  setSlideLayout('standard');
+                  updateCurrentSlide('layout', 'standard');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                  slideLayout === 'standard' ? 'bg-sky-600 text-white shadow-2xs' : 'hover:bg-gray-100 text-gray-700'
+                }`}
+                title="Bố cục 2 cột văn bản & tranh minh họa"
+              >
+                <span>📝 Soạn Thảo 2 Cột</span>
+              </button>
+            </div>
 
-                {/* 2. Main Body: 2 Columns (NGẮN HẠN vs DÀI HẠN) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5 my-1.5 relative z-10 items-stretch">
-                  {/* Left Column: MỤC TIÊU NGẮN HẠN */}
-                  <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-emerald-400 shadow-xs">
-                    {/* Pill Tag */}
-                    <div className="inline-flex items-center gap-1 bg-emerald-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
-                      <span>🎯</span>
-                      <span>NGẮN HẠN</span>
-                    </div>
+            <div className="flex items-center gap-1 shrink-0 ml-2">
+              <button
+                onClick={handleAddTextBox}
+                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                title="Chèn hộp chữ tự do lên bất kỳ vị trí nào trên slide"
+              >
+                <Type className="w-3.5 h-3.5 text-[#C43E1C]" />
+                <span>+ Chữ</span>
+              </button>
+            </div>
+          </div>
 
-                    {/* Definition */}
-                    <div className="flex items-start gap-1.5 bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-200">
-                      <span className="text-emerald-700 text-xs mt-0.5">📌</span>
-                      <textarea
-                        rows={2}
-                        value={currentSlide.goalShortTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch và dự định của bạn trong thời gian gần đây nhất.'}
-                        onChange={(e) => updateCurrentSlide('goalShortTermDesc', e.target.value)}
-                        className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
-                        placeholder="Nội dung mục tiêu ngắn hạn..."
-                      />
-                    </div>
+          {/* Wrapper for Slide Canvas and Floating Side Arrows */}
+          <div className="relative w-full max-w-4xl flex items-center justify-center">
+            {/* Left Floating Chevron Navigation Arrow */}
+            <button
+              onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentSlideIndex === 0}
+              className="absolute -left-3 sm:-left-5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-gray-800 shadow-md border border-gray-300 flex items-center justify-center transition disabled:opacity-20 hover:scale-110 active:scale-95"
+              title="Slide trước (Phím mũi tên Trái)"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
-                    {/* Example Card */}
-                    <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-emerald-300 shadow-2xs">
-                      <span className="bg-emerald-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
-                        VÍ DỤ
-                      </span>
-                      <input
-                        type="text"
-                        value={currentSlide.goalShortTermEx || 'Cải thiện điểm kiểm tra trong tháng.'}
-                        onChange={(e) => updateCurrentSlide('goalShortTermEx', e.target.value)}
-                        className="w-full text-[11px] font-black text-emerald-950 bg-transparent outline-none"
-                        placeholder="Ví dụ cụ thể..."
-                      />
-                      <span className="text-emerald-500 text-sm">✅</span>
-                    </div>
-                  </div>
+            {/* Right Floating Chevron Navigation Arrow */}
+            <button
+              onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
+              disabled={currentSlideIndex === slides.length - 1}
+              className="absolute -right-3 sm:-right-5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-gray-800 shadow-md border border-gray-300 flex items-center justify-center transition disabled:opacity-20 hover:scale-110 active:scale-95"
+              title="Slide kế tiếp (Phím mũi tên Phải)"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
 
-                  {/* Right Column: MỤC TIÊU DÀI HẠN */}
-                  <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-sky-400 shadow-xs">
-                    {/* Pill Tag */}
-                    <div className="inline-flex items-center gap-1 bg-sky-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
-                      <span>⏳</span>
-                      <span>DÀI HẠN</span>
-                    </div>
+            {/* Real Slide Canvas with Dynamic Aspect Ratio & Fonts */}
+            <div 
+              ref={slideContainerRef}
+              key={currentSlideIndex}
+              className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-3xl aspect-[4/3]' : 'max-w-4xl aspect-video'} rounded-2xl shadow-xl border border-gray-300 p-4 sm:p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${
+                slideTransition === 'fade' ? 'animate-fade-in' : slideTransition === 'zoom' ? 'animate-zoom-in' : ''
+              }`}
+              style={{
+                backgroundColor: activeTheme.bg,
+                color: activeTheme.text,
+                fontFamily: `${fontFamily}, sans-serif`
+              }}
+            >
+              {/* Hidden HTML5 Audio Player for Slide Audio */}
+              {currentSlide.audio && (
+                <audio
+                  ref={slideAudioRef}
+                  src={currentSlide.audio.url}
+                  onPlay={() => setIsPlayingSlideAudio(true)}
+                  onPause={() => setIsPlayingSlideAudio(false)}
+                  onEnded={() => setIsPlayingSlideAudio(false)}
+                  className="hidden"
+                />
+              )}
 
-                    {/* Definition */}
-                    <div className="flex items-start gap-1.5 bg-sky-50/80 p-1.5 rounded-lg border border-sky-200">
-                      <span className="text-sky-700 text-xs mt-0.5">⌛</span>
-                      <textarea
-                        rows={2}
-                        value={currentSlide.goalLongTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch trong một khoảng thời gian rất dài sau này của bạn.'}
-                        onChange={(e) => updateCurrentSlide('goalLongTermDesc', e.target.value)}
-                        className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
-                        placeholder="Nội dung mục tiêu dài hạn..."
-                      />
-                    </div>
-
-                    {/* Example Card */}
-                    <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-sky-300 shadow-2xs">
-                      <span className="bg-sky-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
-                        VÍ DỤ
-                      </span>
-                      <input
-                        type="text"
-                        value={currentSlide.goalLongTermEx || 'Cải thiện điểm thi học kì và tích lũy kĩ năng thẩm mỹ.'}
-                        onChange={(e) => updateCurrentSlide('goalLongTermEx', e.target.value)}
-                        className="w-full text-[11px] font-black text-sky-950 bg-transparent outline-none"
-                        placeholder="Ví dụ cụ thể..."
-                      />
-                      <span className="text-amber-500 text-sm">💡</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Center Badge & Bottom Motivational Banner */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/80 relative z-10 flex-wrap">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg shadow-2xs">
-                    <span>🌱</span>
-                    <span>Nuôi dưỡng đam mê</span>
-                  </div>
-
-                  <div className="bg-sky-600 text-white font-black text-[11px] px-3.5 py-0.5 rounded-full shadow-xs uppercase tracking-wide flex items-center gap-1">
-                    <span>📖</span>
-                    <span>MỤC TIÊU HỌC TẬP</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-100/90 px-2.5 py-0.5 rounded-lg border border-rose-300 shadow-2xs">
-                    <span>✨</span>
-                    <span>Có mục tiêu – Có động lực – Có kết quả!</span>
-                    <span>🏆</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Slide Header: Phase & Editable Title */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <input
-                      type="text"
-                      value={currentSlide.phase || ''}
-                      onChange={(e) => updateCurrentSlide('phase', e.target.value)}
-                      className="text-xs sm:text-sm font-black uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition w-1/2"
-                      style={{ color: activeTheme.accent }}
-                      placeholder="Nhập giai đoạn hoạt động..."
-                    />
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold opacity-60">
-                        Slide {currentSlideIndex + 1} / {slides.length} ({slideAspectRatio})
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Editable Slide Title */}
-                  <input
-                    type="text"
-                    value={currentSlide.title || ''}
-                    onChange={(e) => updateCurrentSlide('title', e.target.value)}
-                    className="w-full font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
-                    placeholder="Nhập tiêu đề hoạt động..."
-                    style={{
-                      color: activeTheme.text,
-                      fontSize: `${titleFontSize}px`,
-                      fontWeight: isBold ? '900' : '700',
-                      fontStyle: isItalic ? 'italic' : 'normal',
-                      textAlign: textAlign,
-                      lineHeight: '1.2'
-                    }}
+              {/* BỐ CỤC 1: TOÀN CẢNH SLIDE (FULL-SLIDE) - KHỚP 100% POWERPOINT THẬT, KHÔNG CHÈN TRANH THỊ PHẠM */}
+              {slideLayout === 'full-slide' && (
+                <div className="relative w-full h-full flex items-center justify-center bg-slate-900/5 rounded-xl overflow-hidden group select-none">
+                  <img
+                    src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || './teacher.jpg'}
+                    alt="Toàn cảnh bài giảng PowerPoint"
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
                   />
 
-                  {/* Editable Subtitle */}
-                  {slideLayout !== 'title-only' && (
+                  {/* Custom Overlay Text Boxes (Hộp văn bản tự do chèn thêm) */}
+                  {(currentSlide.textBoxes || []).map((tb) => (
+                    <div
+                      key={tb.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTextBoxId(tb.id);
+                      }}
+                      className={`absolute p-2 rounded-xl transition cursor-move ${
+                        selectedTextBoxId === tb.id ? 'ring-2 ring-[#C43E1C] bg-white/95 shadow-xl' : 'hover:bg-white/60 bg-white/40'
+                      }`}
+                      style={{
+                        left: `${tb.x}%`,
+                        top: `${tb.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        color: tb.color || textColor,
+                        fontFamily: tb.fontFamily || fontFamily,
+                        fontSize: `${tb.fontSize || 18}px`,
+                        fontWeight: tb.isBold ? '900' : 'normal',
+                        fontStyle: tb.isItalic ? 'italic' : 'normal',
+                        textDecoration: tb.isUnderline ? 'underline' : 'none',
+                        textAlign: tb.textAlign || textAlign
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={tb.text}
+                        onChange={(e) => updateTextBox(tb.id, 'text', e.target.value)}
+                        className="bg-transparent outline-none font-sans font-bold"
+                      />
+                      {selectedTextBoxId === tb.id && (
+                        <button
+                          onClick={() => deleteTextBox(tb.id)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center text-xs shadow hover:scale-110"
+                          title="Xóa hộp chữ này"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Floating Controls Bar on Hover */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition bg-black/70 backdrop-blur-md p-1.5 rounded-xl z-20">
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
+                      title="Đổi ảnh từ máy tính"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Đổi Ảnh</span>
+                    </button>
+                    <button
+                      onClick={handleAddTextBox}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1"
+                      title="Thêm hộp chữ lên ảnh slide"
+                    >
+                      <Type className="w-3 h-3" />
+                      <span>+ Chữ</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setZoomedImageSrc(currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url);
+                        setZoomArtworkModal(true);
+                      }}
+                      className="p-1 hover:bg-white/20 text-white rounded-lg transition"
+                      title="Phóng to ảnh"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* BỐ CỤC 2: TRÒ CHƠI TƯƠNG TÁC (INTERACTIVE-GAME) - CON ĐƯỜNG ĐẾN THÀNH CÔNG */}
+              {slideLayout === 'interactive-game' && (
+                <div className="relative w-full h-full flex flex-col justify-between p-3 sm:p-4 bg-gradient-to-br from-amber-50 via-orange-50/40 to-sky-50 rounded-2xl border-4 border-amber-300 shadow-inner select-none overflow-hidden">
+                  {/* Header Game Bar */}
+                  <div className="flex items-center justify-between bg-white/90 p-2 rounded-xl border border-amber-200 shadow-xs relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🎲</span>
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-black text-amber-900 leading-tight">
+                          TRÒ CHƠI: CON ĐƯỜNG ĐẾN THÀNH CÔNG
+                        </h3>
+                        <p className="text-[10px] text-gray-500 font-bold">
+                          Lắc xúc xắc và cùng Thầy/Cô vượt qua các thử thách mĩ thuật!
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="bg-amber-100 text-amber-900 px-3 py-1 rounded-full font-black text-xs flex items-center gap-1 border border-amber-300 shadow-2xs">
+                        <span>⭐</span>
+                        <span>{gameScore} sao</span>
+                      </div>
+                      <button
+                        onClick={() => setShowGameOriginalImage(prev => !prev)}
+                        className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-300 rounded-lg text-xs font-bold transition"
+                      >
+                        {showGameOriginalImage ? '🎮 Vào Bàn Cờ Game' : '🖼️ Xem Hình Gốc PPTX'}
+                      </button>
+                      <button
+                        onClick={handleResetGame}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-600 transition"
+                        title="Chơi lại từ đầu"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showGameOriginalImage ? (
+                    /* Xem hình gốc của slide game trong PPTX */
+                    <div className="my-auto w-full flex-1 flex items-center justify-center p-2">
+                      <img
+                        src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || './teacher.jpg'}
+                        alt="Hình slide game gốc"
+                        className="max-h-[300px] object-contain rounded-xl shadow-md border"
+                      />
+                    </div>
+                  ) : (
+                    /* BÀN CỜ TƯƠNG TÁC THỰC TẾ */
+                    <div className="my-auto w-full space-y-3 relative z-10 py-1">
+                      {/* Trail Stations Grid */}
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {GAME_STATIONS.map((station, sIdx) => {
+                          const isCurrentPos = gamePlayerPosition === sIdx;
+                          const isVisited = gamePlayerPosition >= sIdx;
+
+                          return (
+                            <div
+                              key={station.id}
+                              onClick={() => {
+                                if (station.question) setActiveGameChallenge(station);
+                              }}
+                              className={`p-2.5 rounded-xl border-2 flex flex-col items-center justify-between text-center relative transition-all cursor-pointer ${
+                                isCurrentPos
+                                  ? 'bg-amber-400 text-white border-amber-600 shadow-lg scale-105 ring-4 ring-amber-300/60'
+                                  : isVisited
+                                  ? 'bg-emerald-50 text-emerald-900 border-emerald-400 shadow-xs'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50/50'
+                              }`}
+                            >
+                              {/* Con cờ nhân vật đang đứng */}
+                              {isCurrentPos && (
+                                <div className="absolute -top-3.5 bg-rose-600 text-white px-2 py-0.5 rounded-full text-[9px] font-black shadow animate-bounce flex items-center gap-0.5">
+                                  <span>🏃‍♂️</span>
+                                  <span>Bạn ở đây!</span>
+                                </div>
+                              )}
+
+                              <span className="text-2xl my-1">{station.icon}</span>
+                              <p className="text-[10px] font-black leading-tight line-clamp-1">
+                                {station.name}
+                              </p>
+                              {station.question && (
+                                <span className="text-[8px] mt-1 font-bold bg-black/10 px-1.5 py-0.2 rounded-full">
+                                  Thử thách
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dice & Interaction Center */}
+                      <div className="flex items-center justify-center gap-4 bg-white/95 p-3 rounded-2xl border border-amber-200 shadow-xs">
+                        {/* 3D Dice Display */}
+                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 text-white flex items-center justify-center font-black text-2xl shadow-md border-2 border-white ${
+                          isDiceRolling ? 'animate-spin' : 'scale-105'
+                        }`}>
+                          {diceValue}
+                        </div>
+
+                        <button
+                          onClick={handleRollDice}
+                          disabled={isDiceRolling}
+                          className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-sm rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <span>🎲</span>
+                          <span>{isDiceRolling ? 'Đang Lắc Xúc Xắc...' : 'LẮC XÚC XẮC!'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pop-up Thử Thách Câu Hỏi Tương Tác Khi Bước Vào Trạm */}
+                  {activeGameChallenge && (
+                    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+                      <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-amber-400 relative animate-scale-in">
+                        <button
+                          onClick={() => setActiveGameChallenge(null)}
+                          className="absolute top-4 right-4 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-black"
+                        >
+                          ✕
+                        </button>
+
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-3xl">{activeGameChallenge.icon}</span>
+                          <div>
+                            <span className="text-xs font-black uppercase tracking-wider text-amber-600">
+                              Thử Thách Tại {activeGameChallenge.name}
+                            </span>
+                            <h4 className="text-sm font-black text-gray-900 leading-snug">
+                              {activeGameChallenge.question}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 my-4">
+                          {activeGameChallenge.options.map((opt, oIdx) => (
+                            <button
+                              key={oIdx}
+                              onClick={() => handleAnswerChallenge(opt)}
+                              className="w-full text-left p-3 rounded-xl border-2 border-gray-200 hover:border-amber-400 hover:bg-amber-50 font-bold text-xs sm:text-sm text-gray-800 transition flex items-center justify-between group"
+                            >
+                              <span>{opt.text}</span>
+                              <span className="text-amber-500 opacity-0 group-hover:opacity-100 font-black">
+                                Chọn ➔
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {activeGameChallenge.hint && (
+                          <p className="text-[11px] text-gray-500 italic bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                            💡 <b>Gợi ý của Thầy:</b> {activeGameChallenge.hint}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer Game Banner */}
+                  <div className="flex items-center justify-between text-[10px] text-amber-950 font-bold border-t border-amber-200 pt-1.5">
+                    <span>Trò chơi mĩ thuật GDPT 2018</span>
+                    <span>Về đích nhận Cúp vinh quang 🏆</span>
+                  </div>
+                </div>
+              )}
+
+              {/* BỐ CỤC 3: INFOGRAPHIC MỤC TIÊU HỌC TẬP (SLIDE 12 CHUẨN ẢNH MẪU) */}
+              {slideLayout === 'infographic-goals' && (
+                <div className="relative w-full h-full flex flex-col justify-between p-2 sm:p-3.5 bg-gradient-to-b from-sky-50 via-emerald-50/30 to-amber-50/40 rounded-2xl border-4 border-dashed border-sky-400 overflow-hidden shadow-inner select-text">
+                  {/* Decorative floating sparkles */}
+                  <div className="absolute top-2 left-3 text-amber-400 text-base select-none animate-pulse">✨</div>
+                  <div className="absolute top-2 right-4 text-amber-400 text-base select-none animate-pulse">⭐</div>
+                  
+                  {/* 1. Header Cloud with Characters */}
+                  <div className="flex items-center justify-between gap-2 sm:gap-3 relative z-10">
+                    {/* Left Character: Cute girl with magnifying glass */}
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-pink-100 border-2 border-pink-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
+                        👧
+                      </div>
+                      <span className="text-[9px] font-black text-pink-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-pink-200 shadow-2xs">
+                        Quan sát 🔍
+                      </span>
+                    </div>
+
+                    {/* Center Cloud Title */}
+                    <div className="flex-1 bg-white/95 rounded-2xl sm:rounded-3xl p-2 sm:p-3 border-2 border-rose-300 shadow-sm text-center max-w-lg mx-auto">
+                      <input
+                        type="text"
+                        value={currentSlide.title || 'Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó'}
+                        onChange={(e) => updateCurrentSlide('title', e.target.value)}
+                        className="w-full text-center font-black text-rose-600 outline-none bg-transparent leading-snug text-xs sm:text-sm md:text-base"
+                        placeholder="Nhập câu hỏi gợi mở / tiêu đề slide..."
+                      />
+                    </div>
+
+                    {/* Right Character: Cute boy with graduation cap */}
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-sky-100 border-2 border-sky-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
+                        🎓
+                      </div>
+                      <span className="text-[9px] font-black text-sky-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-sky-200 shadow-2xs">
+                        Mục tiêu 🎯
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2. Main Body: 2 Columns (NGẮN HẠN vs DÀI HẠN) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5 my-1.5 relative z-10 items-stretch">
+                    {/* Left Column: MỤC TIÊU NGẮN HẠN */}
+                    <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-emerald-400 shadow-xs">
+                      <div className="inline-flex items-center gap-1 bg-emerald-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
+                        <span>🎯</span>
+                        <span>NGẮN HẠN</span>
+                      </div>
+
+                      <div className="flex items-start gap-1.5 bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-200">
+                        <span className="text-emerald-700 text-xs mt-0.5">📌</span>
+                        <textarea
+                          rows={2}
+                          value={currentSlide.goalShortTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch và dự định của bạn trong thời gian gần đây nhất.'}
+                          onChange={(e) => updateCurrentSlide('goalShortTermDesc', e.target.value)}
+                          className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
+                          placeholder="Nội dung mục tiêu ngắn hạn..."
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-emerald-300 shadow-2xs">
+                        <span className="bg-emerald-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
+                          VÍ DỤ
+                        </span>
+                        <input
+                          type="text"
+                          value={currentSlide.goalShortTermEx || 'Cải thiện điểm kiểm tra trong tháng.'}
+                          onChange={(e) => updateCurrentSlide('goalShortTermEx', e.target.value)}
+                          className="w-full text-[11px] font-black text-emerald-950 bg-transparent outline-none"
+                          placeholder="Ví dụ cụ thể..."
+                        />
+                        <span className="text-emerald-500 text-sm">✅</span>
+                      </div>
+                    </div>
+
+                    {/* Right Column: MỤC TIÊU DÀI HẠN */}
+                    <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-sky-400 shadow-xs">
+                      <div className="inline-flex items-center gap-1 bg-sky-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
+                        <span>⏳</span>
+                        <span>DÀI HẠN</span>
+                      </div>
+
+                      <div className="flex items-start gap-1.5 bg-sky-50/80 p-1.5 rounded-lg border border-sky-200">
+                        <span className="text-sky-700 text-xs mt-0.5">⌛</span>
+                        <textarea
+                          rows={2}
+                          value={currentSlide.goalLongTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch trong một khoảng thời gian rất dài sau này của bạn.'}
+                          onChange={(e) => updateCurrentSlide('goalLongTermDesc', e.target.value)}
+                          className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
+                          placeholder="Nội dung mục tiêu dài hạn..."
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-sky-300 shadow-2xs">
+                        <span className="bg-sky-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
+                          VÍ DỤ
+                        </span>
+                        <input
+                          type="text"
+                          value={currentSlide.goalLongTermEx || 'Cải thiện điểm thi học kì và tích lũy kĩ năng thẩm mỹ.'}
+                          onChange={(e) => updateCurrentSlide('goalLongTermEx', e.target.value)}
+                          className="w-full text-[11px] font-black text-sky-950 bg-transparent outline-none"
+                          placeholder="Ví dụ cụ thể..."
+                        />
+                        <span className="text-amber-500 text-sm">💡</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Center Badge & Bottom Motivational Banner */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/80 relative z-10 flex-wrap">
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                      <span>🌱</span>
+                      <span>Nuôi dưỡng đam mê</span>
+                    </div>
+
+                    <div className="bg-sky-600 text-white font-black text-[11px] px-3.5 py-0.5 rounded-full shadow-xs uppercase tracking-wide flex items-center gap-1">
+                      <span>📖</span>
+                      <span>MỤC TIÊU HỌC TẬP</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-100/90 px-2.5 py-0.5 rounded-lg border border-rose-300 shadow-2xs">
+                      <span>✨</span>
+                      <span>Có mục tiêu – Có động lực – Có kết quả!</span>
+                      <span>🏆</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BỐ CỤC 4: TIÊU CHUẨN 2 CỘT (STANDARD) */}
+              {slideLayout === 'standard' && (
+                <>
+                  {/* Slide Header: Phase & Editable Title */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <input
+                        type="text"
+                        value={currentSlide.phase || ''}
+                        onChange={(e) => updateCurrentSlide('phase', e.target.value)}
+                        className="text-xs sm:text-sm font-black uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition w-1/2"
+                        style={{ color: activeTheme.accent }}
+                        placeholder="Nhập giai đoạn hoạt động..."
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold opacity-60">
+                          Slide {currentSlideIndex + 1} / {slides.length} ({slideAspectRatio})
+                        </span>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={currentSlide.title || ''}
+                      onChange={(e) => updateCurrentSlide('title', e.target.value)}
+                      className="w-full font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
+                      placeholder="Nhập tiêu đề hoạt động..."
+                      style={{
+                        color: textColor || activeTheme.text,
+                        fontSize: `${titleFontSize}px`,
+                        fontWeight: isBold ? '900' : '700',
+                        fontStyle: isItalic ? 'italic' : 'normal',
+                        textDecoration: isUnderline ? 'underline' : 'none',
+                        textAlign: textAlign,
+                        lineHeight: '1.2'
+                      }}
+                    />
+
+                    {/* Editable Subtitle */}
                     <input
                       type="text"
                       value={currentSlide.subtitle || ''}
@@ -1819,46 +2545,8 @@ export default function MicrosoftPowerPointView({
                       }}
                       placeholder="Nhập mục tiêu hoạt động..."
                     />
-                  )}
+                  </div>
 
-                  {/* EMBEDDED SLIDE AUDIO / MUSIC WIDGET */}
-                  {currentSlide.audio && (
-                    <div className="my-2 p-2 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-xl shadow-md flex items-center justify-between gap-3 text-xs">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <button
-                          onClick={togglePlaySlideAudio}
-                          className="w-7 h-7 rounded-full bg-white text-[#D24726] font-black flex items-center justify-center shadow hover:scale-105 active:scale-95 transition shrink-0"
-                          title={isPlayingSlideAudio ? 'Tạm dừng' : 'Phát âm thanh slide'}
-                        >
-                          {isPlayingSlideAudio ? '⏸' : '▶'}
-                        </button>
-                        <div className="min-w-0">
-                          <span className="font-extrabold block truncate max-w-[280px]">
-                            🎵 {currentSlide.audio.name || 'Bản nhạc slide mĩ thuật'}
-                          </span>
-                          <span className="text-[10px] text-white/80 font-medium">
-                            {isPlayingSlideAudio ? 'Đang phát âm nhạc slide ılıılı' : 'Bấm để phát bài hát / âm thanh'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={() => {
-                            if (slideAudioRef.current) slideAudioRef.current.pause();
-                            updateCurrentSlide('audio', null);
-                          }}
-                          className="p-1 hover:bg-white/20 rounded text-white/80 hover:text-white transition"
-                          title="Gỡ âm thanh này"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Slide Content by Layout */}
-                {slideLayout === 'standard' && (
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 my-auto items-center">
                     {/* Left Column: Bullet points list */}
                     <div className="md:col-span-7 space-y-2">
@@ -1875,8 +2563,10 @@ export default function MicrosoftPowerPointView({
                               onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
                               className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
                               style={{ 
-                                color: activeTheme.text,
-                                fontSize: `${bodyFontSize}px`
+                                color: textColor || activeTheme.text,
+                                fontSize: `${bodyFontSize}px`,
+                                fontWeight: isBold ? 'bold' : 'normal',
+                                fontStyle: isItalic ? 'italic' : 'normal'
                               }}
                               placeholder="Nội dung bước thực hành..."
                             />
@@ -1899,7 +2589,7 @@ export default function MicrosoftPowerPointView({
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[11px] font-black uppercase" style={{ color: activeTheme.accent }}>
-                          🎨 Tranh Thị Phạm {currentSlide.images?.length > 1 ? `(${currentSlide.images.length} ảnh)` : ''}
+                          🎨 Tranh Minh Họa
                         </span>
                         <div className="flex items-center gap-1">
                           <button
@@ -1923,97 +2613,68 @@ export default function MicrosoftPowerPointView({
                         </div>
                       </div>
 
-                      {/* Multi-image Gallery */}
-                      {currentSlide.images && currentSlide.images.length > 1 ? (
-                        <div className="space-y-1.5">
-                          <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-1.5 relative group">
-                            <img
-                              src={currentSlide.visualArt?.imageUrl || currentSlide.images[0]?.url || './teacher.jpg'}
-                              alt="Tranh mẫu chính"
-                              className="max-h-full max-w-full object-contain rounded-lg"
-                            />
-                          </div>
-                          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                            {currentSlide.images.map((img, imgIdx) => (
-                              <button
-                                key={img.id || imgIdx}
-                                onClick={() => {
-                                  updateCurrentSlide('visualArt', { title: img.name, imageUrl: img.url });
-                                }}
-                                className={`w-12 h-10 rounded-lg overflow-hidden border-2 shrink-0 transition ${
-                                  (currentSlide.visualArt?.imageUrl === img.url || (!currentSlide.visualArt?.imageUrl && imgIdx === 0))
-                                    ? 'border-[#D24726] ring-2 ring-[#D24726]/40 scale-105'
-                                    : 'border-gray-300 hover:border-gray-400 opacity-70 hover:opacity-100'
-                                }`}
-                              >
-                                <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
-                          <img
-                            src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                            alt="Tranh mẫu"
-                            className="max-h-full max-w-full object-contain rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = './teacher.jpg';
-                            }}
-                          />
-                        </div>
-                      )}
+                      <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
+                        <img
+                          src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                          alt="Tranh mẫu"
+                          className="max-h-full max-w-full object-contain rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = './teacher.jpg';
+                          }}
+                        />
+                      </div>
 
                       <p className="text-[11px] font-bold text-center mt-1.5 truncate opacity-90">
                         {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
                       </p>
                     </div>
                   </div>
-                )}
+                </>
+              )}
 
-                {slideLayout === 'large-image' && (
-                  <div className="flex flex-col items-center justify-center my-auto w-full gap-2">
-                    <div className="relative w-full max-w-lg aspect-video bg-white rounded-2xl overflow-hidden border border-gray-300 shadow-md p-2 flex items-center justify-center">
-                      <img
-                        src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                        alt="Tranh mẫu tiêu điểm"
-                        className="max-h-full max-w-full object-contain rounded-lg"
-                      />
-                      <button
-                        onClick={() => imageInputRef.current?.click()}
-                        className="absolute top-3 right-3 px-3 py-1 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl backdrop-blur flex items-center gap-1 transition"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Đổi Ảnh Từ Máy</span>
-                      </button>
-                    </div>
-                    <p className="text-xs font-bold text-center opacity-80">
-                      {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
-                    </p>
+              {/* BỐ CỤC 5: TRANH TIÊU ĐIỂM LỚN (LARGE-IMAGE) */}
+              {slideLayout === 'large-image' && (
+                <div className="flex flex-col items-center justify-center my-auto w-full gap-2">
+                  <div className="relative w-full max-w-lg aspect-video bg-white rounded-2xl overflow-hidden border border-gray-300 shadow-md p-2 flex items-center justify-center">
+                    <img
+                      src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                      alt="Tranh mẫu tiêu điểm"
+                      className="max-h-full max-w-full object-contain rounded-lg"
+                    />
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      className="absolute top-3 right-3 px-3 py-1 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl backdrop-blur flex items-center gap-1 transition"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Đổi Ảnh Từ Máy</span>
+                    </button>
                   </div>
-                )}
+                  <p className="text-xs font-bold text-center opacity-80">
+                    {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
+                  </p>
+                </div>
+              )}
 
-                {slideLayout === 'title-only' && (
-                  <div className="flex flex-col items-center justify-center my-auto text-center space-y-4">
-                    <h1 className="text-3xl sm:text-4xl font-black" style={{ color: activeTheme.accent }}>
-                      {currentSlide.title}
-                    </h1>
-                    <p className="text-base sm:text-lg font-bold opacity-80 max-w-xl">
-                      {currentSlide.subtitle || selectedUnit?.summary}
-                    </p>
-                    <div className="pt-4 flex items-center gap-2">
-                      <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
-                        Giáo viên: {teacherName}
-                      </span>
-                      <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
-                        Lớp {selectedGrade} • GDPT 2018
-                      </span>
-                    </div>
+              {/* BỐ CỤC 6: BÌA / TIÊU ĐỀ (TITLE-ONLY) */}
+              {slideLayout === 'title-only' && (
+                <div className="flex flex-col items-center justify-center my-auto text-center space-y-4">
+                  <h1 className="text-3xl sm:text-4xl font-black" style={{ color: activeTheme.accent }}>
+                    {currentSlide.title}
+                  </h1>
+                  <p className="text-base sm:text-lg font-bold opacity-80 max-w-xl">
+                    {currentSlide.subtitle || selectedUnit?.summary}
+                  </p>
+                  <div className="pt-4 flex items-center gap-2">
+                    <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                      Giáo viên: {teacherName}
+                    </span>
+                    <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                      Lớp {selectedGrade} • GDPT 2018
+                    </span>
                   </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
 
             {/* Slide Footer: Bottom Meta */}
             <div className="flex items-center justify-between pt-2 border-t border-gray-300/40 text-[10px] opacity-60 font-bold">
@@ -2034,8 +2695,9 @@ export default function MicrosoftPowerPointView({
               />
             )}
           </div>
+        </div>
 
-          {/* 5. BOTTOM PRESENTER NOTES & AI LECTURE DRAWER */}
+        {/* 5. BOTTOM PRESENTER NOTES & AI LECTURE DRAWER */}
           {showNotesDrawer && (
             <div className="w-full max-w-4xl mt-3 bg-white p-3 sm:p-4 rounded-2xl border-2 border-amber-200 shadow-md">
               <div className="flex items-center justify-between mb-1.5">
@@ -2237,12 +2899,112 @@ export default function MicrosoftPowerPointView({
           <div 
             className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-4xl aspect-[4/3]' : 'max-w-5xl aspect-video'} rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col justify-between relative overflow-hidden`}
             style={{ 
-              backgroundColor: currentSlide.layout === 'infographic-goals' ? '#F0FDF4' : activeTheme.bg, 
-              color: currentSlide.layout === 'infographic-goals' ? '#1E293B' : activeTheme.text,
+              backgroundColor: currentSlide.layout === 'infographic-goals' ? '#F0FDF4' : currentSlide.layout === 'interactive-game' ? '#FFFBEB' : activeTheme.bg, 
+              color: currentSlide.layout === 'infographic-goals' || currentSlide.layout === 'interactive-game' ? '#1E293B' : activeTheme.text,
               fontFamily: `${fontFamily}, sans-serif`
             }}
           >
-            {currentSlide.layout === 'infographic-goals' ? (
+            {/* FULL-SLIDE TRÌNH CHIẾU TOÀN CẢNH KHỚP 100% PPTX */}
+            {currentSlide.layout === 'full-slide' ? (
+              <div className="w-full h-full flex items-center justify-center relative select-none">
+                <img
+                  src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || './teacher.jpg'}
+                  alt="Slide toàn cảnh"
+                  className="max-w-full max-h-full object-contain rounded-2xl shadow-xl"
+                />
+                {/* Overlay Text Boxes */}
+                {(currentSlide.textBoxes || []).map((tb) => (
+                  <div
+                    key={tb.id}
+                    className="absolute p-2 rounded-xl bg-white/90 shadow-md font-sans font-bold"
+                    style={{
+                      left: `${tb.x}%`,
+                      top: `${tb.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      color: tb.color || '#1E293B',
+                      fontSize: `${tb.fontSize || 22}px`,
+                      fontWeight: tb.isBold ? '900' : 'normal',
+                      fontStyle: tb.isItalic ? 'italic' : 'normal'
+                    }}
+                  >
+                    {tb.text}
+                  </div>
+                ))}
+              </div>
+            ) : currentSlide.layout === 'interactive-game' ? (
+              /* TRÌNH CHIẾU GAME TƯƠNG TÁC CON ĐƯỜNG ĐẾN THÀNH CÔNG CHO CẢ LỚP */
+              <div className="w-full h-full flex flex-col justify-between p-4 bg-gradient-to-br from-amber-50 via-orange-50/50 to-sky-50 rounded-2xl border-4 border-amber-400 select-none">
+                <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-2xl border border-amber-300">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🎲</span>
+                    <h3 className="font-black text-amber-950 text-base">
+                      TRÒ CHƠI: CON ĐƯỜNG ĐẾN THÀNH CÔNG
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-amber-100 text-amber-900 font-black px-4 py-1 rounded-full border border-amber-400 text-sm">
+                      ⭐ {gameScore} sao
+                    </span>
+                    <button
+                      onClick={() => setShowGameOriginalImage(prev => !prev)}
+                      className="px-3 py-1 bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold rounded-xl text-xs"
+                    >
+                      {showGameOriginalImage ? '🎮 Vào Game' : '🖼️ Xem Ảnh PPTX'}
+                    </button>
+                  </div>
+                </div>
+
+                {showGameOriginalImage ? (
+                  <div className="my-auto w-full flex items-center justify-center p-2">
+                    <img
+                      src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || './teacher.jpg'}
+                      alt="Ảnh game gốc"
+                      className="max-h-[360px] object-contain rounded-2xl shadow-xl"
+                    />
+                  </div>
+                ) : (
+                  <div className="my-auto w-full space-y-4">
+                    <div className="grid grid-cols-6 gap-2.5">
+                      {GAME_STATIONS.map((st, idx) => {
+                        const isCurrent = gamePlayerPosition === idx;
+                        const isVisited = gamePlayerPosition >= idx;
+                        return (
+                          <div
+                            key={st.id}
+                            onClick={() => { if (st.question) setActiveGameChallenge(st); }}
+                            className={`p-3 rounded-2xl border-2 flex flex-col items-center justify-between text-center cursor-pointer transition ${
+                              isCurrent ? 'bg-amber-400 text-white border-amber-600 shadow-xl scale-105 ring-4 ring-amber-300' :
+                              isVisited ? 'bg-emerald-100 text-emerald-950 border-emerald-500' : 'bg-white text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {isCurrent && (
+                              <span className="text-[10px] bg-rose-600 text-white font-black px-2 py-0.5 rounded-full mb-1 animate-bounce">
+                                🏃‍♂️ Lớp ta
+                              </span>
+                            )}
+                            <span className="text-3xl my-1">{st.icon}</span>
+                            <span className="text-xs font-black">{st.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-center gap-4 bg-white/95 p-3 rounded-2xl border border-amber-300">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 text-white flex items-center justify-center font-black text-3xl shadow">
+                        {diceValue}
+                      </div>
+                      <button
+                        onClick={handleRollDice}
+                        disabled={isDiceRolling}
+                        className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-black text-base rounded-2xl shadow-lg transition"
+                      >
+                        {isDiceRolling ? '🎲 Đang Lắc...' : '🎲 LẮC XÚC XẮC!'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : currentSlide.layout === 'infographic-goals' ? (
               /* Infographic Goals Layout in Fullscreen Mode (Ảnh mẫu Slide 12) */
               <div className="w-full h-full flex flex-col justify-between p-4 sm:p-6 bg-[#F0FDF4] rounded-2xl border-4 border-dashed border-sky-400 text-slate-800 relative overflow-hidden">
                 {/* Background stars */}
