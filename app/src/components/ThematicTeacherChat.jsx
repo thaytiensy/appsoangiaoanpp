@@ -207,7 +207,7 @@ export default function ThematicTeacherChat({
             }`}
           >
             <Presentation className="w-4 h-4" />
-            <span>PowerPoint (Trình Chiếu & Sửa)</span>
+            <span>Trình Chiếu & Soạn Bài</span>
           </button>
 
           {/* Word Tab */}

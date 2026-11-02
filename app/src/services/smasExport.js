@@ -323,7 +323,12 @@ export async function exportSmasPowerPoint({
   effectiveSlides.forEach((s) => {
     const slide = pptx.addSlide();
 
-    if (s.layout === 'infographic-goals') {
+    // Thêm ghi chú giảng bài của giáo viên
+    if (s.speakerNote || s.teacherLecture) {
+      slide.addNotes(s.speakerNote || s.teacherLecture);
+    }
+
+    if (s.layout === 'infographic-goals' || s.layout === 'lesson-goals') {
       slide.background = { color: 'F0FDF4' };
       slide.addText(s.title || 'Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó', {
         x: 0.8,
