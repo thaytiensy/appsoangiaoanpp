@@ -35,9 +35,9 @@ import {
   Maximize
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import mammoth from 'mammoth';
 import { exportSmasWord } from '../services/smasExport';
 import { ttsService } from '../services/tts';
+import { parseDocxFile } from '../services/officeParser';
 
 export default function MicrosoftWordView({
   selectedGrade = 1,
@@ -63,6 +63,11 @@ export default function MicrosoftWordView({
   const [departmentName, setDepartmentName] = useState(`TỔ CHUYÊN MÔN KHỐI ${selectedGrade}`);
   const [saveToast, setSaveToast] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Uploaded Document State
+  const [uploadedDocHtml, setUploadedDocHtml] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState(null);
+  const [wordDisplayMode, setWordDisplayMode] = useState('cv2345'); // 'cv2345' | 'uploaded-doc'
 
   // Formatting State
   const [fontFamily, setFontFamily] = useState('Times New Roman');
@@ -111,35 +116,43 @@ export default function MicrosoftWordView({
 
     const fileName = file.name.toLowerCase();
 
-    // Tệp .docx: Sử dụng thư viện mammoth để trích xuất nội dung
+    // Tệp .docx: Sử dụng bộ phân tích chuẩn parseDocxFile
     if (fileName.endsWith('.docx')) {
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        const rawText = result.value;
-        const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const result = await parseDocxFile(file);
+        if (result.html) {
+          setUploadedDocHtml(result.html);
+          setUploadedFileName(file.name);
+          setWordDisplayMode('uploaded-doc'); // Lập tức hiển thị nguyên vẹn văn bản Word
 
-        if (lines.length > 0) {
-          const detectedTitle = lines[0].length < 100 ? lines[0] : 'KẾ HOẠCH BÀI DẠY MĨ THUẬT';
-          const detectedUnit = lines[1] && lines[1].length < 100 ? lines[1] : `Tệp tải lên: ${file.name}`;
-          const extractedObjectives = lines.filter(l => l.startsWith('-') || l.startsWith('•') || l.toLowerCase().includes('năng lực') || l.toLowerCase().includes('phẩm chất')).slice(0, 5);
-
+          // Cập nhật cấu trúc giáo án & các hoạt động
           setPlan(prev => ({
             ...prev,
-            title: detectedTitle.toUpperCase(),
-            unit: detectedUnit,
-            objectives: extractedObjectives.length > 0 ? extractedObjectives : prev.objectives,
+            title: result.title || prev?.title,
+            unit: result.unit || prev?.unit,
+            objectives: result.objectives?.length > 0 ? result.objectives : prev?.objectives,
+            activities: result.activities?.length > 0 ? result.activities : prev?.activities,
             preparations: {
               teacher: `Nạp tự động từ tệp: ${file.name}`,
-              students: prev.preparations?.students || 'Vở thực hành mĩ thuật'
+              students: prev?.preparations?.students || 'Vở thực hành mĩ thuật'
             }
           }));
-          showSaveToastNotification(`Đã nạp thành công giáo án từ: ${file.name}!`);
+
+          showSaveToastNotification(`Đã mở và nạp thành công giáo án: ${file.name}!`);
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        } else {
+          alert('Không tìm thấy nội dung văn bản trong tệp .docx này.');
         }
       } catch (err) {
         console.error('Lỗi đọc .docx:', err);
-        alert('Không thể đọc cấu trúc tệp docx này. Bạn có thể sao chép văn bản dán trực tiếp vào trang.');
+        alert('Không thể đọc tệp docx này. Vui lòng kiểm tra lại định dạng tệp!');
       }
+      return;
+    }
+
+    // Tệp .doc cũ
+    if (fileName.endsWith('.doc')) {
+      alert('Tệp bạn chọn là định dạng .doc phiên bản cũ. Để hiển thị đầy đủ bảng biểu và đồ họa, vui lòng mở tệp trên Word và bấm "Save As" sang định dạng (.docx) rồi tải lên lại nhé!');
       return;
     }
 
@@ -150,6 +163,11 @@ export default function MicrosoftWordView({
         const text = evt.target.result;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         if (lines.length > 0) {
+          const htmlFromTxt = lines.map(l => `<p class="my-2">${l}</p>`).join('');
+          setUploadedDocHtml(htmlFromTxt);
+          setUploadedFileName(file.name);
+          setWordDisplayMode('uploaded-doc');
+
           setPlan(prev => ({
             ...prev,
             title: lines[0].toUpperCase(),
@@ -725,7 +743,63 @@ export default function MicrosoftWordView({
             lineHeight: lineHeight
           }}
         >
-          {/* Header Cơ Quan & Quốc Hiệu */}
+          {/* Thanh chuyển đổi chế độ xem khi có tệp Word tải lên */}
+          {uploadedDocHtml && (
+            <div className="mb-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-black text-blue-900 flex items-center gap-1">
+                  <FileText className="w-4 h-4 text-blue-700" />
+                  Đang mở tệp: <u>{uploadedFileName}</u>
+                </span>
+                <span className="text-gray-500 hidden sm:inline">• Nhấp trực tiếp vào văn bản để chỉnh sửa</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setWordDisplayMode('uploaded-doc')}
+                  className={`px-3 py-1.5 rounded-lg font-black transition ${
+                    wordDisplayMode === 'uploaded-doc'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-white text-blue-800 border border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  📄 Văn Bản Word Gốc
+                </button>
+                <button
+                  onClick={() => setWordDisplayMode('cv2345')}
+                  className={`px-3 py-1.5 rounded-lg font-black transition ${
+                    wordDisplayMode === 'cv2345'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-white text-blue-800 border border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  📑 Bảng Tiến Trình (CV 2345)
+                </button>
+                <button
+                  onClick={() => {
+                    setUploadedDocHtml(null);
+                    setUploadedFileName(null);
+                    setWordDisplayMode('cv2345');
+                  }}
+                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                  title="Đóng tệp tải lên, quay về mẫu giáo án gốc"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* CHẾ ĐỘ 1: VĂN BẢN WORD GỐC ĐẦY ĐỦ TỪ TỆP TẢI LÊN */}
+          {uploadedDocHtml && wordDisplayMode === 'uploaded-doc' ? (
+            <div 
+              contentEditable 
+              suppressContentEditableWarning 
+              className="outline-none focus:ring-2 focus:ring-blue-400 p-4 min-h-[650px] text-left leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:border [&_table]:border-black [&_td]:border [&_td]:border-black [&_td]:p-2.5 [&_th]:border [&_th]:border-black [&_th]:p-2.5 [&_th]:bg-gray-100 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-2 [&_h3]:text-lg [&_h3]:font-bold [&_p]:my-2 [&_img]:max-w-full [&_img]:my-3 [&_img]:rounded-md [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+              dangerouslySetInnerHTML={{ __html: uploadedDocHtml }}
+            />
+          ) : (
+            <>
+              {/* Header Cơ Quan & Quốc Hiệu */}
           <table className="w-full mb-4 border-none text-center">
             <tbody>
               <tr>
@@ -976,6 +1050,8 @@ export default function MicrosoftWordView({
               </tr>
             </tbody>
           </table>
+            </>
+          )}
         </div>
       </div>
 

@@ -44,6 +44,7 @@ import {
 import confetti from 'canvas-confetti';
 import { exportSmasPowerPoint } from '../services/smasExport';
 import { ttsService } from '../services/tts';
+import { parsePptxFile } from '../services/officeParser';
 
 export default function MicrosoftPowerPointView({
   selectedGrade = 1,
@@ -146,13 +147,38 @@ export default function MicrosoftPowerPointView({
   };
 
   // 1. TẢI LÊN TỆP TỪ MÁY TÍNH (.pptx, ảnh slide, json)
-  const handleUploadPresentation = (e) => {
+  const handleUploadPresentation = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
 
-    // Trường hợp 1: Tải lên ảnh (.png, .jpg, .webp) -> Tạo thành slide mới với ảnh này
+    // Trường hợp 1: Tải lên tệp Microsoft PowerPoint chuẩn (.pptx)
+    if (fileName.endsWith('.pptx')) {
+      try {
+        const result = await parsePptxFile(file, pronoun);
+        if (result.slides && result.slides.length > 0) {
+          setSlides(result.slides);
+          setCurrentSlideIndex(0);
+          showSaveToastNotification(`Đã mở và nạp thành công ${result.slides.length} slide từ tệp: ${file.name}!`);
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        } else {
+          alert('Không tìm thấy nội dung slide hợp lệ trong tệp PowerPoint này.');
+        }
+      } catch (err) {
+        console.error('Lỗi phân tích cú pháp PowerPoint:', err);
+        alert('Không thể mở tệp PowerPoint này. Vui lòng đảm bảo tệp .pptx hợp lệ!');
+      }
+      return;
+    }
+
+    // Trường hợp 2: Tệp .ppt phiên bản cũ
+    if (fileName.endsWith('.ppt')) {
+      alert('Tệp bạn chọn là định dạng .ppt cũ. Để hiển thị đầy đủ hình ảnh và từng slide, vui lòng mở tệp trên PowerPoint và Lưu dưới dạng (.pptx) rồi tải lên lại nhé!');
+      return;
+    }
+
+    // Trường hợp 3: Tải lên ảnh (.png, .jpg, .webp) -> Tạo thành slide mới với ảnh này
     if (fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.webp')) {
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -180,7 +206,7 @@ export default function MicrosoftPowerPointView({
       return;
     }
 
-    // Trường hợp 2: Tệp JSON bài giảng
+    // Trường hợp 4: Tệp JSON bài giảng
     if (fileName.endsWith('.json')) {
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -200,30 +226,6 @@ export default function MicrosoftPowerPointView({
         }
       };
       reader.readAsText(file);
-      return;
-    }
-
-    // Trường hợp 3: Tệp PowerPoint (.pptx / .ppt)
-    if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
-      // Nhận diện tệp PowerPoint của trường
-      const newSlide = {
-        phase: `Slide PowerPoint SMAS`,
-        title: file.name.replace(/\.[^/.]+$/, ""),
-        subtitle: `Bài giảng Microsoft PowerPoint đã mở từ máy tính (${file.name})`,
-        teacherLecture: `${pronoun} chào các con! Chúng ta cùng bắt đầu tiết học mĩ thuật với bài giảng PowerPoint vừa mở!`,
-        bullets: [
-          'Bài giảng số tích hợp từ máy tính giáo viên',
-          'Chuẩn cấu trúc 5 hoạt động theo Công văn 2345/BGDĐT',
-          'Sẵn sàng trình chiếu và chỉnh sửa tác vụ văn phòng trực tiếp'
-        ],
-        visualArt: {
-          title: file.name,
-          imageUrl: './teacher.jpg'
-        }
-      };
-      setSlides(prev => [newSlide, ...prev]);
-      setCurrentSlideIndex(0);
-      showSaveToastNotification(`Đã mở thành công tệp PowerPoint: ${file.name}!`);
       return;
     }
 

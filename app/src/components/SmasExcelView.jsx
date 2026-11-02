@@ -19,6 +19,7 @@ import {
   generateDefaultSmasStudents, 
   SMAS_COMMENT_BANK 
 } from '../services/smasExport';
+import { parseExcelFile } from '../services/officeParser';
 
 export default function SmasExcelView({ 
   selectedGrade = 1, 
@@ -34,6 +35,12 @@ export default function SmasExcelView({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState('all'); // 'all' | 'T' | 'H' | 'C'
   const [toastMsg, setToastMsg] = useState(null);
+
+  // Uploaded Excel Workbook State
+  const [uploadedWorkbook, setUploadedWorkbook] = useState(null);
+  const [activeSheetName, setActiveSheetName] = useState(null);
+  const [excelViewMode, setExcelViewMode] = useState('smas'); // 'smas' | 'grid'
+  const [uploadedFileName, setUploadedFileName] = useState(null);
 
   const excelInputRef = useRef(null);
 
@@ -77,61 +84,40 @@ export default function SmasExcelView({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const result = parseExcelFile(evt.target.result, grade);
+        if (result.sheetNames && result.sheetNames.length > 0) {
+          setUploadedWorkbook(result);
+          setUploadedFileName(file.name);
+          const firstSheet = result.sheetNames[0];
+          setActiveSheetName(firstSheet);
 
-        const parsedStudents = [];
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.length < 2) continue;
-
-          const col0 = String(row[0] || '').trim();
-          const col1 = String(row[1] || '').trim();
-          const col2 = String(row[2] || '').trim();
-
-          const sttNum = parseInt(col0, 10);
-          if (!isNaN(sttNum) && (col1.length > 2 || col2.length > 2)) {
-            const hasSmasCode = col1.toUpperCase().startsWith('SMAS') || col1.toUpperCase().startsWith('HS');
-            const studentCode = hasSmasCode ? col1 : `SMAS26${grade}${String(parsedStudents.length + 1).padStart(3, '0')}`;
-            const fullName = hasSmasCode ? col2 : col1;
-            const birthDate = String(row[3] || '15/09/2018');
-            const gender = String(row[4] || (parsedStudents.length % 2 === 0 ? 'Nam' : 'Nữ'));
-            const rawLvl = String(row[5] || '').toUpperCase();
-            const level = ['T', 'H', 'C'].includes(rawLvl) ? rawLvl : 'H';
-            const commentsPool = SMAS_COMMENT_BANK[level] || SMAS_COMMENT_BANK.H;
-            const comment = String(row[6] || commentsPool[parsedStudents.length % commentsPool.length]);
-
-            parsedStudents.push({
-              stt: parsedStudents.length + 1,
-              studentCode,
-              fullName,
-              birthDate,
-              gender,
-              level,
-              comment,
-              aestheticCapacity: level === 'C' ? 'CĐ' : (level === 'T' ? 'T' : 'Đ'),
-              creativeCapacity: level === 'C' ? 'CĐ' : (level === 'T' ? 'T' : 'Đ'),
-              qualities: level === 'C' ? 'Đ' : 'T'
-            });
+          const sheetData = result.sheetsData[firstSheet];
+          if (sheetData?.students && sheetData.students.length > 0) {
+            setStudents(sheetData.students);
+            setExcelViewMode('smas');
+            showToast(`Đã nạp thành công ${sheetData.students.length} học sinh từ trang tính "${firstSheet}" (${file.name})!`);
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+          } else {
+            // Tự động mở xem lưới bảng tính nếu cấu trúc bảng tùy chỉnh
+            setExcelViewMode('grid');
+            showToast(`Đã mở toàn bộ trang tính "${firstSheet}" (${file.name})!`);
           }
-        }
-
-        if (parsedStudents.length > 0) {
-          setStudents(parsedStudents);
-          showToast(`Đã tải lên & nạp thành công ${parsedStudents.length} học sinh từ file: ${file.name}!`);
-          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
-        } else {
-          alert('Không tìm thấy danh sách học sinh hợp lệ. Vui lòng đảm bảo file Excel có cột STT và Họ tên!');
         }
       } catch (err) {
         console.error('Lỗi phân tích Excel:', err);
-        alert('Không thể đọc file Excel. Vui lòng dùng định dạng chuẩn SMAS (.xlsx).');
+        alert('Không thể đọc file Excel. Vui lòng đảm bảo tệp định dạng .xlsx, .xls hoặc .csv!');
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  // Chuyển đổi giữa các Sheet của tệp Excel tải lên
+  const handleSelectSheet = (sName) => {
+    setActiveSheetName(sName);
+    const sheetData = uploadedWorkbook?.sheetsData[sName];
+    if (sheetData?.students && sheetData.students.length > 0) {
+      setStudents(sheetData.students);
+    }
   };
 
   // Thêm học sinh mới thủ công
@@ -358,7 +344,122 @@ export default function SmasExcelView({
         </div>
       </div>
 
-      {/* 3. Bộ Lọc Điều Khiển & Cấu Hình Thông Tin SMAS */}
+      {/* 2.5 Thanh Điều Khiển Sheet & Chế Độ Xem Bảng Tính Đã Tải Lên */}
+      {uploadedWorkbook && (
+        <div className="bg-emerald-50 border-2 border-emerald-300 p-3.5 rounded-2xl flex items-center justify-between flex-wrap gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-black text-emerald-950 flex items-center gap-1.5">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              Tệp: <u>{uploadedFileName}</u>
+            </span>
+            {uploadedWorkbook.sheetNames.length > 1 && (
+              <div className="flex items-center gap-1.5 ml-2 flex-wrap">
+                <span className="text-gray-500 font-bold">Trang tính:</span>
+                {uploadedWorkbook.sheetNames.map((sName) => (
+                  <button
+                    key={sName}
+                    onClick={() => handleSelectSheet(sName)}
+                    className={`px-3 py-1 rounded-xl font-black text-xs transition ${
+                      activeSheetName === sName
+                        ? 'bg-emerald-700 text-white shadow-sm'
+                        : 'bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {sName}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setExcelViewMode('smas')}
+              className={`px-3.5 py-1.5 rounded-xl font-black transition ${
+                excelViewMode === 'smas'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+              }`}
+            >
+              📑 Sổ Đánh Giá SMAS (TT 27)
+            </button>
+            <button
+              onClick={() => setExcelViewMode('grid')}
+              className={`px-3.5 py-1.5 rounded-xl font-black transition ${
+                excelViewMode === 'grid'
+                  ? 'bg-emerald-700 text-white shadow-sm'
+                  : 'bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+              }`}
+            >
+              📊 Bảng Tính Toàn Vẹn (Lưới Excel)
+            </button>
+            <button
+              onClick={() => {
+                setUploadedWorkbook(null);
+                setUploadedFileName(null);
+                setExcelViewMode('smas');
+              }}
+              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-200"
+              title="Đóng tệp tải lên, quay về danh sách mặc định"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CHẾ ĐỘ XEM 2: LƯỚI BẢNG TÍNH EXCEL TOÀN VẸN (GIỮ 100% ĐỊNH DẠNG TỆP TẢI LÊN) */}
+      {uploadedWorkbook && excelViewMode === 'grid' ? (
+        <div className="bg-white rounded-2xl border-2 border-emerald-400 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs text-gray-700">Tệp: <b>{uploadedFileName}</b></span>
+              <span className="text-xs text-gray-400">|</span>
+              <span className="font-bold text-xs text-emerald-800">Trang tính: <b>{activeSheetName || uploadedWorkbook.sheetNames[0]}</b></span>
+              <span className="text-xs text-gray-500">
+                ({(uploadedWorkbook.sheetsData[activeSheetName || uploadedWorkbook.sheetNames[0]]?.rawRows || []).length} dòng dữ liệu)
+              </span>
+            </div>
+            <button
+              onClick={() => setExcelViewMode('smas')}
+              className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs"
+            >
+              Chuyển Sang Sổ Đánh Giá SMAS
+            </button>
+          </div>
+
+          <div className="overflow-x-auto max-h-[600px] border border-gray-300 rounded-xl overflow-y-auto">
+            <table className="w-full border-collapse text-xs text-left">
+              <thead>
+                <tr className="bg-gray-100 text-gray-600 font-bold sticky top-0 border-b border-gray-300">
+                  <th className="p-2 border-r border-gray-300 text-center w-12 bg-gray-200">#</th>
+                  {(uploadedWorkbook.sheetsData[activeSheetName || uploadedWorkbook.sheetNames[0]]?.rawRows[0] || []).map((_, cIdx) => (
+                    <th key={cIdx} className="p-2 border-r border-gray-300 text-center min-w-[130px] bg-gray-100 text-gray-700">
+                      {cIdx < 26 ? String.fromCharCode(65 + cIdx) : `C${cIdx + 1}`}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(uploadedWorkbook.sheetsData[activeSheetName || uploadedWorkbook.sheetNames[0]]?.rawRows || []).map((row, rIdx) => (
+                  <tr key={rIdx} className="border-b border-gray-200 hover:bg-emerald-50/50">
+                    <td className="p-2 border-r border-gray-300 text-center bg-gray-50 font-bold text-gray-500 select-none">
+                      {rIdx + 1}
+                    </td>
+                    {(row || []).map((cell, cIdx) => (
+                      <td key={cIdx} className="p-2 border-r border-gray-200 text-gray-800 whitespace-pre-wrap">
+                        {String(cell !== undefined && cell !== null ? cell : '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* 3. Bộ Lọc Điều Khiển & Cấu Hình Thông Tin SMAS */}
       <div className="bg-emerald-50/70 p-4 rounded-2xl border-2 border-emerald-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
         {/* Chọn Khối Lớp */}
         <div>
@@ -616,6 +717,8 @@ export default function SmasExcelView({
           </tbody>
         </table>
       </div>
+        </>
+      )}
 
       {/* Save / Upload Toast */}
       {toastMsg && (
