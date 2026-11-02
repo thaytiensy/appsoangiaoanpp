@@ -75,7 +75,7 @@
     <!-- Auto-Update & Cache Purge Engine -->
     <script>
       (function() {
-        const CURRENT_APP_BUILD = '3.1.0-microsoft-office-suite-smas';
+        const CURRENT_APP_BUILD = '3.3.0-powerpoint-desktop-full-smas';
         const previousBuild = localStorage.getItem('ARTED_APP_BUILD_ID');
         if (previousBuild !== CURRENT_APP_BUILD) {
           localStorage.setItem('ARTED_APP_BUILD_ID', CURRENT_APP_BUILD);
@@ -104,25 +104,25 @@
           }
         });
 
-        // Anti-Blank Screen Watchdog: If #root is still completely empty after 2.5s, render a recovery prompt
-        window.addEventListener('DOMContentLoaded', function() {
-          setTimeout(function() {
-            const root = document.getElementById('root');
-            if (root && root.children.length === 0) {
-              root.innerHTML = `
-                <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: Nunito, sans-serif; padding: 20px; text-align: center;">
-                  <div style="background: white; padding: 32px; border-radius: 28px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-width: 500px; border: 3px solid #fde68a;">
-                    <div style="font-size: 54px; margin-bottom: 12px;">🎨</div>
-                    <h2 style="font-size: 22px; font-weight: 900; color: #e11d48; margin: 0 0 10px 0;">
-                      ART AI: Sẵn Sàng Bản Cập Nhật Mới!
-                    </h2>
-                    <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin-bottom: 24px;">
-                      Hệ thống vừa tích hợp bộ phần mềm văn phòng <b>Microsoft PowerPoint, Word, Excel chuẩn SMAS Viettel</b> chuyên nghiệp cho giáo viên. Bấm nút dưới để nạp giao diện mới nhất:
-                    </p>
-                    <button id="btn-force-reload" style="background: linear-gradient(to right, #f43f5e, #fb923c); color: white; border: none; padding: 14px 28px; border-radius: 18px; font-weight: 900; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);">
-                      🚀 Tải Lại Ngay Phiên Bản Mới
-                    </button>
-                  </div>
+        // Anti-Blank Screen Immediate Watchdog
+        function checkRootReady() {
+          const root = document.getElementById('root');
+          // If loader is still there after 3.5s and no React elements appended
+          if (root && root.querySelector('#initial-app-loader') && root.children.length === 1) {
+            const loader = document.getElementById('initial-app-loader');
+            if (loader) {
+              loader.innerHTML = `
+                <div style="background: white; padding: 32px; border-radius: 28px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15); max-width: 480px; border: 3px solid #fde68a; text-align: center;">
+                  <div style="font-size: 50px; margin-bottom: 12px;">🎨</div>
+                  <h2 style="font-size: 20px; font-weight: 900; color: #e11d48; margin: 0 0 10px 0;">
+                    ART AI: Sẵn Sàng Bản Cập Nhật Mới!
+                  </h2>
+                  <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                    Hệ thống vừa nâng cấp <b>Giao diện Microsoft PowerPoint Desktop chuẩn Office 16 & Bàn cờ Game Con đường đến thành công</b>. Bấm nút dưới để nạp giao diện mới nhất:
+                  </p>
+                  <button id="btn-force-reload" style="background: linear-gradient(to right, #f43f5e, #fb923c); color: white; border: none; padding: 12px 28px; border-radius: 18px; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);">
+                    🚀 Tải Lại Ngay Phiên Bản Mới
+                  </button>
                 </div>
               `;
               const btn = document.getElementById('btn-force-reload');
@@ -142,13 +142,26 @@
                 };
               }
             }
-          }, 2500);
-        });
+          }
+        }
+        setTimeout(checkRootReady, 3500);
       })();
     </script>
   </head>
   <body class="bg-gradient-to-br from-amber-50 via-pink-50 to-sky-50 text-gray-800 min-h-screen">
-    <div id="root"></div>
+    <div id="root">
+      <!-- App Shell Initial Splash while bundle executes to guarantee 0% blank screens -->
+      <div id="initial-app-loader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Nunito', sans-serif; background: linear-gradient(135deg, #FFFBEB 0%, #FFF1F2 50%, #F0FDF4 100%);">
+        <div style="background: white; padding: 28px 36px; border-radius: 28px; box-shadow: 0 20px 25px -5px rgba(225, 29, 72, 0.15); border: 3px solid #FDE68A; text-align: center; max-width: 420px;">
+          <img src="./teacher.jpg" alt="Thầy Cọ Nhí" style="width: 72px; height: 72px; border-radius: 20px; border: 3px solid #F59E0B; margin: 0 auto 12px; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" onerror="this.src='/teacher.jpg'" />
+          <h2 style="font-size: 20px; font-weight: 900; color: #E11D48; margin: 0 0 6px 0;">ART AI - Thầy Cọ Nhí</h2>
+          <p style="font-size: 13px; font-weight: 700; color: #4B5563; margin: 0 0 16px 0;">Đang khởi động lớp học mĩ thuật & PowerPoint Office...</p>
+          <div style="width: 140px; height: 6px; background: #FEE2E2; border-radius: 9999px; margin: 0 auto; overflow: hidden; position: relative;">
+            <div style="width: 60%; height: 100%; background: linear-gradient(to right, #F43F5E, #F59E0B); border-radius: 9999px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
     <!-- Register PWA Service Worker with Auto-Update Mechanism -->
     <script>

@@ -1,5 +1,5 @@
 // ART AI Progressive Web App Service Worker (Bulletproof Auto-Update Strategy)
-const CACHE_VERSION = 'art-ai-smas-v3.0.0';
+const CACHE_VERSION = 'art-ai-smas-v3.3.0';
 const STATIC_ASSETS = [
   '/',
   '/teacher.jpg',
