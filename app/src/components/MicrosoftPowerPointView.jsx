@@ -878,6 +878,73 @@ export default function MicrosoftPowerPointView({
     }
   };
 
+  const [isOpeningDesktopApp, setIsOpeningDesktopApp] = useState(false);
+
+  // Kích hoạt trực tiếp phần mềm Microsoft PowerPoint (POWERPNT.EXE) trên máy tính
+  const handleLaunchRealPowerPoint = async () => {
+    setIsOpeningDesktopApp(true);
+    showSaveToastNotification('🚀 Đang chuẩn bị bài giảng và kích hoạt Microsoft PowerPoint (POWERPNT.EXE)...');
+    try {
+      // 1. Xuất tệp PowerPoint nhị phân dạng Blob
+      const blob = await exportSmasPowerPoint({
+        unit: selectedUnit,
+        teacher,
+        grade: selectedGrade,
+        slidesData: slides,
+        outputType: 'blob'
+      });
+
+      // 2. Gửi lệnh tới máy chủ cục bộ gọi trực tiếp POWERPNT.EXE trên máy tính
+      let openedViaApi = false;
+      try {
+        const response = await fetch('/api/open-powerpoint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+          body: blob
+        });
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            openedViaApi = true;
+            confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+            showSaveToastNotification('🎉 Đã kích hoạt phần mềm Microsoft PowerPoint (POWERPNT.EXE) thành công trên máy tính!');
+          }
+        }
+      } catch (err) {
+        console.warn('API /api/open-powerpoint chưa kết nối (đang chạy bản web cloud):', err);
+      }
+
+      // 3. Nếu đang chạy trên web/cloud (Vercel) không thể trực tiếp spawn process
+      if (!openedViaApi) {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `PP_HDTN_Tuan8_MiThuat_Lop${selectedGrade}.pptx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Kích hoạt giao thức Microsoft Office URI Scheme trên Windows
+        try {
+          window.location.href = `ms-powerpoint:ofe|u|${window.location.origin}/api/temp-powerpoint`;
+        } catch (e) {}
+
+        showSaveToastNotification('📥 Đã tải bài giảng (.pptx). Bạn hãy bấm đúp chuột vào tệp để mở ngay bằng Microsoft PowerPoint thật!');
+      }
+    } catch (e) {
+      console.error('Lỗi khi kích hoạt PowerPoint thật:', e);
+      handleExportPptx();
+    } finally {
+      setIsOpeningDesktopApp(false);
+    }
+  };
+
+  // Mở bằng Microsoft 365 PowerPoint Online
+  const handleOpenOffice365Online = () => {
+    window.open('https://www.microsoft365.com/launch/powerpoint', '_blank');
+    showSaveToastNotification('🌐 Đang mở Microsoft 365 PowerPoint trên trình duyệt...');
+  };
+
   // Export to Real Microsoft PowerPoint (.pptx)
   const handleExportPptx = async () => {
     setIsExporting(true);
@@ -1173,6 +1240,17 @@ export default function MicrosoftPowerPointView({
             className="bg-transparent hover:bg-black/10 focus:bg-black/20 px-2 py-0.5 rounded text-xs font-bold text-white outline-none truncate max-w-xs sm:max-w-md md:max-w-xl transition"
             title="Tên bài giảng PowerPoint"
           />
+
+          {/* Quick Launch Real PowerPoint Desktop (POWERPNT.EXE) */}
+          <button
+            onClick={handleLaunchRealPowerPoint}
+            disabled={isOpeningDesktopApp}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-amber-950 font-black rounded text-[11px] shadow-sm transition hover:scale-105 shrink-0"
+            title="Kích hoạt trực tiếp phần mềm Microsoft PowerPoint (POWERPNT.EXE) trên máy tính của bạn"
+          >
+            <span>🚀</span>
+            <span>{isOpeningDesktopApp ? 'Đang Mở...' : 'Mở Bằng PowerPoint Thật (POWERPNT.EXE)'}</span>
+          </button>
         </div>
 
         {/* Right: User Profile 'Đỗ Tiến Sỹ', Share & Window Controls (Khớp ảnh mẫu) */}
@@ -1246,12 +1324,30 @@ export default function MicrosoftPowerPointView({
             !
           </span>
           <span className="font-bold text-[11px] truncate">
-            <b>THÔNG BÁO:</b> Hệ thống tích hợp PowerPoint chuẩn Office 16 & AI Giáo viên mĩ thuật GDPT 2018.
+            <b>THÔNG BÁO |</b> Hầu hết các tính năng đều bị vô hiệu do sản phẩm Office của bạn không hoạt động. Để sử dụng miễn phí, hãy đăng nhập và sử dụng phiên bản trên web.
           </span>
         </div>
 
         {/* Quick Notification Buttons */}
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={handleLaunchRealPowerPoint}
+            disabled={isOpeningDesktopApp}
+            className="px-2.5 py-0.5 bg-[#C43E1C] hover:bg-[#A73315] text-white rounded font-black text-[10px] shadow-2xs transition flex items-center gap-1 hover:scale-105"
+            title="Kích hoạt trực tiếp phần mềm PowerPoint (POWERPNT.EXE) trên máy tính"
+          >
+            <span>🚀</span>
+            <span>{isOpeningDesktopApp ? 'Đang Mở...' : 'Kích hoạt'}</span>
+          </button>
+
+          <button
+            onClick={handleOpenOffice365Online}
+            className="px-2.5 py-0.5 bg-white hover:bg-rose-50 text-[#C43E1C] border border-[#FCA5A5] rounded font-bold text-[10px] shadow-2xs transition"
+            title="Sử dụng miễn phí tại Microsoft365.com (Office for the Web)"
+          >
+            Sử dụng miễn phí tại Microsoft365.com
+          </button>
+
           <button
             onClick={() => {
               let targetIdx = slides.findIndex(s => s.layout === 'infographic-goals');
@@ -1275,7 +1371,7 @@ export default function MicrosoftPowerPointView({
             title="Mở chế độ cửa sổ desktop toàn màn hình hệt như chạy POWERPNT.EXE"
           >
             <Maximize2 className="w-2.5 h-2.5" />
-            <span>{isDesktopWindowMaximized ? 'Thu Nhỏ Cửa Sổ' : 'Cửa Sổ Desktop'}</span>
+            <span>{isDesktopWindowMaximized ? 'Thu Nhỏ' : 'Cửa Sổ Desktop'}</span>
           </button>
 
           <button
@@ -2210,7 +2306,25 @@ export default function MicrosoftPowerPointView({
 
         {/* TAB: TỆP (FILE) */}
         {activeRibbonTab === 'file' && (
-          <div className="flex items-center gap-3 flex-wrap w-full">
+          <div className="flex items-center gap-2.5 flex-wrap w-full py-1">
+            <button
+              onClick={handleLaunchRealPowerPoint}
+              disabled={isOpeningDesktopApp}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black text-xs shadow-md transition hover:scale-105"
+              title="Kích hoạt trực tiếp phần mềm PowerPoint (POWERPNT.EXE) đã cài đặt trên máy tính của bạn"
+            >
+              <span className="text-sm">🚀</span>
+              <span>{isOpeningDesktopApp ? 'Đang Mở...' : 'Kích Hoạt Microsoft PowerPoint Thật (POWERPNT.EXE)'}</span>
+            </button>
+
+            <button
+              onClick={handleOpenOffice365Online}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-[#C43E1C] border border-[#FCA5A5] rounded-xl font-bold text-xs shadow-xs"
+              title="Mở trên Microsoft 365 PowerPoint Online chính hãng"
+            >
+              <span>🌐</span>
+              <span>Sử Dụng Trực Tuyến Microsoft 365 Web</span>
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow"

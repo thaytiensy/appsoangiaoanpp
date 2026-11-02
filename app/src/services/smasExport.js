@@ -182,7 +182,9 @@ export async function exportSmasPowerPoint({
   unit,
   teacher = { name: 'Thầy Cọ Nhí', title: 'Thầy giáo' },
   grade = 1,
-  schoolName = 'TRƯỜNG TIỂU HỌC VIỆT NAM'
+  schoolName = 'TRƯỜNG TIỂU HỌC VIỆT NAM',
+  slidesData = null,
+  outputType = 'file'
 }) {
   if (!unit) return;
 
@@ -190,10 +192,10 @@ export async function exportSmasPowerPoint({
   pptx.layout = 'LAYOUT_16x9';
   pptx.author = teacher.name;
   pptx.company = 'SMAS Viettel E-Learning Repository';
-  pptx.title = `${unit.title} - Mĩ Thuật Lớp ${grade}`;
+  pptx.title = `${unit.title || 'Mĩ Thuật'} - Mĩ Thuật Lớp ${grade}`;
 
   const teacherName = teacher.name || 'Thầy Cọ Nhí';
-  const slidesData = unit.powerpointSlides || [];
+  const effectiveSlides = (slidesData && slidesData.length > 0) ? slidesData : (unit.powerpointSlides || []);
 
   // SLIDE 1: BÌA BÀI GIẢNG ĐIỆN TỬ SỐ SMAS VIETTEL
   const slideCover = pptx.addSlide();
@@ -317,9 +319,89 @@ export async function exportSmasPowerPoint({
     color: '4B5563'
   });
 
-  // SLIDE 3 ĐẾN SLIDE 7: 5 HOẠT ĐỘNG SƯ PHẠM CHUẨN CÔNG VĂN 2345
-  slidesData.forEach((s) => {
+  // SLIDE 3 TRỞ ĐI: CÁC HOẠT ĐỘNG SƯ PHẠM VÀ INFOGRAPHIC MỤC TIÊU
+  effectiveSlides.forEach((s) => {
     const slide = pptx.addSlide();
+
+    if (s.layout === 'infographic-goals') {
+      slide.background = { color: 'F0FDF4' };
+      slide.addText(s.title || 'Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó', {
+        x: 0.8,
+        y: 0.4,
+        w: 8.4,
+        h: 0.6,
+        fontSize: 18,
+        bold: true,
+        color: 'B91C1C',
+        align: 'center',
+        fill: { color: 'FFFFFF' },
+        line: { color: '38BDF8', width: 2 }
+      });
+
+      slide.addText('🎯 MỤC TIÊU NGẮN HẠN', {
+        x: 0.8,
+        y: 1.3,
+        w: 4.0,
+        h: 0.4,
+        fontSize: 14,
+        bold: true,
+        color: 'FFFFFF',
+        fill: { color: '16A34A' },
+        align: 'center'
+      });
+
+      slide.addText([
+        { text: `${s.goalShortTermDesc || 'Là những mục tiêu liên quan đến kế hoạch và dự định của bạn trong thời gian gần đây nhất.'}\n\n`, options: { fontSize: 12, color: '1F2937' } },
+        { text: `VÍ DỤ: ${s.goalShortTermEx || 'Cải thiện điểm kiểm tra trong tháng.'}`, options: { bold: true, fontSize: 12, color: '166534' } }
+      ], {
+        x: 0.8,
+        y: 1.8,
+        w: 4.0,
+        h: 3.0,
+        fill: { color: 'DCFCE7' },
+        line: { color: '22C55E', width: 1.5 },
+        lineSpacing: 20
+      });
+
+      slide.addText('⏳ MỤC TIÊU DÀI HẠN', {
+        x: 5.2,
+        y: 1.3,
+        w: 4.0,
+        h: 0.4,
+        fontSize: 14,
+        bold: true,
+        color: 'FFFFFF',
+        fill: { color: '0284C7' },
+        align: 'center'
+      });
+
+      slide.addText([
+        { text: `${s.goalLongTermDesc || 'Là những mục tiêu liên quan đến kế hoạch trong một khoảng thời gian rất dài sau này của bạn.'}\n\n`, options: { fontSize: 12, color: '1F2937' } },
+        { text: `VÍ DỤ: ${s.goalLongTermEx || 'Cải thiện điểm thi học kì và điểm tổng kết môn học, quyết tâm trang bị thêm nhiều kiến thức.'}`, options: { bold: true, fontSize: 12, color: '075985' } }
+      ], {
+        x: 5.2,
+        y: 1.8,
+        w: 4.0,
+        h: 3.0,
+        fill: { color: 'E0F2FE' },
+        line: { color: '0284C7', width: 1.5 },
+        lineSpacing: 20
+      });
+
+      slide.addText(s.quote || '✨ Có mục tiêu – Có động lực – Có kết quả! 🏆', {
+        x: 1.5,
+        y: 5.0,
+        w: 7.0,
+        h: 0.45,
+        fontSize: 13,
+        bold: true,
+        color: '991B1B',
+        fill: { color: 'FEE2E2' },
+        align: 'center',
+        line: { color: 'FCA5A5', width: 1 }
+      });
+      return;
+    }
     slide.background = { color: 'FFFFFF' };
 
     // Header tiến trình
@@ -418,7 +500,10 @@ export async function exportSmasPowerPoint({
     });
   });
 
-  const fileName = `Bai_Giang_PowerPoint_SMAS_Viettel_Lop_${grade}_${unit.id}.pptx`;
+  const fileName = `Bai_Giang_PowerPoint_SMAS_Viettel_Lop_${grade}_${unit?.id || 'bai_giang'}.pptx`;
+  if (outputType === 'blob') {
+    return await pptx.write({ outputType: 'blob' });
+  }
   await pptx.writeFile({ fileName });
   return fileName;
 };

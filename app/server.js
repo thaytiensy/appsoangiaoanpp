@@ -8,6 +8,7 @@ import os from 'os';
 import https from 'https';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,17 +30,23 @@ const MIME_TYPES = {
 
 const ttsCache = new Map();
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = parsedUrl.pathname;
 
   // 1. API: Text-to-Speech
   if (pathname === '/api/tts') {
-    handleTts(parsedUrl, res);
+    await handleTts(req, res, parsedUrl);
     return;
   }
 
-  // 2. Static Assets from dist/
+  // 2. API: Mở Trực Tiếp Microsoft PowerPoint (POWERPNT.EXE) trên máy tính
+  if (pathname === '/api/open-powerpoint') {
+    handleOpenPowerpoint(req, res);
+    return;
+  }
+
+  // 3. Static Assets from dist/
   let filePath = path.join(DIST_DIR, pathname === '/' ? 'index.html' : pathname);
 
   if (!fs.existsSync(filePath)) {
@@ -64,7 +71,46 @@ const server = http.createServer((req, res) => {
   });
 });
 
-function handleTts(url, res) {
+function handleOpenPowerpoint(req, res) {
+  try {
+    const pptPath = 'C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\POWERPNT.EXE';
+    const fallbackPath = 'C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE';
+    const exe = fs.existsSync(pptPath) ? pptPath : (fs.existsSync(fallbackPath) ? fallbackPath : 'powerpnt.exe');
+
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        let targetFile = '';
+        if (chunks.length > 0) {
+          const buffer = Buffer.concat(chunks);
+          const tempPptx = path.join(os.tmpdir(), 'BaiGiang_MiThuat_GDPT2018.pptx');
+          fs.writeFileSync(tempPptx, buffer);
+          targetFile = tempPptx;
+        }
+
+        const cmd = targetFile ? `start "" "${exe}" "${targetFile}"` : `start "" "${exe}"`;
+        spawn('cmd.exe', ['/c', cmd], { windowsHide: true, detached: true });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          success: true, 
+          message: 'Đã kích hoạt Microsoft PowerPoint (POWERPNT.EXE) thành công trên máy tính!' 
+        }));
+      } catch (err) {
+        console.error('Lỗi khi mở PowerPoint:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+  } catch (e) {
+    console.error('Lỗi middleware open-powerpoint:', e);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: e.message }));
+  }
+}
+
+async function handleTts(req, res, url) {
   const text = url.searchParams.get('text');
   if (!text) {
     res.writeHead(400);
@@ -98,7 +144,6 @@ function handleTts(url, res) {
 
   // Ưu tiên 1: Pure Node.js WebSocket Edge-TTS
   try {
-    const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
     const tts = new MsEdgeTTS();
     await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
     const { audioStream } = tts.toStream(cleanText);
@@ -118,7 +163,7 @@ function handleTts(url, res) {
 
     audioStream.on('end', () => {
       if (chunks.length > 0) {
-        ttsCache.set(cleanText, Buffer.concat(chunks));
+        ttsCache.set(cacheKey, Buffer.concat(chunks));
       }
       if (!res.writableEnded) res.end();
     });
@@ -151,8 +196,8 @@ function handleTts(url, res) {
   const useDirectExe = fs.existsSync(localEdgeExe);
   const exeCmd = useDirectExe ? localEdgeExe : 'uvx';
   const exeArgs = useDirectExe
-    ? ['--voice', 'vi-VN-NamMinhNeural', '--file', tempFile, '--write-media', '-']
-    : ['edge-tts', '--voice', 'vi-VN-NamMinhNeural', '--file', tempFile, '--write-media', '-'];
+    ? ['--voice', voice, '--file', tempFile, '--write-media', '-']
+    : ['edge-tts', '--voice', voice, '--file', tempFile, '--write-media', '-'];
 
   res.writeHead(200, {
     'Content-Type': 'audio/mpeg',
@@ -175,7 +220,7 @@ function handleTts(url, res) {
     cleanup();
     if (code === 0 && chunks.length > 0) {
       const audioBuffer = Buffer.concat(chunks);
-      ttsCache.set(cleanText, audioBuffer);
+      ttsCache.set(cacheKey, audioBuffer);
       if (!res.writableEnded) {
         res.end();
       }
@@ -208,5 +253,4 @@ function handleTts(url, res) {
 
 server.listen(PORT, () => {
   console.log(`🎨 ART AI Production Server running on http://localhost:${PORT}`);
-});
 });

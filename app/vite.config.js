@@ -187,6 +187,46 @@ export default defineConfig({
             }
           }
         });
+
+        // 2. Kích hoạt trực tiếp phần mềm Microsoft PowerPoint (POWERPNT.EXE) trên máy tính
+        server.middlewares.use('/api/open-powerpoint', async (req, res) => {
+          try {
+            const pptPath = 'C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\POWERPNT.EXE';
+            const fallbackPath = 'C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE';
+            const exe = fs.existsSync(pptPath) ? pptPath : (fs.existsSync(fallbackPath) ? fallbackPath : 'powerpnt.exe');
+
+            const chunks = [];
+            req.on('data', chunk => chunks.push(chunk));
+            req.on('end', () => {
+              try {
+                let targetFile = '';
+                if (chunks.length > 0) {
+                  const buffer = Buffer.concat(chunks);
+                  const tempPptx = path.join(os.tmpdir(), 'BaiGiang_MiThuat_GDPT2018.pptx');
+                  fs.writeFileSync(tempPptx, buffer);
+                  targetFile = tempPptx;
+                }
+
+                const cmd = targetFile ? `start "" "${exe}" "${targetFile}"` : `start "" "${exe}"`;
+                spawn('cmd.exe', ['/c', cmd], { windowsHide: true, detached: true });
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ 
+                  success: true, 
+                  message: 'Đã kích hoạt Microsoft PowerPoint (POWERPNT.EXE) thành công trên máy tính!' 
+                }));
+              } catch (err) {
+                console.error('Lỗi khi mở PowerPoint:', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            });
+          } catch (e) {
+            console.error('Lỗi middleware open-powerpoint:', e);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: e.message }));
+          }
+        });
       }
     }
   ],
