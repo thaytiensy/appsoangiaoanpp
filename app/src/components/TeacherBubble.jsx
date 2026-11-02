@@ -66,10 +66,12 @@ export default function TeacherBubble({
       ttsService.stop();
       setIsSpeaking(false);
     } else {
+      const currentVoice = teacher?.gender || (teacher?.id === 'female' ? 'female' : 'male');
       ttsService.speak(
         currentMessage,
         () => setIsSpeaking(true),
-        () => setIsSpeaking(false)
+        () => setIsSpeaking(false),
+        currentVoice
       );
     }
   };

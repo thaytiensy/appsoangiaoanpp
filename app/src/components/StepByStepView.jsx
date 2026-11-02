@@ -3,7 +3,7 @@ import { DRAWING_LESSONS } from '../data/lessons';
 import { ChevronRight, ChevronLeft, Sparkles, BookOpen, Volume2, VolumeX, ZoomIn, X, Palette } from 'lucide-react';
 import { ttsService } from '../services/tts';
 
-export default function StepByStepView({ onSelectToDraw, isTvMode = false }) {
+export default function StepByStepView({ onSelectToDraw, isTvMode = false, teacher }) {
   const [selectedLesson, setSelectedLesson] = useState(DRAWING_LESSONS[5] || DRAWING_LESSONS[0]); // Default to Grade 4 Landscape if present
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -39,11 +39,14 @@ export default function StepByStepView({ onSelectToDraw, isTvMode = false }) {
       ttsService.stop();
       setIsSpeaking(false);
     } else {
-      const textToSpeak = `Bước ${activeStep.step}: ${activeStep.title}. ${activeStep.detail}. Bí quyết của Thầy: ${activeStep.tip}`;
+      const pronoun = teacher?.pronoun || (teacher?.gender === 'female' ? 'Cô' : 'Thầy');
+      const textToSpeak = `Bước ${activeStep.step}: ${activeStep.title}. ${activeStep.detail}. Bí quyết của ${pronoun}: ${activeStep.tip}`;
+      const voice = teacher?.gender || ttsService.getVoice();
       ttsService.speak(
         textToSpeak,
         () => setIsSpeaking(true),
-        () => setIsSpeaking(false)
+        () => setIsSpeaking(false),
+        voice
       );
     }
   };

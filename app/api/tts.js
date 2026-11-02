@@ -73,12 +73,14 @@ export default async function handler(req, res) {
   const voiceName = (voiceParam === 'female' || voiceParam === 'vi-VN-HoaiMyNeural' || String(voiceParam).toLowerCase().includes('nu') || String(voiceParam).toLowerCase().includes('hoaimy'))
     ? 'vi-VN-HoaiMyNeural'
     : 'vi-VN-NamMinhNeural';
+  const isFemale = voiceName === 'vi-VN-HoaiMyNeural';
   const cacheKey = `${voiceName}_${cleanText}`;
 
   if (ttsCache.has(cacheKey)) {
     const cached = ttsCache.get(cacheKey);
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', cached.length);
+    res.setHeader('X-TTS-Voice', voiceName);
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
     return res.status(200).send(cached);
   }
@@ -89,6 +91,7 @@ export default async function handler(req, res) {
       if (finished) return;
       finished = true;
       Object.entries(headers).forEach(([k, v]) => res.setHeader(k, v));
+      res.setHeader('X-TTS-Voice', voiceName);
       if (!res.headersSent) {
         res.status(statusCode).send(body);
       }
@@ -98,7 +101,7 @@ export default async function handler(req, res) {
     // 1. Primary: Microsoft Edge Neural TTS
     const tryEdgeTTS = () => {
       return new Promise(async (resEdge, rejEdge) => {
-        const timeout = setTimeout(() => rejEdge(new Error('Edge TTS timeout')), 4500);
+        const timeout = setTimeout(() => rejEdge(new Error('Edge TTS timeout')), 5000);
         try {
           const tts = new MsEdgeTTS();
           await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
@@ -123,7 +126,7 @@ export default async function handler(req, res) {
     try {
       const edgeBuffer = await tryEdgeTTS();
       if (edgeBuffer && edgeBuffer.length > 0) {
-        ttsCache.set(cleanText, edgeBuffer);
+        ttsCache.set(cacheKey, edgeBuffer);
         return finish(200, edgeBuffer, {
           'Content-Type': 'audio/mpeg',
           'Content-Length': edgeBuffer.length,
@@ -131,24 +134,28 @@ export default async function handler(req, res) {
         });
       }
     } catch (edgeErr) {
-      console.warn('[TTS] Edge Neural failed on cloud, activating Google TTS fallback:', edgeErr.message);
+      console.warn(`[TTS] Edge Neural (${voiceName}) failed:`, edgeErr.message);
     }
 
-    // 2. Secondary Fallback: Google Vietnamese TTS
-    try {
-      const googleBuffer = await synthesizeGoogleTts(cleanText);
-      if (googleBuffer && googleBuffer.length > 0) {
-        ttsCache.set(cleanText, googleBuffer);
-        return finish(200, googleBuffer, {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': googleBuffer.length,
-          'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800'
-        });
+    // 2. Secondary Fallback:
+    // CHÚ Ý BẢO VỆ GIỌNG NAM: Google Vietnamese TTS là giọng NỮ 100%.
+    // Chỉ kích hoạt Google TTS khi người dùng chọn Cô giáo (isFemale = true).
+    if (isFemale) {
+      try {
+        const googleBuffer = await synthesizeGoogleTts(cleanText);
+        if (googleBuffer && googleBuffer.length > 0) {
+          ttsCache.set(cacheKey, googleBuffer);
+          return finish(200, googleBuffer, {
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': googleBuffer.length,
+            'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800'
+          });
+        }
+      } catch (googleErr) {
+        console.error('[TTS] Google TTS fallback failed:', googleErr.message);
       }
-    } catch (googleErr) {
-      console.error('[TTS] Google TTS fallback also failed:', googleErr.message);
     }
 
-    finish(500, 'All TTS Engines Unavailable');
+    finish(500, `TTS Engine Unavailable for ${voiceName}`);
   });
 }

@@ -404,6 +404,7 @@ export default function MicrosoftWordView({
     const speechText = `${act.phase}: ${act.objective || ''}. Nội dung của giáo viên: ${act.teacherAct}. ` +
       (act.teacherQuestions?.length ? `Câu hỏi gợi mở: ${act.teacherQuestions[0]}` : '');
 
+    const currentVoice = teacher?.gender || (teacher?.id === 'female' ? 'female' : 'male');
     ttsService.speak(
       speechText,
       () => {},
@@ -415,7 +416,8 @@ export default function MicrosoftWordView({
         } else {
           stopLecture();
         }
-      }
+      },
+      currentVoice
     );
   };
 

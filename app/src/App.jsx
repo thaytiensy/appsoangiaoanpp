@@ -434,6 +434,7 @@ export default function App() {
 
         {activeTab === 'stepbystep' && (
           <StepByStepView 
+            teacher={teacher}
             onSelectToDraw={handleSelectToDraw}
             isTvMode={isTvMode}
           />

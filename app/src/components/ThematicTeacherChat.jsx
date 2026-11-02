@@ -110,10 +110,12 @@ export default function ThematicTeacherChat({
       setMessages(prev => [...prev, teacherMsg]);
 
       if (voiceEnabled && teacherReply.text) {
+        const teacherVoice = teacher?.gender || (teacher?.id === 'female' ? 'female' : 'male');
         ttsService.speak(
           teacherReply.text,
           () => setIsSpeaking(true),
-          () => setIsSpeaking(false)
+          () => setIsSpeaking(false),
+          teacherVoice
         );
       }
     } catch (err) {

@@ -40,12 +40,45 @@ import {
   Sliders, 
   FileText, 
   FolderOpen,
-  Music
+  Music,
+  Share2,
+  Search,
+  Star,
+  Minus,
+  Square,
+  X,
+  User,
+  Lightbulb,
+  MessageSquare,
+  BookOpen,
+  Monitor
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { exportSmasPowerPoint } from '../services/smasExport';
 import { ttsService } from '../services/tts';
 import { parsePptxFile } from '../services/officeParser';
+
+// Mẫu Slide 12 Mục Tiêu Học Tập (Chuẩn trực quan hệt như ảnh mẫu người dùng gửi)
+export const SAMPLE_GOAL_SLIDE = {
+  slideNumber: 12,
+  phase: "Hoạt động 1: Mục tiêu học tập",
+  layout: "infographic-goals",
+  title: "Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó",
+  subtitle: "Xác định mục tiêu ngắn hạn & dài hạn đối với môn học",
+  goalShortTermLabel: "NGẮN HẠN",
+  goalShortTermDesc: "Là những mục tiêu liên quan đến những kế hoạch và dự định của bạn trong thời gian gần đây nhất.",
+  goalShortTermEx: "Cải thiện điểm kiểm tra trong tháng.",
+  goalLongTermLabel: "DÀI HẠN",
+  goalLongTermDesc: "Là những mục tiêu liên quan đến những kế hoạch trong một khoảng thời gian rất dài sau này của bạn.",
+  goalLongTermEx: "Cải thiện điểm thi học kì và điểm tổng kết môn học, quyết tâm trang bị thêm nhiều kiến thức và kĩ năng liên quan đến môn học này.",
+  quote: "Có mục tiêu – Có động lực – Có kết quả!",
+  teacherLecture: "Thầy chào các con! Ở hoạt động này, các con hãy cùng suy nghĩ và nêu ra hai mục tiêu: mục tiêu ngắn hạn và mục tiêu dài hạn đối với môn học của mình nhé. Mục tiêu ngắn hạn là những kế hoạch gần nhất, như cải thiện điểm kiểm tra trong tháng. Mục tiêu dài hạn là kế hoạch xa hơn, như điểm thi học kì và tích lũy kĩ năng sáng tạo. Có mục tiêu, chúng ta sẽ có động lực và gặt hái kết quả tuyệt vời!",
+  bullets: [
+    "Xác định mục tiêu ngắn hạn đối với môn học",
+    "Lập kế hoạch mục tiêu dài hạn cho năm học",
+    "Ghi nhớ: Có mục tiêu - Có động lực - Có kết quả"
+  ]
+};
 
 export default function MicrosoftPowerPointView({
   selectedGrade = 1,
@@ -62,11 +95,35 @@ export default function MicrosoftPowerPointView({
   // Ribbon Tabs: 'home' | 'insert' | 'draw' | 'design' | 'slideshow' | 'view' | 'file'
   const [activeRibbonTab, setActiveRibbonTab] = useState('home');
 
+  // Presentation Title (Chuẩn thanh tiêu đề Microsoft PowerPoint)
+  const [presentationTitle, setPresentationTitle] = useState(() => {
+    return selectedUnit?.title 
+      ? `PP HĐTN tuần 8- Ai mẩu - PowerPoint (${selectedUnit.title} - Lớp ${selectedGrade})`
+      : 'PP HĐTN tuần 8- Ai mẩu - PowerPoint (Sản phẩm Chưa cấp phép)';
+  });
+
+  // Zoom Level on Slide (82% như trong ảnh mẫu)
+  const [zoomLevel, setZoomLevel] = useState(82);
+
+  // Khóa giọng đọc giáo viên rõ ràng: 'male' (Thầy Cọ Nhí) | 'female' (Cô Hoài My)
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ARTED_SELECTED_TEACHER') : null;
+    return saved === 'female' ? 'female' : (teacher?.gender || 'male');
+  });
+
   // Editable Slides Deck State
   const [slides, setSlides] = useState(() => {
-    return selectedUnit?.powerpointSlides ? JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)) : [];
+    const raw = selectedUnit?.powerpointSlides ? JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)) : [];
+    // Luôn bổ sung slide mục tiêu học tập mẫu (Slide 12) để người dùng xem và dùng ngay
+    if (!raw.some(s => s.layout === 'infographic-goals')) {
+      raw.push(JSON.parse(JSON.stringify(SAMPLE_GOAL_SLIDE)));
+    }
+    return raw;
   });
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
+    // Ưu tiên chọn ngay slide mục tiêu học tập (Slide 12 như ảnh mẫu) khi khởi động
+    return 0;
+  });
   const [isExporting, setIsExporting] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
 
@@ -125,15 +182,36 @@ export default function MicrosoftPowerPointView({
   const penCanvasRef = useRef(null);
   const slideContainerRef = useRef(null);
 
+  // Sync teacher voice when teacher prop changes
+  useEffect(() => {
+    if (teacher?.gender) {
+      setSelectedVoice(teacher.gender);
+      ttsService.setVoice(teacher.gender);
+    }
+  }, [teacher]);
+
+  const handleSwitchVoice = (newVoice) => {
+    const v = newVoice || (selectedVoice === 'male' ? 'female' : 'male');
+    setSelectedVoice(v);
+    ttsService.setVoice(v);
+    showSaveToastNotification(v === 'male' ? '🎙️ Đã chọn: AI Thầy Cọ Nhí (Giọng Nam)' : '🎙️ Đã chọn: AI Cô Hoài My (Giọng Nữ)');
+  };
+
   // Sync slides when selectedUnit changes
   useEffect(() => {
     if (selectedUnit?.powerpointSlides) {
-      setSlides(JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)));
-      setCurrentSlideIndex(0);
+      const copy = JSON.parse(JSON.stringify(selectedUnit.powerpointSlides));
+      if (!copy.some(s => s.layout === 'infographic-goals')) {
+        copy.push(JSON.parse(JSON.stringify(SAMPLE_GOAL_SLIDE)));
+      }
+      setSlides(copy);
+      if (selectedUnit.title) {
+        setPresentationTitle(`PP HĐTN tuần 8- Ai mẩu - PowerPoint (${selectedUnit.title} - Lớp ${selectedGrade})`);
+      }
       clearPenCanvas();
       stopAutoLecture();
     }
-  }, [selectedUnit]);
+  }, [selectedUnit, selectedGrade]);
 
   // Clean up timers & audio
   useEffect(() => {
@@ -613,11 +691,12 @@ export default function MicrosoftPowerPointView({
           autoLectureTimerRef.current = interval;
         } else {
           confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
-          const endMsg = `Tuyệt vời! ${pronoun} chúc mừng cả lớp đã hoàn thành toàn bộ bài học "${selectedUnit.title}"! Bây giờ các con cùng thực hành vẽ tranh nhé!`;
-          ttsService.speak(endMsg);
+          const endMsg = `Tuyệt vời! ${pronoun} chúc mừng cả lớp đã hoàn thành toàn bộ bài học "${selectedUnit?.title || ''}"! Bây giờ các con cùng thực hành vẽ tranh nhé!`;
+          ttsService.speak(endMsg, null, null, selectedVoice);
           stopAutoLecture();
         }
-      }
+      },
+      selectedVoice
     );
   };
 
@@ -629,8 +708,8 @@ export default function MicrosoftPowerPointView({
       return;
     }
     const s = currentSlide;
-    const text = s?.teacherLecture || `${pronoun} chào các con! Chúng mình đang học bài ${selectedUnit.title}`;
-    ttsService.speak(text, () => setIsSpeaking(true), () => setIsSpeaking(false));
+    const text = s?.teacherLecture || `${pronoun} chào các con! Chúng mình đang học bài ${selectedUnit?.title || s?.title}`;
+    ttsService.speak(text, () => setIsSpeaking(true), () => setIsSpeaking(false), selectedVoice);
   };
 
   // Pen Canvas Handlers
@@ -753,107 +832,191 @@ export default function MicrosoftPowerPointView({
         className="hidden"
       />
 
-      {/* 1. MICROSOFT 365 POWERPOINT TOP BAR */}
-      <div className="bg-[#D24726] text-white px-4 py-2 flex items-center justify-between border-b border-[#B9381A] shadow-sm flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-[#B9381A] px-2.5 py-1 rounded-xl text-xs font-black shadow-inner">
-            <span className="w-5 h-5 rounded-lg bg-white text-[#D24726] font-black flex items-center justify-center text-xs shadow-xs">
-              P
-            </span>
-            <span>PowerPoint</span>
+      {/* 1. AUTHENTIC MICROSOFT POWERPOINT TITLE BAR */}
+      <div className="bg-[#C43E1C] text-white px-3 py-1.5 flex items-center justify-between border-b border-[#A73315] shadow-xs select-none">
+        {/* Left: Quick Access Toolbar & App Icon */}
+        <div className="flex items-center gap-2">
+          {/* PowerPoint Brand Icon */}
+          <div className="w-6 h-6 rounded-md bg-[#A73315] border border-white/20 flex items-center justify-center font-black text-white text-xs shadow-inner">
+            P
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-xs sm:text-sm tracking-tight text-white/95">
-              {selectedUnit?.unitNumber}: {selectedUnit?.title} - Lớp {selectedGrade} (SMAS Viettel)
-            </span>
-            <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-white/80 bg-white/15 px-2 py-0.5 rounded-md font-semibold">
-              <Check className="w-3 h-3 text-emerald-300" /> Đã đồng bộ GDPT 2018
-            </span>
+          {/* Quick Access Action Icons */}
+          <div className="flex items-center gap-1 text-white/90 border-r border-white/20 pr-2">
+            <button
+              onClick={() => showSaveToastNotification('Đã lưu bài giảng!')}
+              className="p-1 hover:bg-black/20 rounded transition"
+              title="Lưu (Ctrl+S)"
+            >
+              <Save className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1 hover:bg-black/20 rounded transition"
+              title="Mở tệp PowerPoint (.pptx / ảnh / json)"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                setIsSlideShowMode(true);
+                setCurrentSlideIndex(0);
+              }}
+              className="p-1 hover:bg-black/20 rounded transition"
+              title="Bắt đầu Trình Chiếu từ Đầu (F5)"
+            >
+              <Play className="w-3.5 h-3.5 fill-white" />
+            </button>
           </div>
+
+          {/* Document / Presentation Title */}
+          <input
+            type="text"
+            value={presentationTitle}
+            onChange={(e) => setPresentationTitle(e.target.value)}
+            className="bg-transparent hover:bg-black/10 focus:bg-black/20 px-2 py-0.5 rounded text-xs sm:text-sm font-bold text-white outline-none max-w-sm sm:max-w-md md:max-w-xl truncate transition"
+            title="Tên tệp bài giảng PowerPoint"
+          />
         </div>
 
-        {/* Quick Top Actions: Upload, Ambient Music, Presentation F5, Export PPTX, Save */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* NÚT BẬT / TẮT NHẠC NỀN MĨ THUẬT */}
+        {/* Right: User Profile 'Đỗ Tiến Sỹ', Share & Window Controls */}
+        <div className="flex items-center gap-2.5">
+          {/* User Account Capsule like sample photo */}
+          <div className="hidden sm:flex items-center gap-2 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full cursor-pointer transition text-xs font-semibold">
+            <img
+              src={avatarUrl}
+              alt="Avatar"
+              className="w-5 h-5 rounded-full object-cover border border-white/40 shadow-xs"
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = './teacher.jpg'; }}
+            />
+            <span className="font-bold text-white tracking-tight">Đỗ Tiến Sỹ</span>
+            <span className="text-[10px] opacity-70">▼</span>
+          </div>
+
+          {/* Share Button [Chia sẻ] */}
           <button
-            onClick={toggleAmbientMusic}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs shadow-sm transition ${
-              ambientMusicEnabled
-                ? 'bg-amber-400 text-amber-950 ring-2 ring-white animate-pulse'
-                : 'bg-white/20 hover:bg-white/30 text-white'
-            }`}
-            title="Bật/Tắt nhạc nền sáng tạo mĩ thuật êm dịu cho học sinh tập trung vẽ tranh"
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({ title: presentationTitle, url: window.location.href }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(window.location.href);
+                showSaveToastNotification('Đã sao chép liên kết bài giảng để chia sẻ!');
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition shadow-xs"
+            title="Chia sẻ bài giảng này"
           >
-            <Music className="w-3.5 h-3.5" />
-            <span>{ambientMusicEnabled ? 'Nhạc Nền: BẬT 🎵' : 'Nhạc Nền Mĩ Thuật'}</span>
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Chia sẻ</span>
           </button>
 
-          {/* NÚT TẢI LÊN TỆP TỪ MÁY TÍNH */}
+          {/* Window Control Buttons */}
+          <div className="flex items-center gap-1 text-white/80 pl-1 border-l border-white/20">
+            <button className="p-1 hover:bg-black/20 rounded text-xs transition" title="Thu nhỏ">
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setIsSlideShowMode(prev => !prev)}
+              className="p-1 hover:bg-black/20 rounded text-xs transition" 
+              title="Phóng to cửa sổ"
+            >
+              <Square className="w-3 h-3" />
+            </button>
+            <button 
+              onClick={() => {
+                if (confirm('Bạn có muốn đóng trình xem PowerPoint?')) {
+                  window.history.back();
+                }
+              }}
+              className="p-1 hover:bg-rose-700 rounded text-xs transition" 
+              title="Đóng"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. AUTHENTIC OFFICE NOTIFICATION BAR (Chuẩn hệt như ảnh mẫu) */}
+      <div className="bg-[#FDE8E4] border-b border-[#FCA5A5] px-4 py-1.5 flex items-center justify-between text-xs text-[#991B1B] flex-wrap gap-2 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded-full bg-[#C43E1C] text-white flex items-center justify-center font-black text-[10px] shrink-0">
+            !
+          </span>
+          <span className="font-bold text-[11px] sm:text-xs">
+            <b>THÔNG BÁO:</b> Hệ thống tích hợp đầy đủ công cụ PowerPoint, Trợ lý AI Giảng bài tự động & Mẫu Slide Mục tiêu học tập chuẩn GDPT 2018.
+          </span>
+        </div>
+
+        {/* Quick Notification Buttons */}
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl font-black text-xs shadow-sm transition hover:scale-105"
-            title="Tải lên tệp PowerPoint (.pptx), tệp ảnh slide hoặc JSON từ máy tính"
+            onClick={() => {
+              // Nhảy ngay tới Slide Mục Tiêu Học Tập (Slide 12 như ảnh mẫu)
+              let targetIdx = slides.findIndex(s => s.layout === 'infographic-goals');
+              if (targetIdx === -1) {
+                setSlides(prev => [...prev, JSON.parse(JSON.stringify(SAMPLE_GOAL_SLIDE))]);
+                targetIdx = slides.length;
+              }
+              setCurrentSlideIndex(targetIdx);
+              setSlideLayout('infographic-goals');
+              showSaveToastNotification('Đã mở Slide 12 Mục tiêu học tập (Chuẩn ảnh mẫu)!');
+            }}
+            className="px-2.5 py-1 bg-white hover:bg-rose-50 text-[#C43E1C] border border-[#FCA5A5] rounded-md font-black text-[11px] shadow-2xs transition hover:scale-105"
+            title="Mở ngay Slide 12 Mục tiêu ngắn hạn & dài hạn như ảnh mẫu"
           >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Tải Lên Tệp (.pptx/ảnh)</span>
+            🎯 Slide 12 Mục Tiêu (Như Ảnh Mẫu)
           </button>
 
-          {/* Nút Bắt đầu Trình Chiếu F5 */}
           <button
             onClick={() => {
               setIsSlideShowMode(true);
               setCurrentSlideIndex(0);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl font-black text-xs shadow-md transition transform hover:scale-105"
-            title="Bắt đầu trình chiếu từ slide đầu tiên (Phím: F5)"
+            className="px-2.5 py-1 bg-[#C43E1C] hover:bg-[#A73315] text-white rounded-md font-bold text-[11px] shadow-2xs transition"
           >
-            <Play className="w-3.5 h-3.5 fill-amber-950" />
-            <span>Trình Chiếu (F5)</span>
+            ▶ Trình Chiếu (F5)
           </button>
 
-          {/* Nút Xuất PowerPoint .pptx Chuẩn SMAS */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-2.5 py-1 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 rounded-md font-bold text-[11px] shadow-2xs transition"
+          >
+            📁 Tải Lên (.pptx)
+          </button>
+
           <button
             onClick={handleExportPptx}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs shadow transition disabled:opacity-50"
-            title="Tải tệp bài giảng số Microsoft PowerPoint (.pptx) chuẩn nộp SMAS Viettel"
+            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md font-bold text-[11px] shadow-2xs transition"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>{isExporting ? 'Đang xuất...' : 'Xuất PPTX (SMAS)'}</span>
-          </button>
-
-          {/* Nút Lưu Thay Đổi */}
-          <button
-            onClick={() => showSaveToastNotification('Đã lưu bài giảng vào bộ nhớ!')}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-bold transition text-white"
-            title="Lưu các nội dung vừa chỉnh sửa (Ctrl+S)"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Lưu</span>
+            📥 Xuất SMAS
           </button>
         </div>
       </div>
 
-      {/* 2. MICROSOFT POWERPOINT OFFICE RIBBON TABS */}
-      <div className="bg-[#FAF9F8] border-b border-gray-300 px-4 pt-1 flex items-center justify-between overflow-x-auto shadow-xs">
-        <div className="flex items-center gap-1">
+      {/* 3. MICROSOFT POWERPOINT OFFICE RIBBON TABS */}
+      <div className="bg-[#FAF9F8] border-b border-gray-300 px-3 pt-1 flex items-center justify-between overflow-x-auto shadow-2xs">
+        <div className="flex items-center gap-0.5">
           {[
             { id: 'file', label: 'Tệp' },
             { id: 'home', label: 'Trang đầu' },
             { id: 'insert', label: 'Chèn' },
-            { id: 'draw', label: 'Vẽ' },
             { id: 'design', label: 'Thiết kế' },
-            { id: 'slideshow', label: 'Trình chiếu' },
-            { id: 'view', label: 'Xem' }
+            { id: 'transitions', label: 'Chuyển tiếp' },
+            { id: 'animations', label: 'Hoạt hình' },
+            { id: 'slideshow', label: 'Trình Chiếu' },
+            { id: 'record', label: 'Ghi' },
+            { id: 'review', label: 'Xem lại' },
+            { id: 'view', label: 'Xem' },
+            { id: 'help', label: 'Trợ giúp' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveRibbonTab(tab.id)}
-              className={`px-3.5 py-1.5 text-xs font-black rounded-t-xl transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-t-lg transition-all ${
                 activeRibbonTab === tab.id
-                  ? 'bg-white text-[#D24726] border-t-2 border-x border-[#D24726] shadow-xs'
-                  : 'text-gray-700 hover:bg-gray-200/60'
+                  ? 'bg-white text-[#C43E1C] border-t-2 border-x border-[#C43E1C] font-black shadow-2xs'
+                  : 'text-gray-700 hover:bg-gray-200/70'
               }`}
             >
               {tab.label}
@@ -861,28 +1024,14 @@ export default function MicrosoftPowerPointView({
           ))}
         </div>
 
-        {/* AI Teacher Avatar Voice Indicator */}
-        <div className="flex items-center gap-2 py-1">
-          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
-            <img
-              src={avatarUrl}
-              alt={teacherName}
-              className="w-5 h-5 rounded-full object-cover border border-amber-400"
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/teacher.jpg'; }}
-            />
-            <span className="text-[11px] font-extrabold text-gray-800 hidden sm:inline">
-              {teacherName}
-            </span>
-            <button
-              onClick={speakCurrentSlideOnly}
-              className={`p-1 rounded-lg transition ${
-                isSpeaking ? 'bg-rose-500 text-white animate-pulse' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-              title="Nghe Thầy/Cô AI đọc lời giảng slide này"
-            >
-              <Volume2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        {/* Search Assistant: 'Cho tôi biết bạn muốn làm gì' */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs text-gray-400 w-56 shadow-inner">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+          <input
+            type="text"
+            placeholder="Cho tôi biết bạn muốn làm gì..."
+            className="w-full bg-transparent outline-none text-gray-700 text-xs"
+          />
         </div>
       </div>
 
@@ -922,10 +1071,15 @@ export default function MicrosoftPowerPointView({
               <span className="text-[11px] font-bold text-gray-400">Bố Cục:</span>
               <select
                 value={slideLayout}
-                onChange={(e) => setSlideLayout(e.target.value)}
-                className="p-1.5 rounded-lg border border-gray-300 font-bold text-xs bg-gray-50 outline-none"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSlideLayout(val);
+                  updateCurrentSlide('layout', val);
+                }}
+                className="p-1.5 rounded-lg border border-gray-300 font-black text-xs bg-gray-50 outline-none"
               >
-                <option value="standard">Tiêu chuẩn (2 Cột)</option>
+                <option value="infographic-goals">🎯 Mục Tiêu Học Tập (Như Ảnh Mẫu)</option>
+                <option value="standard">Tiêu chuẩn GDPT (2 Cột)</option>
                 <option value="large-image">Tranh Tiêu Điểm Lớn</option>
                 <option value="title-only">Bìa / Tiêu Đề</option>
               </select>
@@ -1043,14 +1197,53 @@ export default function MicrosoftPowerPointView({
               </div>
             </div>
 
-            {/* Insert Bullets & Items */}
+            {/* Group: Thêm Văn Bản & Khóa Giọng Giảng Bài AI */}
             <div className="flex items-center gap-2">
               <button
                 onClick={addBulletPoint}
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl font-bold text-xs transition"
               >
                 <Type className="w-3.5 h-3.5" />
-                <span>+ Thêm Nét/Gạch Đầu Dòng</span>
+                <span>+ Thêm Dòng</span>
+              </button>
+
+              {/* NÚT CHUYỂN ĐỔI GIỌNG NÓI RÕ RÀNG */}
+              <button
+                onClick={() => handleSwitchVoice()}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black border transition shadow-xs ${
+                  selectedVoice === 'female'
+                    ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100'
+                    : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
+                }`}
+                title="Bấm để chuyển đổi giữa Giọng Thầy Cọ Nhí (Nam) và Cô Hoài My (Nữ) - Khóa giọng 100%"
+              >
+                <span>{selectedVoice === 'female' ? '👩‍🏫' : '👨‍🏫'}</span>
+                <span className="hidden sm:inline">{selectedVoice === 'female' ? 'Cô Hoài My (Nữ)' : 'Thầy Cọ Nhí (Nam)'}</span>
+                <span className="text-[10px] opacity-60">⇄</span>
+              </button>
+
+              {/* Nút Giảng Bài Slide Này */}
+              <button
+                onClick={speakCurrentSlideOnly}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition ${
+                  isSpeaking ? 'bg-rose-600 text-white animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+                title="Nghe Thầy/Cô AI đọc bài giảng slide này"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>{isSpeaking ? 'Dừng Đọc' : 'Đọc Slide'}</span>
+              </button>
+
+              {/* Nút Nhạc Nền Mĩ Thuật */}
+              <button
+                onClick={toggleAmbientMusic}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-black text-xs transition ${
+                  ambientMusicEnabled ? 'bg-amber-400 text-amber-950 animate-pulse' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+                title="Bật/Tắt nhạc nền sáng tạo mĩ thuật êm dịu"
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{ambientMusicEnabled ? 'Nhạc: BẬT 🎵' : 'Nhạc Nền'}</span>
               </button>
             </div>
           </div>
@@ -1307,78 +1500,112 @@ export default function MicrosoftPowerPointView({
 
       {/* 4. MAIN POWERPOINT WORKSPACE: LEFT THUMBNAILS + CENTER SLIDE STAGE */}
       <div className="flex flex-1 min-h-[580px] bg-[#EAE8E4] relative overflow-hidden">
-        {/* LEFT SLIDE THUMBNAIL STRIP */}
-        <div className="w-40 sm:w-48 bg-[#F0EEEA] border-r border-gray-300 p-2 overflow-y-auto flex flex-col gap-2 shrink-0">
+        {/* LEFT SLIDE THUMBNAIL STRIP (Đúng chuẩn cột dọc số trang chiếu như ảnh mẫu) */}
+        <div className="w-44 sm:w-52 bg-[#F0EEEA] border-r border-gray-300 p-2 overflow-y-auto flex flex-col gap-2 shrink-0 select-none">
           <div className="text-[11px] font-black uppercase text-gray-500 px-1 mb-1 flex items-center justify-between">
-            <span>Danh Sách Slide</span>
+            <span>Trang Chiếu</span>
             <span className="bg-white px-1.5 py-0.2 rounded text-[10px] text-gray-700 font-bold border">
               {slides.length}
             </span>
           </div>
 
-          {slides.map((s, idx) => (
-            <div
-              key={idx}
-              onClick={() => setCurrentSlideIndex(idx)}
-              className={`p-1.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-1 relative ${
-                currentSlideIndex === idx
-                  ? 'border-[#D24726] bg-white shadow-md scale-102 ring-2 ring-[#D24726]/30'
-                  : 'border-gray-200 bg-white/70 hover:bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center justify-between text-[10px] font-black text-gray-500 px-1">
-                <span>Slide {idx + 1}</span>
-                <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => moveSlideUp(idx)}
-                    disabled={idx === 0}
-                    className="p-0.5 hover:bg-gray-200 disabled:opacity-20 rounded"
-                    title="Di chuyển lên"
-                  >
-                    <ArrowUp className="w-3 h-3 text-gray-600" />
-                  </button>
-                  <button
-                    onClick={() => moveSlideDown(idx)}
-                    disabled={idx === slides.length - 1}
-                    className="p-0.5 hover:bg-gray-200 disabled:opacity-20 rounded"
-                    title="Di chuyển xuống"
-                  >
-                    <ArrowDown className="w-3 h-3 text-gray-600" />
-                  </button>
-                </div>
-              </div>
+          {slides.map((s, idx) => {
+            const isCurrent = currentSlideIndex === idx;
+            const isGoalSlide = s.layout === 'infographic-goals';
+            const displaySlideNum = isGoalSlide ? (s.slideNumber || 12) : (idx + 1);
 
-              {/* 16:9 Thumbnail Box */}
-              <div 
-                className="w-full aspect-video rounded-lg border border-gray-200 p-1 flex flex-col justify-between overflow-hidden text-[8px] select-none"
-                style={{ backgroundColor: activeTheme.bg, color: activeTheme.text }}
+            return (
+              <div
+                key={idx}
+                onClick={() => {
+                  setCurrentSlideIndex(idx);
+                  if (s.layout) setSlideLayout(s.layout);
+                }}
+                className="flex items-start gap-1.5 cursor-pointer group"
               >
-                <p className="font-extrabold truncate leading-tight" style={{ color: activeTheme.accent }}>
-                  {s.title}
-                </p>
-                <div className="space-y-0.5">
-                  <div className="w-3/4 h-1 bg-gray-300 rounded-full" />
-                  <div className="w-1/2 h-1 bg-gray-200 rounded-full" />
+                {/* Slide Number & Star Effect Icon on the Left Column (như ảnh mẫu) */}
+                <div className="flex flex-col items-center justify-center w-5 pt-1 shrink-0 select-none">
+                  <span className={`text-xs font-black transition ${
+                    isCurrent ? 'text-[#C43E1C]' : 'text-gray-500 group-hover:text-gray-800'
+                  }`}>
+                    {displaySlideNum}
+                  </span>
+                  <span className="text-[10px] text-amber-500">★</span>
+                </div>
+
+                {/* Thumbnail Card with Real WYSIWYG Mini Preview */}
+                <div className={`flex-1 aspect-video rounded-md overflow-hidden transition-all relative border-2 ${
+                  isCurrent
+                    ? 'border-[#C43E1C] ring-2 ring-[#C43E1C]/50 shadow-md scale-[1.02] bg-white'
+                    : 'border-gray-300 hover:border-gray-400 bg-white shadow-2xs'
+                }`}>
+                  {/* Thumbnail Content */}
+                  {isGoalSlide ? (
+                    <div className="w-full h-full bg-gradient-to-b from-sky-50 to-emerald-50/40 p-1 flex flex-col justify-between border border-dashed border-sky-400 rounded text-[6px] select-none overflow-hidden">
+                      {/* Mini Header Cloud */}
+                      <div className="flex items-center justify-between gap-0.5">
+                        <span className="text-[7px]">👧</span>
+                        <div className="bg-white/90 px-1 py-0.2 rounded border border-rose-300 text-[5px] font-black text-rose-600 truncate max-w-[85px]">
+                          {s.title || 'Mục tiêu ngắn hạn & dài hạn'}
+                        </div>
+                        <span className="text-[7px]">🎓</span>
+                      </div>
+                      {/* Mini 2 Cards */}
+                      <div className="grid grid-cols-2 gap-0.5 my-0.5">
+                        <div className="bg-emerald-100/90 border border-emerald-400 rounded p-0.5 text-[4px] font-bold text-emerald-900 truncate">
+                          🎯 NGẮN HẠN
+                        </div>
+                        <div className="bg-sky-100/90 border border-sky-400 rounded p-0.5 text-[4px] font-bold text-sky-900 truncate">
+                          ⏳ DÀI HẠN
+                        </div>
+                      </div>
+                      {/* Mini Bottom Quote */}
+                      <div className="bg-rose-100/90 border border-rose-300 rounded text-[4.5px] font-black text-rose-700 text-center truncate">
+                        Có mục tiêu – Có kết quả! 🏆
+                      </div>
+                    </div>
+                  ) : (s.visualArt?.imageUrl && s.visualArt?.imageUrl !== './teacher.jpg') || (s.images?.[0]?.url) ? (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={s.visualArt?.imageUrl || s.images?.[0]?.url}
+                        alt="Slide thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      className="w-full h-full p-1 flex flex-col justify-between overflow-hidden text-[7px] select-none"
+                      style={{ backgroundColor: activeTheme.bg, color: activeTheme.text }}
+                    >
+                      <p className="font-extrabold truncate leading-tight" style={{ color: activeTheme.accent }}>
+                        {s.title}
+                      </p>
+                      <div className="space-y-0.5">
+                        <div className="w-3/4 h-0.5 bg-gray-300 rounded-full" />
+                        <div className="w-1/2 h-0.5 bg-gray-200 rounded-full" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Quick Add Slide & Upload Slide in Strip */}
-          <div className="flex flex-col gap-1.5 mt-1">
+          <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-gray-300/80">
             <button
               onClick={handleAddNewSlide}
-              className="w-full py-2 bg-white hover:bg-amber-50 border-2 border-dashed border-gray-300 hover:border-[#D24726] rounded-xl text-gray-600 hover:text-[#D24726] font-black text-xs flex items-center justify-center gap-1 transition"
+              className="w-full py-1.5 bg-white hover:bg-amber-50 border border-dashed border-gray-300 hover:border-[#C43E1C] rounded-lg text-gray-700 hover:text-[#C43E1C] font-bold text-[11px] flex items-center justify-center gap-1 transition"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm Slide Mới</span>
+              <span>Thêm Bản Chiếu</span>
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-blue-800 font-bold text-[11px] flex items-center justify-center gap-1 transition"
+              className="w-full py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-blue-800 font-bold text-[11px] flex items-center justify-center gap-1 transition"
             >
               <Upload className="w-3 h-3" />
-              <span>Tải Lên File / Ảnh</span>
+              <span>Tải Lên .pptx</span>
             </button>
           </div>
         </div>
@@ -1407,246 +1634,385 @@ export default function MicrosoftPowerPointView({
               />
             )}
 
-            {/* Slide Header: Phase & Editable Title */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <input
-                  type="text"
-                  value={currentSlide.phase || ''}
-                  onChange={(e) => updateCurrentSlide('phase', e.target.value)}
-                  className="text-xs sm:text-sm font-black uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition w-1/2"
-                  style={{ color: activeTheme.accent }}
-                  placeholder="Nhập giai đoạn hoạt động..."
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold opacity-60">
-                    Slide {currentSlideIndex + 1} / {slides.length} ({slideAspectRatio})
-                  </span>
+            {/* CHẾ ĐỘ 1: BỐ CỤC INFOGRAPHIC MỤC TIÊU HỌC TẬP (CHUẨN HỆT NHƯ ẢNH MẪU NGƯỜI DÙNG GỬI) */}
+            {(currentSlide.layout === 'infographic-goals' || slideLayout === 'infographic-goals') ? (
+              <div className="relative w-full h-full flex flex-col justify-between p-2 sm:p-3.5 bg-gradient-to-b from-sky-50 via-emerald-50/30 to-amber-50/40 rounded-2xl border-4 border-dashed border-sky-400 overflow-hidden shadow-inner select-text">
+                {/* Decorative floating sparkles */}
+                <div className="absolute top-2 left-3 text-amber-400 text-base select-none animate-pulse">✨</div>
+                <div className="absolute top-2 right-4 text-amber-400 text-base select-none animate-pulse">⭐</div>
+                
+                {/* 1. Header Cloud with Characters */}
+                <div className="flex items-center justify-between gap-2 sm:gap-3 relative z-10">
+                  {/* Left Character: Cute girl with magnifying glass */}
+                  <div className="flex flex-col items-center shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-pink-100 border-2 border-pink-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
+                      👧
+                    </div>
+                    <span className="text-[9px] font-black text-pink-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-pink-200 shadow-2xs">
+                      Quan sát 🔍
+                    </span>
+                  </div>
+
+                  {/* Center Cloud Title */}
+                  <div className="flex-1 bg-white/95 rounded-2xl sm:rounded-3xl p-2 sm:p-3 border-2 border-rose-300 shadow-sm text-center max-w-lg mx-auto">
+                    <input
+                      type="text"
+                      value={currentSlide.title || 'Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó'}
+                      onChange={(e) => updateCurrentSlide('title', e.target.value)}
+                      className="w-full text-center font-black text-rose-600 outline-none bg-transparent leading-snug text-xs sm:text-sm md:text-base"
+                      placeholder="Nhập câu hỏi gợi mở / tiêu đề slide..."
+                    />
+                  </div>
+
+                  {/* Right Character: Cute boy with graduation cap */}
+                  <div className="flex flex-col items-center shrink-0">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-sky-100 border-2 border-sky-400 flex items-center justify-center text-xl sm:text-2xl shadow-xs transform hover:scale-105 transition">
+                      🎓
+                    </div>
+                    <span className="text-[9px] font-black text-sky-700 bg-white/95 px-1.5 py-0.5 rounded-full mt-0.5 border border-sky-200 shadow-2xs">
+                      Mục tiêu 🎯
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Main Body: 2 Columns (NGẮN HẠN vs DÀI HẠN) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5 my-1.5 relative z-10 items-stretch">
+                  {/* Left Column: MỤC TIÊU NGẮN HẠN */}
+                  <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-emerald-400 shadow-xs">
+                    {/* Pill Tag */}
+                    <div className="inline-flex items-center gap-1 bg-emerald-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
+                      <span>🎯</span>
+                      <span>NGẮN HẠN</span>
+                    </div>
+
+                    {/* Definition */}
+                    <div className="flex items-start gap-1.5 bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-200">
+                      <span className="text-emerald-700 text-xs mt-0.5">📌</span>
+                      <textarea
+                        rows={2}
+                        value={currentSlide.goalShortTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch và dự định của bạn trong thời gian gần đây nhất.'}
+                        onChange={(e) => updateCurrentSlide('goalShortTermDesc', e.target.value)}
+                        className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
+                        placeholder="Nội dung mục tiêu ngắn hạn..."
+                      />
+                    </div>
+
+                    {/* Example Card */}
+                    <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-emerald-300 shadow-2xs">
+                      <span className="bg-emerald-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
+                        VÍ DỤ
+                      </span>
+                      <input
+                        type="text"
+                        value={currentSlide.goalShortTermEx || 'Cải thiện điểm kiểm tra trong tháng.'}
+                        onChange={(e) => updateCurrentSlide('goalShortTermEx', e.target.value)}
+                        className="w-full text-[11px] font-black text-emerald-950 bg-transparent outline-none"
+                        placeholder="Ví dụ cụ thể..."
+                      />
+                      <span className="text-emerald-500 text-sm">✅</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: MỤC TIÊU DÀI HẠN */}
+                  <div className="flex flex-col gap-1.5 bg-white/95 rounded-xl p-2.5 border-2 border-sky-400 shadow-xs">
+                    {/* Pill Tag */}
+                    <div className="inline-flex items-center gap-1 bg-sky-500 text-white font-black text-[11px] sm:text-xs px-3 py-0.5 rounded-full shadow-2xs self-start">
+                      <span>⏳</span>
+                      <span>DÀI HẠN</span>
+                    </div>
+
+                    {/* Definition */}
+                    <div className="flex items-start gap-1.5 bg-sky-50/80 p-1.5 rounded-lg border border-sky-200">
+                      <span className="text-sky-700 text-xs mt-0.5">⌛</span>
+                      <textarea
+                        rows={2}
+                        value={currentSlide.goalLongTermDesc || 'Là những mục tiêu liên quan đến những kế hoạch trong một khoảng thời gian rất dài sau này của bạn.'}
+                        onChange={(e) => updateCurrentSlide('goalLongTermDesc', e.target.value)}
+                        className="w-full text-[11px] font-bold text-gray-800 bg-transparent outline-none resize-none leading-relaxed"
+                        placeholder="Nội dung mục tiêu dài hạn..."
+                      />
+                    </div>
+
+                    {/* Example Card */}
+                    <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-sky-300 shadow-2xs">
+                      <span className="bg-sky-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded shrink-0">
+                        VÍ DỤ
+                      </span>
+                      <input
+                        type="text"
+                        value={currentSlide.goalLongTermEx || 'Cải thiện điểm thi học kì và tích lũy kĩ năng thẩm mỹ.'}
+                        onChange={(e) => updateCurrentSlide('goalLongTermEx', e.target.value)}
+                        className="w-full text-[11px] font-black text-sky-950 bg-transparent outline-none"
+                        placeholder="Ví dụ cụ thể..."
+                      />
+                      <span className="text-amber-500 text-sm">💡</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Center Badge & Bottom Motivational Banner */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-200/80 relative z-10 flex-wrap">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                    <span>🌱</span>
+                    <span>Nuôi dưỡng đam mê</span>
+                  </div>
+
+                  <div className="bg-sky-600 text-white font-black text-[11px] px-3.5 py-0.5 rounded-full shadow-xs uppercase tracking-wide flex items-center gap-1">
+                    <span>📖</span>
+                    <span>MỤC TIÊU HỌC TẬP</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] font-black text-rose-700 bg-rose-100/90 px-2.5 py-0.5 rounded-lg border border-rose-300 shadow-2xs">
+                    <span>✨</span>
+                    <span>Có mục tiêu – Có động lực – Có kết quả!</span>
+                    <span>🏆</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Editable Slide Title */}
-              <input
-                type="text"
-                value={currentSlide.title || ''}
-                onChange={(e) => updateCurrentSlide('title', e.target.value)}
-                className="w-full font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
-                placeholder="Nhập tiêu đề hoạt động..."
-                style={{
-                  color: activeTheme.text,
-                  fontSize: `${titleFontSize}px`,
-                  fontWeight: isBold ? '900' : '700',
-                  fontStyle: isItalic ? 'italic' : 'normal',
-                  textAlign: textAlign,
-                  lineHeight: '1.2'
-                }}
-              />
-
-              {/* Editable Subtitle */}
-              {slideLayout !== 'title-only' && (
-                <input
-                  type="text"
-                  value={currentSlide.subtitle || ''}
-                  onChange={(e) => updateCurrentSlide('subtitle', e.target.value)}
-                  className="w-full font-bold bg-transparent border-b border-transparent hover:border-gray-400 outline-none transition mt-1 opacity-80"
-                  style={{ 
-                    color: activeTheme.accent,
-                    fontSize: `${bodyFontSize}px`
-                  }}
-                  placeholder="Nhập mục tiêu hoạt động..."
-                />
-              )}
-
-              {/* EMBEDDED SLIDE AUDIO / MUSIC WIDGET */}
-              {currentSlide.audio && (
-                <div className="my-2 p-2 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-xl shadow-md flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <button
-                      onClick={togglePlaySlideAudio}
-                      className="w-7 h-7 rounded-full bg-white text-[#D24726] font-black flex items-center justify-center shadow hover:scale-105 active:scale-95 transition shrink-0"
-                      title={isPlayingSlideAudio ? 'Tạm dừng' : 'Phát âm thanh slide'}
-                    >
-                      {isPlayingSlideAudio ? '⏸' : '▶'}
-                    </button>
-                    <div className="min-w-0">
-                      <span className="font-extrabold block truncate max-w-[280px]">
-                        🎵 {currentSlide.audio.name || 'Bản nhạc slide mĩ thuật'}
-                      </span>
-                      <span className="text-[10px] text-white/80 font-medium">
-                        {isPlayingSlideAudio ? 'Đang phát âm nhạc slide ılıılı' : 'Bấm để phát bài hát / âm thanh'}
+            ) : (
+              <>
+                {/* Slide Header: Phase & Editable Title */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <input
+                      type="text"
+                      value={currentSlide.phase || ''}
+                      onChange={(e) => updateCurrentSlide('phase', e.target.value)}
+                      className="text-xs sm:text-sm font-black uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition w-1/2"
+                      style={{ color: activeTheme.accent }}
+                      placeholder="Nhập giai đoạn hoạt động..."
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold opacity-60">
+                        Slide {currentSlideIndex + 1} / {slides.length} ({slideAspectRatio})
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => {
-                        if (slideAudioRef.current) slideAudioRef.current.pause();
-                        updateCurrentSlide('audio', null);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded text-white/80 hover:text-white transition"
-                      title="Gỡ âm thanh này"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* Slide Content by Layout */}
-            {slideLayout === 'standard' && (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 my-auto items-center">
-                {/* Left Column: Bullet points list */}
-                <div className="md:col-span-7 space-y-2">
-                  <span className="text-xs font-black uppercase tracking-wider opacity-90" style={{ color: activeTheme.accent }}>
-                    Nội dung trọng tâm & Bước thực hiện:
-                  </span>
-                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
-                    {(currentSlide.bullets || []).map((bullet, bIdx) => (
-                      <div key={bIdx} className="flex items-start gap-2 group">
-                        <span className="font-black mt-0.5" style={{ color: activeTheme.accent }}>•</span>
-                        <textarea
-                          rows={2}
-                          value={bullet}
-                          onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
-                          className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
-                          style={{ 
-                            color: activeTheme.text,
-                            fontSize: `${bodyFontSize}px`
-                          }}
-                          placeholder="Nội dung bước thực hành..."
-                        />
+                  {/* Editable Slide Title */}
+                  <input
+                    type="text"
+                    value={currentSlide.title || ''}
+                    onChange={(e) => updateCurrentSlide('title', e.target.value)}
+                    className="w-full font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
+                    placeholder="Nhập tiêu đề hoạt động..."
+                    style={{
+                      color: activeTheme.text,
+                      fontSize: `${titleFontSize}px`,
+                      fontWeight: isBold ? '900' : '700',
+                      fontStyle: isItalic ? 'italic' : 'normal',
+                      textAlign: textAlign,
+                      lineHeight: '1.2'
+                    }}
+                  />
+
+                  {/* Editable Subtitle */}
+                  {slideLayout !== 'title-only' && (
+                    <input
+                      type="text"
+                      value={currentSlide.subtitle || ''}
+                      onChange={(e) => updateCurrentSlide('subtitle', e.target.value)}
+                      className="w-full font-bold bg-transparent border-b border-transparent hover:border-gray-400 outline-none transition mt-1 opacity-80"
+                      style={{ 
+                        color: activeTheme.accent,
+                        fontSize: `${bodyFontSize}px`
+                      }}
+                      placeholder="Nhập mục tiêu hoạt động..."
+                    />
+                  )}
+
+                  {/* EMBEDDED SLIDE AUDIO / MUSIC WIDGET */}
+                  {currentSlide.audio && (
+                    <div className="my-2 p-2 px-3 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-xl shadow-md flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <button
-                          onClick={() => deleteBulletPoint(bIdx)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 transition"
-                          title="Xóa dòng này"
+                          onClick={togglePlaySlideAudio}
+                          className="w-7 h-7 rounded-full bg-white text-[#D24726] font-black flex items-center justify-center shadow hover:scale-105 active:scale-95 transition shrink-0"
+                          title={isPlayingSlideAudio ? 'Tạm dừng' : 'Phát âm thanh slide'}
+                        >
+                          {isPlayingSlideAudio ? '⏸' : '▶'}
+                        </button>
+                        <div className="min-w-0">
+                          <span className="font-extrabold block truncate max-w-[280px]">
+                            🎵 {currentSlide.audio.name || 'Bản nhạc slide mĩ thuật'}
+                          </span>
+                          <span className="text-[10px] text-white/80 font-medium">
+                            {isPlayingSlideAudio ? 'Đang phát âm nhạc slide ılıılı' : 'Bấm để phát bài hát / âm thanh'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            if (slideAudioRef.current) slideAudioRef.current.pause();
+                            updateCurrentSlide('audio', null);
+                          }}
+                          className="p-1 hover:bg-white/20 rounded text-white/80 hover:text-white transition"
+                          title="Gỡ âm thanh này"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Right Column: Visual Artwork Card with Multi-Image Support */}
-                <div 
-                  className="md:col-span-5 p-3 rounded-2xl border-2 shadow-sm flex flex-col justify-between"
-                  style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-black uppercase" style={{ color: activeTheme.accent }}>
-                      🎨 Tranh Thị Phạm {currentSlide.images?.length > 1 ? `(${currentSlide.images.length} ảnh)` : ''}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => imageInputRef.current?.click()}
-                        className="px-2 py-0.5 bg-white/80 hover:bg-white text-gray-800 text-[10px] font-bold rounded-lg border border-gray-300 transition flex items-center gap-1"
-                        title="Tải ảnh mẫu mới từ máy tính lên"
-                      >
-                        <Upload className="w-3 h-3" />
-                        <span>Đổi Ảnh</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setZoomedImageSrc(currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl);
-                          setZoomArtworkModal(true);
-                        }}
-                        className="p-1 hover:bg-white rounded-lg transition"
-                        title="Phóng to tranh"
-                      >
-                        <Maximize2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Multi-image Gallery */}
-                  {currentSlide.images && currentSlide.images.length > 1 ? (
-                    <div className="space-y-1.5">
-                      <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-1.5 relative group">
-                        <img
-                          src={currentSlide.visualArt?.imageUrl || currentSlide.images[0]?.url || './teacher.jpg'}
-                          alt="Tranh mẫu chính"
-                          className="max-h-full max-w-full object-contain rounded-lg"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                        {currentSlide.images.map((img, imgIdx) => (
-                          <button
-                            key={img.id || imgIdx}
-                            onClick={() => {
-                              updateCurrentSlide('visualArt', { title: img.name, imageUrl: img.url });
-                            }}
-                            className={`w-12 h-10 rounded-lg overflow-hidden border-2 shrink-0 transition ${
-                              (currentSlide.visualArt?.imageUrl === img.url || (!currentSlide.visualArt?.imageUrl && imgIdx === 0))
-                                ? 'border-[#D24726] ring-2 ring-[#D24726]/40 scale-105'
-                                : 'border-gray-300 hover:border-gray-400 opacity-70 hover:opacity-100'
-                            }`}
-                          >
-                            <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                          </button>
+                {/* Slide Content by Layout */}
+                {slideLayout === 'standard' && (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 my-auto items-center">
+                    {/* Left Column: Bullet points list */}
+                    <div className="md:col-span-7 space-y-2">
+                      <span className="text-xs font-black uppercase tracking-wider opacity-90" style={{ color: activeTheme.accent }}>
+                        Nội dung trọng tâm & Bước thực hiện:
+                      </span>
+                      <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                        {(currentSlide.bullets || []).map((bullet, bIdx) => (
+                          <div key={bIdx} className="flex items-start gap-2 group">
+                            <span className="font-black mt-0.5" style={{ color: activeTheme.accent }}>•</span>
+                            <textarea
+                              rows={2}
+                              value={bullet}
+                              onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
+                              style={{ 
+                                color: activeTheme.text,
+                                fontSize: `${bodyFontSize}px`
+                              }}
+                              placeholder="Nội dung bước thực hành..."
+                            />
+                            <button
+                              onClick={() => deleteBulletPoint(bIdx)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 transition"
+                              title="Xóa dòng này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
+
+                    {/* Right Column: Visual Artwork Card with Multi-Image Support */}
+                    <div 
+                      className="md:col-span-5 p-3 rounded-2xl border-2 shadow-sm flex flex-col justify-between"
+                      style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-black uppercase" style={{ color: activeTheme.accent }}>
+                          🎨 Tranh Thị Phạm {currentSlide.images?.length > 1 ? `(${currentSlide.images.length} ảnh)` : ''}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => imageInputRef.current?.click()}
+                            className="px-2 py-0.5 bg-white/80 hover:bg-white text-gray-800 text-[10px] font-bold rounded-lg border border-gray-300 transition flex items-center gap-1"
+                            title="Tải ảnh mẫu mới từ máy tính lên"
+                          >
+                            <Upload className="w-3 h-3" />
+                            <span>Đổi Ảnh</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setZoomedImageSrc(currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl);
+                              setZoomArtworkModal(true);
+                            }}
+                            className="p-1 hover:bg-white rounded-lg transition"
+                            title="Phóng to tranh"
+                          >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Multi-image Gallery */}
+                      {currentSlide.images && currentSlide.images.length > 1 ? (
+                        <div className="space-y-1.5">
+                          <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-1.5 relative group">
+                            <img
+                              src={currentSlide.visualArt?.imageUrl || currentSlide.images[0]?.url || './teacher.jpg'}
+                              alt="Tranh mẫu chính"
+                              className="max-h-full max-w-full object-contain rounded-lg"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                            {currentSlide.images.map((img, imgIdx) => (
+                              <button
+                                key={img.id || imgIdx}
+                                onClick={() => {
+                                  updateCurrentSlide('visualArt', { title: img.name, imageUrl: img.url });
+                                }}
+                                className={`w-12 h-10 rounded-lg overflow-hidden border-2 shrink-0 transition ${
+                                  (currentSlide.visualArt?.imageUrl === img.url || (!currentSlide.visualArt?.imageUrl && imgIdx === 0))
+                                    ? 'border-[#D24726] ring-2 ring-[#D24726]/40 scale-105'
+                                    : 'border-gray-300 hover:border-gray-400 opacity-70 hover:opacity-100'
+                                }`}
+                              >
+                                <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
+                          <img
+                            src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                            alt="Tranh mẫu"
+                            className="max-h-full max-w-full object-contain rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = './teacher.jpg';
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-[11px] font-bold text-center mt-1.5 truncate opacity-90">
+                        {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {slideLayout === 'large-image' && (
+                  <div className="flex flex-col items-center justify-center my-auto w-full gap-2">
+                    <div className="relative w-full max-w-lg aspect-video bg-white rounded-2xl overflow-hidden border border-gray-300 shadow-md p-2 flex items-center justify-center">
                       <img
                         src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                        alt="Tranh mẫu"
+                        alt="Tranh mẫu tiêu điểm"
                         className="max-h-full max-w-full object-contain rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = './teacher.jpg';
-                        }}
                       />
+                      <button
+                        onClick={() => imageInputRef.current?.click()}
+                        className="absolute top-3 right-3 px-3 py-1 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl backdrop-blur flex items-center gap-1 transition"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Đổi Ảnh Từ Máy</span>
+                      </button>
                     </div>
-                  )}
+                    <p className="text-xs font-bold text-center opacity-80">
+                      {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
+                    </p>
+                  </div>
+                )}
 
-                  <p className="text-[11px] font-bold text-center mt-1.5 truncate opacity-90">
-                    {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {slideLayout === 'large-image' && (
-              <div className="flex flex-col items-center justify-center my-auto w-full gap-2">
-                <div className="relative w-full max-w-lg aspect-video bg-white rounded-2xl overflow-hidden border border-gray-300 shadow-md p-2 flex items-center justify-center">
-                  <img
-                    src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                    alt="Tranh mẫu tiêu điểm"
-                    className="max-h-full max-w-full object-contain rounded-lg"
-                  />
-                  <button
-                    onClick={() => imageInputRef.current?.click()}
-                    className="absolute top-3 right-3 px-3 py-1 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl backdrop-blur flex items-center gap-1 transition"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Đổi Ảnh Từ Máy</span>
-                  </button>
-                </div>
-                <p className="text-xs font-bold text-center opacity-80">
-                  {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
-                </p>
-              </div>
-            )}
-
-            {slideLayout === 'title-only' && (
-              <div className="flex flex-col items-center justify-center my-auto text-center space-y-4">
-                <h1 className="text-3xl sm:text-4xl font-black" style={{ color: activeTheme.accent }}>
-                  {currentSlide.title}
-                </h1>
-                <p className="text-base sm:text-lg font-bold opacity-80 max-w-xl">
-                  {currentSlide.subtitle || selectedUnit?.summary}
-                </p>
-                <div className="pt-4 flex items-center gap-2">
-                  <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
-                    Giáo viên: {teacherName}
-                  </span>
-                  <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
-                    Lớp {selectedGrade} • GDPT 2018
-                  </span>
-                </div>
-              </div>
+                {slideLayout === 'title-only' && (
+                  <div className="flex flex-col items-center justify-center my-auto text-center space-y-4">
+                    <h1 className="text-3xl sm:text-4xl font-black" style={{ color: activeTheme.accent }}>
+                      {currentSlide.title}
+                    </h1>
+                    <p className="text-base sm:text-lg font-bold opacity-80 max-w-xl">
+                      {currentSlide.subtitle || selectedUnit?.summary}
+                    </p>
+                    <div className="pt-4 flex items-center gap-2">
+                      <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                        Giáo viên: {teacherName}
+                      </span>
+                      <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                        Lớp {selectedGrade} • GDPT 2018
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Slide Footer: Bottom Meta */}
@@ -1707,32 +2073,147 @@ export default function MicrosoftPowerPointView({
         </div>
       </div>
 
-      {/* 6. BOTTOM STATUS BAR */}
-      <div className="bg-[#FAF9F8] border-t border-gray-300 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-600 font-bold flex-wrap gap-2">
+      {/* 6. AUTHENTIC MICROSOFT POWERPOINT BOTTOM STATUS BAR (Khớp 100% Ảnh Mẫu) */}
+      <div className="bg-[#FAF9F8] border-t border-[#E1DFDD] px-3 py-1 flex items-center justify-between text-[11px] text-[#323130] font-medium select-none shrink-0 z-10">
+        {/* Left Side: Slide Number, Language, Accessibility */}
         <div className="flex items-center gap-3">
-          <span>Slide {currentSlideIndex + 1} / {slides.length}</span>
-          <span>Tiếng Việt (Việt Nam)</span>
-          <span className="text-emerald-700">● Chuẩn GDPT 2018</span>
+          <div className="flex items-center gap-1.5 font-bold hover:bg-black/5 px-1.5 py-0.5 rounded cursor-pointer transition">
+            <span>Trang chiếu {currentSlideIndex + 1} / {slides.length}</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentSlideIndex === 0}
+              className="p-1 hover:bg-black/10 disabled:opacity-30 rounded transition"
+              title="Slide trước"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
+              disabled={currentSlideIndex === slides.length - 1}
+              className="p-1 hover:bg-black/10 disabled:opacity-30 rounded transition"
+              title="Slide kế tiếp"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-3.5 w-px bg-gray-300 mx-0.5 hidden sm:block" />
+
+          <div className="hidden sm:flex items-center gap-1 hover:bg-black/5 px-1.5 py-0.5 rounded cursor-pointer transition">
+            <BookOpen className="w-3.5 h-3.5 opacity-70" />
+            <span>Tiếng Việt (Việt Nam)</span>
+          </div>
+
+          <div className="h-3.5 w-px bg-gray-300 mx-0.5 hidden md:block" />
+
+          <div className="hidden md:flex items-center gap-1 text-gray-600 hover:bg-black/5 px-1.5 py-0.5 rounded cursor-pointer transition">
+            <User className="w-3.5 h-3.5 opacity-70 text-emerald-600" />
+            <span>Khả năng truy cập: Sẵn sàng</span>
+          </div>
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Right Side: Ghi chú, Chú thích, View Modes, Zoom Slider (82%) */}
         <div className="flex items-center gap-2">
+          {/* Ghi chú */}
           <button
-            onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-            disabled={currentSlideIndex === 0}
-            className="px-2.5 py-1 bg-white hover:bg-gray-100 disabled:opacity-30 rounded-lg border border-gray-300 font-bold transition flex items-center gap-1"
+            onClick={() => setShowNotesDrawer(!showNotesDrawer)}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition ${
+              showNotesDrawer ? 'bg-amber-100 text-amber-800' : 'hover:bg-black/5 text-[#323130]'
+            }`}
+            title="Mở ngăn ghi chú / lời giảng của giáo viên"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Trước</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Ghi chú</span>
           </button>
+
+          {/* Chú thích */}
           <button
-            onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
-            disabled={currentSlideIndex === slides.length - 1}
-            className="px-2.5 py-1 bg-white hover:bg-gray-100 disabled:opacity-30 rounded-lg border border-gray-300 font-bold transition flex items-center gap-1"
+            onClick={() => alert('Chức năng bình luận & góp ý giáo án mĩ thuật')}
+            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-black/5 text-[#323130] text-[11px] font-bold transition"
+            title="Thêm chú thích bài giảng"
           >
-            <span>Tiếp</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Chú thích</span>
           </button>
+
+          <div className="h-3.5 w-px bg-gray-300 mx-1 hidden sm:block" />
+
+          {/* Chế độ xem: Normal, Slide Sorter, Reading, Slide Show */}
+          <div className="hidden sm:flex items-center gap-0.5">
+            <button 
+              className="p-1 hover:bg-black/10 rounded transition text-gray-700 bg-black/5" 
+              title="Chế độ xem bình thường"
+            >
+              <Layout className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => alert('Chế độ sắp xếp slide')}
+              className="p-1 hover:bg-black/10 rounded transition text-gray-700" 
+              title="Bộ sắp xếp trang chiếu"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => alert('Chế độ xem đọc bài giảng')}
+              className="p-1 hover:bg-black/10 rounded transition text-gray-700" 
+              title="Chế độ xem đọc"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setIsSlideShowMode(true)}
+              className="p-1 hover:bg-[#C43E1C] hover:text-white rounded transition text-[#C43E1C]" 
+              title="Trình chiếu Slide (F5)"
+            >
+              <Monitor className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-3.5 w-px bg-gray-300 mx-1" />
+
+          {/* Zoom Slider (Mặc định 82% hệt ảnh mẫu) */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setZoomLevel(prev => Math.max(50, prev - 5))}
+              className="p-0.5 hover:bg-black/10 rounded transition"
+              title="Thu nhỏ"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+            <input
+              type="range"
+              min="50"
+              max="150"
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(Number(e.target.value))}
+              className="w-16 sm:w-24 h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-[#C43E1C]"
+              title={`Thu phóng: ${zoomLevel}%`}
+            />
+            <button
+              onClick={() => setZoomLevel(prev => Math.min(150, prev + 5))}
+              className="p-0.5 hover:bg-black/10 rounded transition"
+              title="Phóng to"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setZoomLevel(82)}
+              className="w-8 text-right font-bold hover:underline cursor-pointer"
+              title="Khôi phục 82% chuẩn như ảnh mẫu"
+            >
+              {zoomLevel}%
+            </button>
+            <button
+              onClick={() => setZoomLevel(100)}
+              className="p-0.5 hover:bg-black/10 rounded transition text-gray-600"
+              title="Vừa khít cửa sổ hiện tại"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1754,52 +2235,155 @@ export default function MicrosoftPowerPointView({
 
           {/* Centered Large Slide Canvas */}
           <div 
-            className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-4xl aspect-[4/3]' : 'max-w-5xl aspect-video'} rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden`}
+            className={`w-full ${slideAspectRatio === '4:3' ? 'max-w-4xl aspect-[4/3]' : 'max-w-5xl aspect-video'} rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col justify-between relative overflow-hidden`}
             style={{ 
-              backgroundColor: activeTheme.bg, 
-              color: activeTheme.text,
+              backgroundColor: currentSlide.layout === 'infographic-goals' ? '#F0FDF4' : activeTheme.bg, 
+              color: currentSlide.layout === 'infographic-goals' ? '#1E293B' : activeTheme.text,
               fontFamily: `${fontFamily}, sans-serif`
             }}
           >
-            <div>
-              <p className="text-xs sm:text-sm font-black uppercase tracking-wider mb-1" style={{ color: activeTheme.accent }}>
-                {currentSlide.phase} ({slideAspectRatio})
-              </p>
-              <h2 className="font-black" style={{ fontSize: `${Math.max(24, titleFontSize + 4)}px`, lineHeight: '1.2' }}>
-                {currentSlide.title}
-              </h2>
-              <p className="font-bold mt-2 opacity-80" style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>
-                {currentSlide.subtitle}
-              </p>
-            </div>
+            {currentSlide.layout === 'infographic-goals' ? (
+              /* Infographic Goals Layout in Fullscreen Mode (Ảnh mẫu Slide 12) */
+              <div className="w-full h-full flex flex-col justify-between p-4 sm:p-6 bg-[#F0FDF4] rounded-2xl border-4 border-dashed border-sky-400 text-slate-800 relative overflow-hidden">
+                {/* Background stars */}
+                <div className="absolute top-2 left-4 text-2xl select-none opacity-60">⭐</div>
+                <div className="absolute top-2 right-6 text-2xl select-none opacity-60">✨</div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-auto items-center">
-              <div className="md:col-span-7 space-y-3">
-                {(currentSlide.bullets || []).map((b, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-sm sm:text-lg font-bold">
-                    <span className="font-black text-xl" style={{ color: activeTheme.accent }}>•</span>
-                    <span style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>{b}</span>
+                {/* 1. Header Cloud with Cartoon Girl & Boy */}
+                <div className="flex items-center justify-between gap-4 relative z-10">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="w-14 h-14 rounded-full bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-3xl shadow-sm">
+                      👧🔍
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="md:col-span-5 p-4 rounded-2xl border" style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}>
-                <img
-                  src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                  alt="Tranh mẫu"
-                  className="w-full aspect-[4/3] object-contain rounded-xl bg-white p-2 shadow-sm"
-                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = './teacher.jpg'; }}
-                />
-                <p className="text-xs font-black text-center mt-2 truncate opacity-90">
-                  {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
-                </p>
-              </div>
-            </div>
+                  <div className="flex-1 bg-white/95 px-6 py-2.5 rounded-2xl border-2 border-sky-300 shadow-sm text-center">
+                    <p className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight leading-tight">
+                      {currentSlide.title || "Em hãy nêu hai mục tiêu: ngắn hạn và dài hạn đối với môn học đó"}
+                    </p>
+                  </div>
 
-            <div className="flex items-center justify-between text-xs opacity-60 border-t border-gray-300/40 pt-3">
-              <span>Giáo án Mĩ thuật GDPT 2018</span>
-              <span>Slide {currentSlideIndex + 1} / {slides.length}</span>
-            </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="w-14 h-14 rounded-full bg-sky-100 border-2 border-sky-300 flex items-center justify-center text-3xl shadow-sm">
+                      👦🎓
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Two Columns: Ngắn Hạn & Dài Hạn */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-auto relative z-10">
+                  {/* Left Column: NGẮN HẠN */}
+                  <div className="bg-emerald-50/90 p-4 sm:p-5 rounded-2xl border-2 border-emerald-400 shadow-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="bg-emerald-600 text-white font-black text-sm px-4 py-1 rounded-full shadow-xs uppercase tracking-wide flex items-center gap-1.5">
+                        <span>🎯</span>
+                        <span>{currentSlide.goalShortTermLabel || "NGẮN HẠN"}</span>
+                      </div>
+                      <span className="text-xl">🎯</span>
+                    </div>
+
+                    <p className="text-sm sm:text-base font-bold text-emerald-950 leading-relaxed">
+                      {currentSlide.goalShortTermDesc || "Là những mục tiêu liên quan đến những kế hoạch và dự định của bạn trong thời gian gần đây nhất."}
+                    </p>
+
+                    <div className="flex items-start gap-2 bg-white p-3 rounded-xl border border-emerald-300 shadow-2xs">
+                      <span className="bg-emerald-600 text-white font-black text-xs px-2 py-0.5 rounded shrink-0">
+                        VÍ DỤ
+                      </span>
+                      <p className="text-sm font-black text-emerald-900 leading-snug">
+                        {currentSlide.goalShortTermEx || "Cải thiện điểm kiểm tra trong tháng."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Column: DÀI HẠN */}
+                  <div className="bg-sky-50/90 p-4 sm:p-5 rounded-2xl border-2 border-sky-400 shadow-md space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="bg-sky-600 text-white font-black text-sm px-4 py-1 rounded-full shadow-xs uppercase tracking-wide flex items-center gap-1.5">
+                        <span>⏳</span>
+                        <span>{currentSlide.goalLongTermLabel || "DÀI HẠN"}</span>
+                      </div>
+                      <span className="text-xl">⏳</span>
+                    </div>
+
+                    <p className="text-sm sm:text-base font-bold text-sky-950 leading-relaxed">
+                      {currentSlide.goalLongTermDesc || "Là những mục tiêu liên quan đến những kế hoạch trong một khoảng thời gian rất dài sau này của bạn."}
+                    </p>
+
+                    <div className="flex items-start gap-2 bg-white p-3 rounded-xl border border-sky-300 shadow-2xs">
+                      <span className="bg-sky-600 text-white font-black text-xs px-2 py-0.5 rounded shrink-0">
+                        VÍ DỤ
+                      </span>
+                      <p className="text-sm font-black text-sky-900 leading-snug">
+                        {currentSlide.goalLongTermEx || "Cải thiện điểm thi học kì và điểm tổng kết môn học, quyết tâm trang bị thêm nhiều kiến thức và kĩ năng liên quan đến môn học này."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Center Badge & Motivational Quote Banner */}
+                <div className="flex items-center justify-between gap-4 pt-3 border-t border-sky-200 relative z-10 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-xl shadow-xs">
+                    <span>🌱</span>
+                    <span>Nuôi dưỡng đam mê</span>
+                  </div>
+
+                  <div className="bg-sky-600 text-white font-black text-sm px-5 py-1 rounded-full shadow-sm uppercase tracking-wide flex items-center gap-1.5">
+                    <span>📖</span>
+                    <span>MỤC TIÊU HỌC TẬP</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm font-black text-rose-700 bg-rose-100 px-3 py-1 rounded-xl border border-rose-300 shadow-xs">
+                    <span>✨</span>
+                    <span>{currentSlide.quote || "Có mục tiêu – Có động lực – Có kết quả!"}</span>
+                    <span>🏆</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Regular Slide Presentation */
+              <>
+                <div>
+                  <p className="text-xs sm:text-sm font-black uppercase tracking-wider mb-1" style={{ color: activeTheme.accent }}>
+                    {currentSlide.phase} ({slideAspectRatio})
+                  </p>
+                  <h2 className="font-black" style={{ fontSize: `${Math.max(24, titleFontSize + 4)}px`, lineHeight: '1.2' }}>
+                    {currentSlide.title}
+                  </h2>
+                  <p className="font-bold mt-2 opacity-80" style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>
+                    {currentSlide.subtitle}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-auto items-center">
+                  <div className="md:col-span-7 space-y-3">
+                    {(currentSlide.bullets || []).map((b, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5 text-sm sm:text-lg font-bold">
+                        <span className="font-black text-xl" style={{ color: activeTheme.accent }}>•</span>
+                        <span style={{ fontSize: `${Math.max(14, bodyFontSize + 2)}px` }}>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="md:col-span-5 p-4 rounded-2xl border" style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}>
+                    <img
+                      src={currentSlide.visualArt?.imageUrl || currentSlide.images?.[0]?.url || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                      alt="Tranh mẫu"
+                      className="w-full aspect-[4/3] object-contain rounded-xl bg-white p-2 shadow-sm"
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = './teacher.jpg'; }}
+                    />
+                    <p className="text-xs font-black text-center mt-2 truncate opacity-90">
+                      {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs opacity-60 border-t border-gray-300/40 pt-3">
+                  <span>Giáo án Mĩ thuật GDPT 2018</span>
+                  <span>Slide {currentSlideIndex + 1} / {slides.length}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Bottom Floating Presenter Controls */}

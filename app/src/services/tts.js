@@ -10,7 +10,9 @@ class TeacherSpeechService {
     this.pendingText = null;
     this.pendingCallbacks = null;
     this.currentSessionId = 0;
-    this.activeVoice = 'male'; // 'male' (Thầy Cọ Nhí) | 'female' (Cô Hoài My)
+    // Khởi tạo giọng nói theo cài đặt đã lưu trong localStorage ('male' | 'female')
+    const savedTeacher = typeof localStorage !== 'undefined' ? localStorage.getItem('ARTED_SELECTED_TEACHER') : null;
+    this.activeVoice = savedTeacher === 'female' ? 'female' : 'male';
 
     // Listen for user interaction channel to unlock browser autoplay
     if (typeof window !== 'undefined') {
@@ -32,6 +34,9 @@ class TeacherSpeechService {
 
   setVoice(voice) {
     this.activeVoice = (voice === 'female' || voice === 'vi-VN-HoaiMyNeural') ? 'female' : 'male';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('ARTED_SELECTED_TEACHER', this.activeVoice);
+    }
   }
 
   getVoice() {
@@ -75,10 +80,13 @@ class TeacherSpeechService {
     // 2. Global Vercel production serverless gateway (artaimythuat.vercel.app with CORS)
     urls.push(`https://artaimythuat.vercel.app/api/tts?text=${encoded}&voice=${voice}`);
 
-    // 3. Direct Google Vietnamese TTS (100% Guaranteed fallback in any browser)
-    const firstSentence = cleanText.split(/[.!?]\s+/)[0] || cleanText;
-    const googleText = firstSentence.slice(0, 180).trim();
-    urls.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(googleText)}&tl=vi&client=tw-ob`);
+    // 3. Fallback: CHỈ KHI voice === 'female', mới dùng Google Vietnamese TTS (vì Google TTS là giọng NỮ)
+    // TUYỆT ĐỐI KHÔNG dùng Google TTS khi voice === 'male' để tránh bị đổi sang giọng nữ!
+    if (voice === 'female') {
+      const firstSentence = cleanText.split(/[.!?]\s+/)[0] || cleanText;
+      const googleText = firstSentence.slice(0, 180).trim();
+      urls.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(googleText)}&tl=vi&client=tw-ob`);
+    }
 
     // Deduplicate
     return [...new Set(urls)];
@@ -210,8 +218,8 @@ class TeacherSpeechService {
           const name = v.name.toLowerCase();
           return /(hoaimy|mai|linh|chi|nu|female|woman|girl|an\b)/i.test(name);
         }) || viVoices[0];
-        pitch = 1.1;
-        rate = 0.96;
+        pitch = 1.15;
+        rate = 0.98;
       } else {
         selectedVoice = viVoices.find((v) => {
           const name = v.name.toLowerCase();
@@ -219,8 +227,9 @@ class TeacherSpeechService {
           if (isFemale) return false;
           return name.includes('namminh') || /\b(nam|male)\b/i.test(name.replace(/vietnam/gi, ''));
         }) || viVoices[0];
-        pitch = 0.85;
-        rate = 0.92;
+        // Hạ pitch xuống 0.72 để tạo âm sắc nam trầm ấm dứt khoát của Thầy giáo
+        pitch = 0.72;
+        rate = 0.90;
       }
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
