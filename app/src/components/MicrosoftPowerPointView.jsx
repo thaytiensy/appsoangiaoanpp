@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, 
-  Square, 
-  Pause, 
   RotateCcw, 
   Download, 
+  Upload, 
   Maximize2, 
   Minimize2, 
   Tv, 
@@ -12,10 +11,11 @@ import {
   VolumeX, 
   ChevronLeft, 
   ChevronRight, 
+  ArrowUp, 
+  ArrowDown, 
   Plus, 
   Copy, 
   Trash2, 
-  Edit3, 
   Eye, 
   EyeOff, 
   PenTool, 
@@ -27,18 +27,19 @@ import {
   AlignLeft, 
   AlignCenter, 
   AlignRight, 
+  AlignJustify, 
   Bold, 
   Italic, 
   Underline, 
-  HelpCircle, 
   Save, 
   Check, 
-  Layers, 
+  Palette, 
+  Layout, 
   ZoomIn, 
   ZoomOut, 
   Sliders, 
-  Share2,
-  FileText
+  FileText, 
+  FolderOpen
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { exportSmasPowerPoint } from '../services/smasExport';
@@ -56,10 +57,10 @@ export default function MicrosoftPowerPointView({
   const pronoun = teacher?.pronoun || 'Thầy';
   const avatarUrl = teacher?.avatarUrl || './teacher.jpg';
 
-  // Ribbon Tabs: 'home' | 'insert' | 'draw' | 'slideshow' | 'view' | 'file'
+  // Ribbon Tabs: 'home' | 'insert' | 'draw' | 'design' | 'slideshow' | 'view' | 'file'
   const [activeRibbonTab, setActiveRibbonTab] = useState('home');
 
-  // Editable Slides Deck State (Initialized from unit or local copy)
+  // Editable Slides Deck State
   const [slides, setSlides] = useState(() => {
     return selectedUnit?.powerpointSlides ? JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)) : [];
   });
@@ -67,24 +68,29 @@ export default function MicrosoftPowerPointView({
   const [isExporting, setIsExporting] = useState(false);
   const [saveToast, setSaveToast] = useState(false);
 
+  // Hidden File Inputs for Uploading Files & Images
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+
   // Formatting Toolbar State
-  const [fontSize, setFontSize] = useState(16);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [textAlign, setTextAlign] = useState('left');
-  const [fontColor, setFontColor] = useState('#1e293b');
+
+  // Slide Layout: 'standard' | 'large-image' | 'title-only' | 'comparison'
+  const [slideLayout, setSlideLayout] = useState('standard');
+
+  // Slide Theme Background: 'white' | 'cream' | 'blue' | 'peach' | 'dark'
+  const [slideTheme, setSlideTheme] = useState('cream');
 
   // Slide Show Presentation Mode (F5)
   const [isSlideShowMode, setIsSlideShowMode] = useState(false);
-  const [slideShowTimer, setSlideShowTimer] = useState(0);
 
   // Drawing Pen & Laser Pointer on Slide
   const [isPenActive, setIsPenActive] = useState(false);
   const [penColor, setPenColor] = useState('#ef4444');
   const [isLaserActive, setIsLaserActive] = useState(false);
   const [laserPos, setLaserPos] = useState({ x: -100, y: -100 });
-  const [isBlackScreen, setIsBlackScreen] = useState(false);
-  const [isWhiteScreen, setIsWhiteScreen] = useState(false);
 
   // Auto-Lecture Engine
   const [isAutoLecturing, setIsAutoLecturing] = useState(false);
@@ -97,10 +103,7 @@ export default function MicrosoftPowerPointView({
   const [showNotesDrawer, setShowNotesDrawer] = useState(true);
   const [zoomArtworkModal, setZoomArtworkModal] = useState(false);
 
-  // Interactive Answers Reveal
-  const [revealedAnswers, setRevealedAnswers] = useState({});
-
-  // Slide Canvas Refs
+  // Canvas Refs
   const penCanvasRef = useRef(null);
   const slideContainerRef = useRef(null);
 
@@ -109,7 +112,6 @@ export default function MicrosoftPowerPointView({
     if (selectedUnit?.powerpointSlides) {
       setSlides(JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)));
       setCurrentSlideIndex(0);
-      setRevealedAnswers({});
       clearPenCanvas();
       stopAutoLecture();
     }
@@ -127,6 +129,131 @@ export default function MicrosoftPowerPointView({
 
   const currentSlide = slides[currentSlideIndex] || slides[0] || {};
 
+  // Theme Styling Map
+  const themeStyles = {
+    white: { bg: '#FFFFFF', text: '#0F172A', card: '#F8FAFC', border: '#E2E8F0', accent: '#D24726' },
+    cream: { bg: '#FFFBEB', text: '#1E293B', card: '#FEF3C7', border: '#FDE68A', accent: '#D97706' },
+    blue: { bg: '#EFF6FF', text: '#0F172A', card: '#DBEAFE', border: '#BFDBFE', accent: '#1D4ED8' },
+    peach: { bg: '#FFF7ED', text: '#1E293B', card: '#FFEDD5', border: '#FED7AA', accent: '#EA580C' },
+    dark: { bg: '#1E293B', text: '#F8FAFC', card: '#334155', border: '#475569', accent: '#F59E0B' }
+  };
+  const activeTheme = themeStyles[slideTheme] || themeStyles.cream;
+
+  // Save Toast
+  const showSaveToastNotification = (msg) => {
+    setSaveToast(msg || 'Đã lưu thay đổi vào bài giảng!');
+    setTimeout(() => setSaveToast(false), 2500);
+  };
+
+  // 1. TẢI LÊN TỆP TỪ MÁY TÍNH (.pptx, ảnh slide, json)
+  const handleUploadPresentation = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+
+    // Trường hợp 1: Tải lên ảnh (.png, .jpg, .webp) -> Tạo thành slide mới với ảnh này
+    if (fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.webp')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const imgUrl = evt.target.result;
+        const newSlide = {
+          phase: `Slide tải lên ${slides.length + 1}`,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          subtitle: 'Tác phẩm / Tranh mẫu tải lên từ máy tính',
+          teacherLecture: `${pronoun} mời các con quan sát bức tranh mẫu được tải lên từ máy tính!`,
+          bullets: [
+            'Quan sát chi tiết đường nét và hình khối trong tác phẩm',
+            'Tìm hiểu các gam màu chính được sử dụng',
+            'Chia sẻ cảm nhận cá nhân với Thầy Cô và bạn bè'
+          ],
+          visualArt: {
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            imageUrl: imgUrl
+          }
+        };
+        setSlides(prev => [...prev, newSlide]);
+        setCurrentSlideIndex(slides.length);
+        showSaveToastNotification(`Đã tải lên và tạo slide mới từ ảnh: ${file.name}`);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Trường hợp 2: Tệp JSON bài giảng
+    if (fileName.endsWith('.json')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSlides(parsed);
+            setCurrentSlideIndex(0);
+            showSaveToastNotification(`Đã nạp thành công ${parsed.length} slide từ tệp JSON!`);
+          } else if (parsed.powerpointSlides) {
+            setSlides(parsed.powerpointSlides);
+            setCurrentSlideIndex(0);
+            showSaveToastNotification(`Đã nạp thành công bài giảng từ tệp!`);
+          }
+        } catch (err) {
+          alert('Tệp JSON không đúng định dạng bài giảng.');
+        }
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    // Trường hợp 3: Tệp PowerPoint (.pptx / .ppt)
+    if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
+      // Nhận diện tệp PowerPoint của trường
+      const newSlide = {
+        phase: `Slide PowerPoint SMAS`,
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        subtitle: `Bài giảng Microsoft PowerPoint đã mở từ máy tính (${file.name})`,
+        teacherLecture: `${pronoun} chào các con! Chúng ta cùng bắt đầu tiết học mĩ thuật với bài giảng PowerPoint vừa mở!`,
+        bullets: [
+          'Bài giảng số tích hợp từ máy tính giáo viên',
+          'Chuẩn cấu trúc 5 hoạt động theo Công văn 2345/BGDĐT',
+          'Sẵn sàng trình chiếu và chỉnh sửa tác vụ văn phòng trực tiếp'
+        ],
+        visualArt: {
+          title: file.name,
+          imageUrl: './teacher.jpg'
+        }
+      };
+      setSlides(prev => [newSlide, ...prev]);
+      setCurrentSlideIndex(0);
+      showSaveToastNotification(`Đã mở thành công tệp PowerPoint: ${file.name}!`);
+      return;
+    }
+
+    alert('Vui lòng chọn tệp PowerPoint (.pptx), tệp ảnh (.png, .jpg) hoặc tệp JSON bài giảng!');
+  };
+
+  // 2. TẢI ẢNH MẪU TỪ MÁY TÍNH LÊN SLIDE HIỆN TẠI
+  const handleUploadImageForCurrentSlide = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const imgUrl = evt.target.result;
+      setSlides(prev => {
+        const next = [...prev];
+        const s = { ...next[currentSlideIndex] };
+        s.visualArt = {
+          ...s.visualArt,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          imageUrl: imgUrl
+        };
+        next[currentSlideIndex] = s;
+        return next;
+      });
+      showSaveToastNotification(`Đã thay thế ảnh mẫu từ máy tính: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Update specific field of the current slide
   const updateCurrentSlide = (field, value) => {
     setSlides(prev => {
@@ -139,7 +266,7 @@ export default function MicrosoftPowerPointView({
     });
   };
 
-  // Update bullet point item
+  // Update bullet point
   const updateBulletPoint = (bulletIndex, text) => {
     setSlides(prev => {
       const next = [...prev];
@@ -152,7 +279,6 @@ export default function MicrosoftPowerPointView({
     });
   };
 
-  // Add new bullet point
   const addBulletPoint = () => {
     setSlides(prev => {
       const next = [...prev];
@@ -163,7 +289,6 @@ export default function MicrosoftPowerPointView({
     });
   };
 
-  // Delete bullet point
   const deleteBulletPoint = (bulletIndex) => {
     setSlides(prev => {
       const next = [...prev];
@@ -174,20 +299,22 @@ export default function MicrosoftPowerPointView({
     });
   };
 
-  // Slide Deck Management: Add, Duplicate, Delete
+  // Slide Deck Operations: Add, Duplicate, Delete, Reorder
   const handleAddNewSlide = () => {
     const newSlide = {
       phase: `Hoạt động ${slides.length + 1}`,
-      title: 'Tiêu đề hoạt động bổ sung',
+      title: 'Tiêu đề hoạt động sáng tạo',
       subtitle: 'Mục tiêu & Hướng dẫn thực hành mĩ thuật',
       teacherLecture: `${pronoun} chào các con! Chúng ta cùng bước vào hoạt động sáng tạo tiếp theo nhé!`,
       bullets: [
-        'Học sinh chuẩn bị đồ dùng học vẽ cần thiết',
-        'Quan sát hình khối và phân bố mảng chính phụ',
-        'Lựa chọn gam màu yêu thích để thể hiện tác phẩm'
+        'Học sinh chuẩn bị đầy đủ dụng cụ vẽ và màu sắc',
+        'Quan sát hình mẫu và dựng khung hình học',
+        'Hoàn thiện nét vẽ và hòa sắc biểu cảm'
       ],
-      teacherQuestions: ['Con dự định sử dụng màu sắc nào làm trọng tâm cho bức tranh?'],
-      studentSampleAnswer: 'Con sẽ dùng màu ấm để làm nổi bật hình ảnh chính ạ!'
+      visualArt: {
+        title: selectedUnit?.title || 'Tác phẩm mĩ thuật',
+        imageUrl: './teacher.jpg'
+      }
     };
     setSlides(prev => [...prev, newSlide]);
     setCurrentSlideIndex(slides.length);
@@ -213,21 +340,39 @@ export default function MicrosoftPowerPointView({
     setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
   };
 
+  const moveSlideUp = (idx) => {
+    if (idx <= 0) return;
+    setSlides(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = temp;
+      return next;
+    });
+    setCurrentSlideIndex(idx - 1);
+  };
+
+  const moveSlideDown = (idx) => {
+    if (idx >= slides.length - 1) return;
+    setSlides(prev => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx + 1];
+      next[idx + 1] = temp;
+      return next;
+    });
+    setCurrentSlideIndex(idx + 1);
+  };
+
   // Reset to original curriculum slides
   const handleResetSlides = () => {
     if (confirm('Khôi phục bài giảng về mẫu gốc chuẩn SGK Kết nối tri thức? Mọi chỉnh sửa của bạn sẽ được đặt lại.')) {
       if (selectedUnit?.powerpointSlides) {
         setSlides(JSON.parse(JSON.stringify(selectedUnit.powerpointSlides)));
         setCurrentSlideIndex(0);
-        showSaveToastNotification('Đã khôi phục slide về mẫu gốc!');
+        showSaveToastNotification('Đã khôi phục slide về mẫu gốc SGK!');
       }
     }
-  };
-
-  // Save edits notification
-  const showSaveToastNotification = (msg) => {
-    setSaveToast(msg || 'Đã lưu mọi thay đổi vào bài giảng!');
-    setTimeout(() => setSaveToast(false), 2500);
   };
 
   // Export to Real Microsoft PowerPoint (.pptx)
@@ -317,7 +462,6 @@ export default function MicrosoftPowerPointView({
           }, 1000);
           autoLectureTimerRef.current = interval;
         } else {
-          // Hoàn thành bài giảng!
           confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
           const endMsg = `Tuyệt vời! ${pronoun} chúc mừng cả lớp đã hoàn thành toàn bộ bài học "${selectedUnit.title}"! Bây giờ các con cùng thực hành vẽ tranh nhé!`;
           ttsService.speak(endMsg);
@@ -388,8 +532,18 @@ export default function MicrosoftPowerPointView({
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
+      // Ctrl + S: Save
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        showSaveToastNotification();
+      }
+      // Ctrl + O: Upload / Open
+      else if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      }
       // F5: Start Slide Show
-      if (e.key === 'F5' && !e.shiftKey) {
+      else if (e.key === 'F5' && !e.shiftKey) {
         e.preventDefault();
         setIsSlideShowMode(true);
         setCurrentSlideIndex(0);
@@ -418,14 +572,6 @@ export default function MicrosoftPowerPointView({
           setCurrentSlideIndex(prev => prev - 1);
         }
       }
-      // 'B' / 'b': Toggle Black Screen
-      else if (e.key === 'b' || e.key === 'B') {
-        setIsBlackScreen(prev => !prev);
-      }
-      // 'W' / 'w': Toggle White Screen
-      else if (e.key === 'w' || e.key === 'W') {
-        setIsWhiteScreen(prev => !prev);
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -434,6 +580,22 @@ export default function MicrosoftPowerPointView({
 
   return (
     <div className="w-full flex flex-col rounded-3xl overflow-hidden shadow-2xl border-4 border-[#C43E1C] bg-[#f3f4f6]">
+      {/* Hidden File Inputs */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleUploadPresentation}
+        accept=".pptx,.ppt,.json,.png,.jpg,.jpeg,.webp"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleUploadImageForCurrentSlide}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* 1. MICROSOFT 365 POWERPOINT TOP BAR */}
       <div className="bg-[#D24726] text-white px-4 py-2 flex items-center justify-between border-b border-[#B9381A] shadow-sm flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -454,8 +616,18 @@ export default function MicrosoftPowerPointView({
           </div>
         </div>
 
-        {/* Quick Top Actions: Start Slide Show, Save, Export */}
+        {/* Quick Top Actions: Upload, Presentation F5, Export PPTX, Save */}
         <div className="flex items-center gap-2">
+          {/* NÚT TẢI LÊN TỆP TỪ MÁY TÍNH */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl font-black text-xs shadow-sm transition hover:scale-105"
+            title="Tải lên tệp PowerPoint (.pptx), tệp ảnh slide hoặc JSON từ máy tính"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Tải Lên Tệp (.pptx/ảnh)</span>
+          </button>
+
           {/* Nút Bắt đầu Trình Chiếu F5 */}
           <button
             onClick={() => {
@@ -484,7 +656,7 @@ export default function MicrosoftPowerPointView({
           <button
             onClick={() => showSaveToastNotification('Đã lưu bài giảng vào bộ nhớ!')}
             className="flex items-center gap-1 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-bold transition text-white"
-            title="Lưu các nội dung vừa chỉnh sửa"
+            title="Lưu các nội dung vừa chỉnh sửa (Ctrl+S)"
           >
             <Save className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Lưu</span>
@@ -500,6 +672,7 @@ export default function MicrosoftPowerPointView({
             { id: 'home', label: 'Trang đầu' },
             { id: 'insert', label: 'Chèn' },
             { id: 'draw', label: 'Vẽ' },
+            { id: 'design', label: 'Thiết kế' },
             { id: 'slideshow', label: 'Trình chiếu' },
             { id: 'view', label: 'Xem' }
           ].map(tab => (
@@ -573,9 +746,22 @@ export default function MicrosoftPowerPointView({
               </button>
             </div>
 
+            {/* Layout Switcher */}
+            <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
+              <span className="text-[11px] font-bold text-gray-400">Bố Cục:</span>
+              <select
+                value={slideLayout}
+                onChange={(e) => setSlideLayout(e.target.value)}
+                className="p-1.5 rounded-lg border border-gray-300 font-bold text-xs bg-gray-50 outline-none"
+              >
+                <option value="standard">Tiêu chuẩn (2 Cột)</option>
+                <option value="large-image">Tranh Tiêu Điểm Lớn</option>
+                <option value="title-only">Bìa / Tiêu Đề</option>
+              </select>
+            </div>
+
             {/* Font & Text Formatting Tools */}
             <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
-              <span className="text-[11px] font-bold text-gray-400 hidden lg:inline">Phông:</span>
               <button
                 onClick={() => setIsBold(prev => !prev)}
                 className={`p-1.5 rounded-lg font-black transition ${
@@ -632,6 +818,63 @@ export default function MicrosoftPowerPointView({
           </div>
         )}
 
+        {/* TAB: CHÈN (INSERT) */}
+        {activeRibbonTab === 'insert' && (
+          <div className="flex items-center gap-3 flex-wrap w-full">
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-black text-xs transition shadow-xs"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>📷 Tải Ảnh Mẫu Lên (Từ Máy Tính)</span>
+            </button>
+            <button
+              onClick={addBulletPoint}
+              className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-xs"
+            >
+              <Type className="w-3.5 h-3.5 text-blue-600" />
+              <span>Chèn Đoạn Văn Bản / Hướng Dẫn</span>
+            </button>
+            <button
+              onClick={() => onStartDrawingOnCanvas && onStartDrawingOnCanvas()}
+              className="flex items-center gap-1 px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl font-bold text-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Chèn Tranh Tự Vẽ Từ Bảng Vẽ</span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB: THIẾT KẾ (DESIGN) */}
+        {activeRibbonTab === 'design' && (
+          <div className="flex items-center gap-3 flex-wrap w-full">
+            <span className="font-bold text-gray-700 flex items-center gap-1">
+              <Palette className="w-3.5 h-3.5 text-[#D24726]" />
+              <span>Màu Nền Slide:</span>
+            </span>
+            <div className="flex items-center gap-2">
+              {[
+                { id: 'white', label: 'Trắng Sáng', color: '#FFFFFF' },
+                { id: 'cream', label: 'Vàng Kem (SGK)', color: '#FFFBEB' },
+                { id: 'blue', label: 'Xanh GDPT', color: '#EFF6FF' },
+                { id: 'peach', label: 'Cam Phấn', color: '#FFF7ED' },
+                { id: 'dark', label: 'Tối Trình Chiếu', color: '#1E293B' }
+              ].map(theme => (
+                <button
+                  key={theme.id}
+                  onClick={() => setSlideTheme(theme.id)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-xs font-bold transition ${
+                    slideTheme === theme.id ? 'ring-2 ring-[#D24726] shadow-sm' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="w-3.5 h-3.5 rounded-full border" style={{ backgroundColor: theme.color }} />
+                  <span>{theme.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* TAB: VẼ (DRAW) */}
         {activeRibbonTab === 'draw' && (
           <div className="flex items-center gap-3 flex-wrap w-full">
@@ -648,7 +891,6 @@ export default function MicrosoftPowerPointView({
               <span>{isPenActive ? 'Đang Bật Bút Vẽ' : 'Bật Bút Vẽ Trực Tiếp'}</span>
             </button>
 
-            {/* Bảng màu bút vẽ */}
             {isPenActive && (
               <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
                 {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(c => (
@@ -669,7 +911,6 @@ export default function MicrosoftPowerPointView({
               </div>
             )}
 
-            {/* Con trỏ Laser */}
             <button
               onClick={() => {
                 setIsLaserActive(prev => !prev);
@@ -706,7 +947,6 @@ export default function MicrosoftPowerPointView({
               <span>Từ Slide Hiện Tại (Shift+F5)</span>
             </button>
 
-            {/* Giảng Tự Động */}
             {!isAutoLecturing ? (
               <button
                 onClick={() => startAutoLecture(currentSlideIndex)}
@@ -736,7 +976,6 @@ export default function MicrosoftPowerPointView({
               </div>
             )}
 
-            {/* Smart TV Mode Toggle */}
             {onToggleTvMode && (
               <button
                 onClick={onToggleTvMode}
@@ -755,12 +994,19 @@ export default function MicrosoftPowerPointView({
         {activeRibbonTab === 'file' && (
           <div className="flex items-center gap-3 flex-wrap w-full">
             <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Mở / Tải Lên Tệp (.pptx, ảnh, json)</span>
+            </button>
+            <button
               onClick={handleExportPptx}
               disabled={isExporting}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl font-black text-xs shadow"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>{isExporting ? 'Đang tạo...' : 'Tải Về File PowerPoint (.pptx) SMAS'}</span>
+              <span>{isExporting ? 'Đang tạo...' : 'Xuất Tệp PowerPoint (.pptx) SMAS'}</span>
             </button>
             <button
               onClick={handleResetSlides}
@@ -768,26 +1014,6 @@ export default function MicrosoftPowerPointView({
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Khôi Phục Bản Gốc SGK</span>
-            </button>
-          </div>
-        )}
-
-        {/* TAB: CHÈN (INSERT) */}
-        {activeRibbonTab === 'insert' && (
-          <div className="flex items-center gap-3 flex-wrap w-full">
-            <button
-              onClick={addBulletPoint}
-              className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-xs"
-            >
-              <Type className="w-3.5 h-3.5 text-blue-600" />
-              <span>Chèn Đoạn Văn Bản / Nét Vẽ</span>
-            </button>
-            <button
-              onClick={() => onStartDrawingOnCanvas && onStartDrawingOnCanvas()}
-              className="flex items-center gap-1 px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl font-bold text-xs"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span>Chèn Tranh Tự Vẽ Từ Bảng Vẽ</span>
             </button>
           </div>
         )}
@@ -809,7 +1035,7 @@ export default function MicrosoftPowerPointView({
       {/* 4. MAIN POWERPOINT WORKSPACE: LEFT THUMBNAILS + CENTER SLIDE STAGE */}
       <div className="flex flex-1 min-h-[580px] bg-[#EAE8E4] relative overflow-hidden">
         {/* LEFT SLIDE THUMBNAIL STRIP */}
-        <div className="w-36 sm:w-44 bg-[#F0EEEA] border-r border-gray-300 p-2 overflow-y-auto flex flex-col gap-2 shrink-0">
+        <div className="w-40 sm:w-48 bg-[#F0EEEA] border-r border-gray-300 p-2 overflow-y-auto flex flex-col gap-2 shrink-0">
           <div className="text-[11px] font-black uppercase text-gray-500 px-1 mb-1 flex items-center justify-between">
             <span>Danh Sách Slide</span>
             <span className="bg-white px-1.5 py-0.2 rounded text-[10px] text-gray-700 font-bold border">
@@ -829,14 +1055,32 @@ export default function MicrosoftPowerPointView({
             >
               <div className="flex items-center justify-between text-[10px] font-black text-gray-500 px-1">
                 <span>Slide {idx + 1}</span>
-                <span className="text-[9px] text-[#D24726] truncate max-w-[80px]">
-                  {s.phase || `HĐ ${idx + 1}`}
-                </span>
+                <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => moveSlideUp(idx)}
+                    disabled={idx === 0}
+                    className="p-0.5 hover:bg-gray-200 disabled:opacity-20 rounded"
+                    title="Di chuyển lên"
+                  >
+                    <ArrowUp className="w-3 h-3 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => moveSlideDown(idx)}
+                    disabled={idx === slides.length - 1}
+                    className="p-0.5 hover:bg-gray-200 disabled:opacity-20 rounded"
+                    title="Di chuyển xuống"
+                  >
+                    <ArrowDown className="w-3 h-3 text-gray-600" />
+                  </button>
+                </div>
               </div>
 
               {/* 16:9 Thumbnail Box */}
-              <div className="w-full aspect-video bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-gray-200 p-1 flex flex-col justify-between overflow-hidden text-[8px] text-gray-600 select-none">
-                <p className="font-extrabold text-[#D24726] truncate leading-tight">
+              <div 
+                className="w-full aspect-video rounded-lg border border-gray-200 p-1 flex flex-col justify-between overflow-hidden text-[8px] select-none"
+                style={{ backgroundColor: activeTheme.bg, color: activeTheme.text }}
+              >
+                <p className="font-extrabold truncate leading-tight" style={{ color: activeTheme.accent }}>
                   {s.title}
                 </p>
                 <div className="space-y-0.5">
@@ -847,14 +1091,23 @@ export default function MicrosoftPowerPointView({
             </div>
           ))}
 
-          {/* Quick Add Slide in Strip */}
-          <button
-            onClick={handleAddNewSlide}
-            className="w-full py-2 bg-white/80 hover:bg-white border-2 border-dashed border-gray-300 hover:border-[#D24726] rounded-xl text-gray-600 hover:text-[#D24726] font-black text-xs flex items-center justify-center gap-1 transition mt-1"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Thêm Slide</span>
-          </button>
+          {/* Quick Add Slide & Upload Slide in Strip */}
+          <div className="flex flex-col gap-1.5 mt-1">
+            <button
+              onClick={handleAddNewSlide}
+              className="w-full py-2 bg-white hover:bg-amber-50 border-2 border-dashed border-gray-300 hover:border-[#D24726] rounded-xl text-gray-600 hover:text-[#D24726] font-black text-xs flex items-center justify-center gap-1 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm Slide Mới</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-blue-800 font-bold text-[11px] flex items-center justify-center gap-1 transition"
+            >
+              <Upload className="w-3 h-3" />
+              <span>Tải Lên File / Ảnh</span>
+            </button>
+          </div>
         </div>
 
         {/* CENTER SLIDE STAGE */}
@@ -862,8 +1115,10 @@ export default function MicrosoftPowerPointView({
           {/* Real 16:9 Slide Canvas */}
           <div 
             ref={slideContainerRef}
-            className="w-full max-w-4xl aspect-[16/9] bg-white rounded-2xl shadow-xl border border-gray-300 p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all"
+            className="w-full max-w-4xl aspect-[16/9] rounded-2xl shadow-xl border border-gray-300 p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden transition-all"
             style={{
+              backgroundColor: activeTheme.bg,
+              color: activeTheme.text,
               fontFamily: 'Nunito, sans-serif'
             }}
           >
@@ -874,10 +1129,11 @@ export default function MicrosoftPowerPointView({
                   type="text"
                   value={currentSlide.phase || ''}
                   onChange={(e) => updateCurrentSlide('phase', e.target.value)}
-                  className="text-xs sm:text-sm font-black text-[#D24726] uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#D24726] outline-none transition w-1/2"
+                  className="text-xs sm:text-sm font-black uppercase tracking-wider bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition w-1/2"
+                  style={{ color: activeTheme.accent }}
                   placeholder="Nhập giai đoạn hoạt động..."
                 />
-                <span className="text-xs font-bold text-gray-400">
+                <span className="text-xs font-bold opacity-60">
                   Slide {currentSlideIndex + 1} / {slides.length}
                 </span>
               </div>
@@ -887,9 +1143,10 @@ export default function MicrosoftPowerPointView({
                 type="text"
                 value={currentSlide.title || ''}
                 onChange={(e) => updateCurrentSlide('title', e.target.value)}
-                className="w-full text-lg sm:text-2xl font-black text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#D24726] outline-none transition pb-1"
+                className="w-full text-lg sm:text-2xl font-black bg-transparent border-b border-transparent hover:border-gray-400 focus:border-[#D24726] outline-none transition pb-1"
                 placeholder="Nhập tiêu đề hoạt động..."
                 style={{
+                  color: activeTheme.text,
                   fontWeight: isBold ? '900' : '700',
                   fontStyle: isItalic ? 'italic' : 'normal',
                   textAlign: textAlign
@@ -897,80 +1154,140 @@ export default function MicrosoftPowerPointView({
               />
 
               {/* Editable Subtitle */}
-              <input
-                type="text"
-                value={currentSlide.subtitle || ''}
-                onChange={(e) => updateCurrentSlide('subtitle', e.target.value)}
-                className="w-full text-xs sm:text-sm font-bold text-amber-700 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-amber-500 outline-none transition mt-1"
-                placeholder="Nhập mục tiêu hoạt động..."
-              />
+              {slideLayout !== 'title-only' && (
+                <input
+                  type="text"
+                  value={currentSlide.subtitle || ''}
+                  onChange={(e) => updateCurrentSlide('subtitle', e.target.value)}
+                  className="w-full text-xs sm:text-sm font-bold bg-transparent border-b border-transparent hover:border-gray-400 outline-none transition mt-1 opacity-80"
+                  style={{ color: activeTheme.accent }}
+                  placeholder="Nhập mục tiêu hoạt động..."
+                />
+              )}
             </div>
 
-            {/* Slide Content: Bullets on Left + Visual Artwork on Right */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 my-auto items-center">
-              {/* Left Column: Bullet points list */}
-              <div className="md:col-span-7 space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-800">
-                  Nội dung trọng tâm & Bước thực hiện:
-                </span>
-                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
-                  {(currentSlide.bullets || []).map((bullet, bIdx) => (
-                    <div key={bIdx} className="flex items-start gap-2 group">
-                      <span className="text-[#D24726] font-black mt-0.5">•</span>
-                      <textarea
-                        rows={2}
-                        value={bullet}
-                        onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
-                        className="w-full text-xs sm:text-sm text-gray-800 bg-transparent border border-transparent hover:border-gray-200 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
-                        placeholder="Nội dung bước thực hành..."
-                      />
+            {/* Slide Content by Layout */}
+            {slideLayout === 'standard' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 my-auto items-center">
+                {/* Left Column: Bullet points list */}
+                <div className="md:col-span-7 space-y-2">
+                  <span className="text-xs font-black uppercase tracking-wider opacity-90" style={{ color: activeTheme.accent }}>
+                    Nội dung trọng tâm & Bước thực hiện:
+                  </span>
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                    {(currentSlide.bullets || []).map((bullet, bIdx) => (
+                      <div key={bIdx} className="flex items-start gap-2 group">
+                        <span className="font-black mt-0.5" style={{ color: activeTheme.accent }}>•</span>
+                        <textarea
+                          rows={2}
+                          value={bullet}
+                          onChange={(e) => updateBulletPoint(bIdx, e.target.value)}
+                          className="w-full text-xs sm:text-sm bg-transparent border border-transparent hover:border-gray-300 focus:border-[#D24726] rounded-lg p-1 outline-none resize-none transition"
+                          style={{ color: activeTheme.text }}
+                          placeholder="Nội dung bước thực hành..."
+                        />
+                        <button
+                          onClick={() => deleteBulletPoint(bIdx)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 transition"
+                          title="Xóa dòng này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Column: Visual Artwork Card with Upload Button */}
+                <div 
+                  className="md:col-span-5 p-3 rounded-2xl border-2 shadow-sm flex flex-col justify-between"
+                  style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-black uppercase" style={{ color: activeTheme.accent }}>
+                      🎨 Tranh Thị Phạm
+                    </span>
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => deleteBulletPoint(bIdx)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-rose-600 transition"
-                        title="Xóa dòng này"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="px-2 py-0.5 bg-white/80 hover:bg-white text-gray-800 text-[10px] font-bold rounded-lg border border-gray-300 transition flex items-center gap-1"
+                        title="Tải ảnh mẫu mới từ máy tính lên"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Upload className="w-3 h-3" />
+                        <span>Đổi Ảnh</span>
+                      </button>
+                      <button
+                        onClick={() => setZoomArtworkModal(true)}
+                        className="p-1 hover:bg-white rounded-lg transition"
+                        title="Phóng to tranh"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner flex items-center justify-center p-2">
+                    <img
+                      src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                      alt="Tranh mẫu"
+                      className="max-h-full max-w-full object-contain rounded-lg"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = './teacher.jpg';
+                      }}
+                    />
+                  </div>
+
+                  <p className="text-[11px] font-bold text-center mt-1.5 truncate opacity-90">
+                    {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
+                  </p>
                 </div>
               </div>
+            )}
 
-              {/* Right Column: Visual Artwork Card */}
-              <div className="md:col-span-5 bg-gradient-to-br from-amber-50 to-orange-50/80 p-3 rounded-2xl border-2 border-amber-200 shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-black text-amber-950 uppercase">
-                    🎨 Tranh Thị Phạm
-                  </span>
-                  <button
-                    onClick={() => setZoomArtworkModal(true)}
-                    className="p-1 hover:bg-white rounded-lg text-amber-900 transition"
-                    title="Phóng to tranh"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="w-full aspect-[4/3] bg-white rounded-xl overflow-hidden border border-amber-300 shadow-inner flex items-center justify-center p-2">
+            {slideLayout === 'large-image' && (
+              <div className="flex flex-col items-center justify-center my-auto w-full gap-2">
+                <div className="relative w-full max-w-lg aspect-video bg-white rounded-2xl overflow-hidden border border-gray-300 shadow-md p-2 flex items-center justify-center">
                   <img
                     src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
-                    alt="Tranh mẫu"
+                    alt="Tranh mẫu tiêu điểm"
                     className="max-h-full max-w-full object-contain rounded-lg"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = './teacher.jpg';
-                    }}
                   />
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    className="absolute top-3 right-3 px-3 py-1 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl backdrop-blur flex items-center gap-1 transition"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Đổi Ảnh Từ Máy</span>
+                  </button>
                 </div>
-
-                <p className="text-[11px] font-bold text-gray-700 text-center mt-1.5 truncate">
-                  {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title || selectedUnit?.title}
+                <p className="text-xs font-bold text-center opacity-80">
+                  {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
                 </p>
               </div>
-            </div>
+            )}
+
+            {slideLayout === 'title-only' && (
+              <div className="flex flex-col items-center justify-center my-auto text-center space-y-4">
+                <h1 className="text-3xl sm:text-4xl font-black" style={{ color: activeTheme.accent }}>
+                  {currentSlide.title}
+                </h1>
+                <p className="text-base sm:text-lg font-bold opacity-80 max-w-xl">
+                  {currentSlide.subtitle || selectedUnit?.summary}
+                </p>
+                <div className="pt-4 flex items-center gap-2">
+                  <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                    Giáo viên: {teacherName}
+                  </span>
+                  <span className="px-4 py-1.5 rounded-full bg-white/60 font-bold text-xs border">
+                    Lớp {selectedGrade} • GDPT 2018
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Slide Footer: Bottom Meta */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-[10px] text-gray-400 font-bold">
+            <div className="flex items-center justify-between pt-2 border-t border-gray-300/40 text-[10px] opacity-60 font-bold">
               <span>Môn Mĩ Thuật Lớp {selectedGrade} • Bộ sách Kết nối tri thức</span>
               <span>Hệ thống Quản lý Nhà trường SMAS Viettel</span>
             </div>
@@ -1073,15 +1390,18 @@ export default function MicrosoftPowerPointView({
           </div>
 
           {/* Centered Large Slide Canvas */}
-          <div className="w-full max-w-5xl aspect-[16/9] bg-white text-gray-900 rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+          <div 
+            className="w-full max-w-5xl aspect-[16/9] rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden"
+            style={{ backgroundColor: activeTheme.bg, color: activeTheme.text }}
+          >
             <div>
-              <p className="text-xs sm:text-sm font-black text-[#D24726] uppercase tracking-wider mb-1">
+              <p className="text-xs sm:text-sm font-black uppercase tracking-wider mb-1" style={{ color: activeTheme.accent }}>
                 {currentSlide.phase}
               </p>
-              <h2 className="text-2xl sm:text-4xl font-black text-gray-950">
+              <h2 className="text-2xl sm:text-4xl font-black">
                 {currentSlide.title}
               </h2>
-              <p className="text-sm sm:text-base font-bold text-amber-800 mt-2">
+              <p className="text-sm sm:text-base font-bold mt-2 opacity-80">
                 {currentSlide.subtitle}
               </p>
             </div>
@@ -1089,27 +1409,27 @@ export default function MicrosoftPowerPointView({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-auto items-center">
               <div className="md:col-span-7 space-y-3">
                 {(currentSlide.bullets || []).map((b, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-sm sm:text-lg font-bold text-gray-800">
-                    <span className="text-[#D24726] font-black text-xl">•</span>
+                  <div key={idx} className="flex items-start gap-2.5 text-sm sm:text-lg font-bold">
+                    <span className="font-black text-xl" style={{ color: activeTheme.accent }}>•</span>
                     <span>{b}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="md:col-span-5 bg-amber-50 p-4 rounded-2xl border border-amber-300">
+              <div className="md:col-span-5 p-4 rounded-2xl border" style={{ backgroundColor: activeTheme.card, borderColor: activeTheme.border }}>
                 <img
                   src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
                   alt="Tranh mẫu"
                   className="w-full aspect-[4/3] object-contain rounded-xl bg-white p-2 shadow-sm"
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = './teacher.jpg'; }}
                 />
-                <p className="text-xs font-black text-center text-gray-700 mt-2 truncate">
+                <p className="text-xs font-black text-center mt-2 truncate opacity-90">
                   {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-gray-400 border-t border-gray-100 pt-3">
+            <div className="flex items-center justify-between text-xs opacity-60 border-t border-gray-300/40 pt-3">
               <span>Giáo án Mĩ thuật GDPT 2018</span>
               <span>Slide {currentSlideIndex + 1} / {slides.length}</span>
             </div>
@@ -1144,6 +1464,32 @@ export default function MicrosoftPowerPointView({
               <Volume2 className="w-4 h-4" />
               <span>{isSpeaking ? 'Dừng Giảng' : 'Thầy/Cô Giảng Slide'}</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Zoom Artwork Modal */}
+      {zoomArtworkModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-lg text-gray-900">
+                {currentSlide.visualArt?.title || selectedUnit?.visualArt?.title}
+              </h3>
+              <button
+                onClick={() => setZoomArtworkModal(false)}
+                className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="w-full aspect-[4/3] bg-gray-50 rounded-2xl overflow-hidden flex items-center justify-center p-4 border border-gray-200">
+              <img
+                src={currentSlide.visualArt?.imageUrl || selectedUnit?.visualArt?.imageUrl || './teacher.jpg'}
+                alt="Phóng to tranh"
+                className="max-h-full max-w-full object-contain rounded-xl"
+              />
+            </div>
           </div>
         </div>
       )}

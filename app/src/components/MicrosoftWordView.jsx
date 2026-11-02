@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, 
   Download, 
+  Upload, 
   Printer, 
   Save, 
   RotateCcw, 
@@ -25,9 +26,16 @@ import {
   Sparkles, 
   BookOpen, 
   Table, 
-  Edit3
+  Edit3, 
+  FolderOpen, 
+  Image as ImageIcon, 
+  Highlighter, 
+  Undo, 
+  Redo, 
+  Maximize
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import mammoth from 'mammoth';
 import { exportSmasWord } from '../services/smasExport';
 import { ttsService } from '../services/tts';
 
@@ -42,6 +50,10 @@ export default function MicrosoftWordView({
 
   // Ribbon Tabs: 'home' | 'insert' | 'layout' | 'view' | 'file'
   const [activeRibbonTab, setActiveRibbonTab] = useState('home');
+
+  // Hidden File Inputs
+  const docxInputRef = useRef(null);
+  const imageInputRef = useRef(null);
 
   // Editable Plan State
   const [plan, setPlan] = useState(() => {
@@ -59,16 +71,30 @@ export default function MicrosoftWordView({
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const [textAlign, setTextAlign] = useState('justify');
+  const [lineHeight, setLineHeight] = useState('1.4');
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('transparent');
+  const [marginPreset, setMarginPreset] = useState('cv2345'); // 'cv2345' | 'narrow' | 'wide'
+
+  // Document Images inserted by teacher
+  const [insertedImages, setInsertedImages] = useState([]);
 
   // AI Speech Engine
   const [isAutoLecturing, setIsAutoLecturing] = useState(false);
   const [activeActivityIndex, setActiveActivityIndex] = useState(0);
 
+  // History for Undo / Redo
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   // Sync plan when selectedUnit changes
   useEffect(() => {
     if (selectedUnit?.wordLessonPlan) {
-      setPlan(JSON.parse(JSON.stringify(selectedUnit.wordLessonPlan)));
+      const initialPlan = JSON.parse(JSON.stringify(selectedUnit.wordLessonPlan));
+      setPlan(initialPlan);
       setDepartmentName(`TỔ CHUYÊN MÔN KHỐI ${selectedGrade}`);
+      setHistory([initialPlan]);
+      setHistoryIndex(0);
       stopLecture();
     }
   }, [selectedUnit, selectedGrade]);
@@ -76,6 +102,82 @@ export default function MicrosoftWordView({
   const showSaveToastNotification = (msg) => {
     setSaveToast(msg || 'Đã lưu thay đổi vào Kế hoạch bài dạy!');
     setTimeout(() => setSaveToast(false), 2500);
+  };
+
+  // 1. TẢI LÊN GIÁO ÁN WORD TỪ MÁY TÍNH (.docx / .doc / .txt)
+  const handleUploadWordDocument = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+
+    // Tệp .docx: Sử dụng thư viện mammoth để trích xuất nội dung
+    if (fileName.endsWith('.docx')) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        const rawText = result.value;
+        const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        if (lines.length > 0) {
+          const detectedTitle = lines[0].length < 100 ? lines[0] : 'KẾ HOẠCH BÀI DẠY MĨ THUẬT';
+          const detectedUnit = lines[1] && lines[1].length < 100 ? lines[1] : `Tệp tải lên: ${file.name}`;
+          const extractedObjectives = lines.filter(l => l.startsWith('-') || l.startsWith('•') || l.toLowerCase().includes('năng lực') || l.toLowerCase().includes('phẩm chất')).slice(0, 5);
+
+          setPlan(prev => ({
+            ...prev,
+            title: detectedTitle.toUpperCase(),
+            unit: detectedUnit,
+            objectives: extractedObjectives.length > 0 ? extractedObjectives : prev.objectives,
+            preparations: {
+              teacher: `Nạp tự động từ tệp: ${file.name}`,
+              students: prev.preparations?.students || 'Vở thực hành mĩ thuật'
+            }
+          }));
+          showSaveToastNotification(`Đã nạp thành công giáo án từ: ${file.name}!`);
+        }
+      } catch (err) {
+        console.error('Lỗi đọc .docx:', err);
+        alert('Không thể đọc cấu trúc tệp docx này. Bạn có thể sao chép văn bản dán trực tiếp vào trang.');
+      }
+      return;
+    }
+
+    // Tệp văn bản thuần .txt
+    if (fileName.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = evt.target.result;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length > 0) {
+          setPlan(prev => ({
+            ...prev,
+            title: lines[0].toUpperCase(),
+            unit: `Tệp văn bản: ${file.name}`,
+            objectives: lines.slice(1, 4).length > 0 ? lines.slice(1, 4) : prev.objectives
+          }));
+          showSaveToastNotification(`Đã mở tệp văn bản: ${file.name}`);
+        }
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    alert('Vui lòng chọn tệp Word (.docx) hoặc tệp văn bản (.txt) từ máy tính!');
+  };
+
+  // 2. CHÈN ẢNH VÀO GIÁO ÁN TỪ MÁY TÍNH
+  const handleInsertDocumentImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const imgUrl = evt.target.result;
+      setInsertedImages(prev => [...prev, { id: Date.now(), name: file.name, url: imgUrl }]);
+      showSaveToastNotification(`Đã chèn ảnh minh họa: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Export to Real Microsoft Word (.doc)
@@ -106,6 +208,7 @@ export default function MicrosoftWordView({
     if (confirm('Khôi phục Kế hoạch bài dạy về mẫu gốc Công văn 2345? Mọi nội dung vừa sửa sẽ được hoàn tác.')) {
       if (selectedUnit?.wordLessonPlan) {
         setPlan(JSON.parse(JSON.stringify(selectedUnit.wordLessonPlan)));
+        setInsertedImages([]);
         showSaveToastNotification('Đã khôi phục kế hoạch bài dạy về bản gốc!');
       }
     }
@@ -215,6 +318,13 @@ export default function MicrosoftWordView({
     );
   };
 
+  // Margin Styling Map
+  const marginStyles = {
+    cv2345: 'p-8 sm:p-14', // Chuẩn: Trên 2cm, Dưới 2cm, Trái 2.5cm, Phải 1.5cm
+    narrow: 'p-4 sm:p-8',
+    wide: 'p-10 sm:p-20'
+  };
+
   if (!plan) {
     return (
       <div className="p-8 text-center bg-white rounded-3xl border-2 border-blue-200">
@@ -225,6 +335,22 @@ export default function MicrosoftWordView({
 
   return (
     <div className="w-full flex flex-col rounded-3xl overflow-hidden shadow-2xl border-4 border-[#185ABD] bg-[#f1f5f9]">
+      {/* Hidden File Inputs */}
+      <input
+        type="file"
+        ref={docxInputRef}
+        onChange={handleUploadWordDocument}
+        accept=".docx,.doc,.txt"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleInsertDocumentImage}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* 1. MICROSOFT 365 WORD TOP BAR */}
       <div className="bg-[#185ABD] text-white px-4 py-2 flex items-center justify-between border-b border-[#124694] shadow-sm flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -245,12 +371,22 @@ export default function MicrosoftWordView({
           </div>
         </div>
 
-        {/* Quick Top Actions: Print, Save, Export */}
+        {/* Quick Top Actions: Upload, Print, Export Word, Save */}
         <div className="flex items-center gap-2">
+          {/* NÚT TẢI LÊN GIÁO ÁN TỪ MÁY TÍNH */}
+          <button
+            onClick={() => docxInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl font-black text-xs shadow-sm transition hover:scale-105"
+            title="Tải lên tệp Word (.docx) giáo án từ máy tính"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Tải Lên Word (.docx)</span>
+          </button>
+
           {/* Nút In Giáo Án */}
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl font-bold text-xs shadow transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs shadow-sm transition"
             title="In Kế hoạch bài dạy (Phím tắt: Ctrl + P)"
           >
             <Printer className="w-3.5 h-3.5" />
@@ -351,8 +487,8 @@ export default function MicrosoftWordView({
               </select>
             </div>
 
-            {/* B, I, U formatting */}
-            <div className="flex items-center gap-1 pr-3 border-r border-gray-200">
+            {/* B, I, U, Text Color, Highlight */}
+            <div className="flex items-center gap-1.5 pr-3 border-r border-gray-200">
               <button
                 onClick={() => setIsBold(prev => !prev)}
                 className={`p-1.5 rounded-lg font-black transition ${
@@ -380,9 +516,35 @@ export default function MicrosoftWordView({
               >
                 <Underline className="w-3.5 h-3.5" />
               </button>
+
+              {/* Text Color Picker */}
+              <select
+                value={textColor}
+                onChange={(e) => setTextColor(e.target.value)}
+                className="p-1 rounded-lg border border-gray-300 text-[11px] font-bold bg-white"
+                title="Màu chữ"
+              >
+                <option value="#000000">Chữ Đen</option>
+                <option value="#1e3a8a">Xanh Đậm</option>
+                <option value="#b91c1c">Đỏ Đô</option>
+                <option value="#047857">Xanh Lá</option>
+              </select>
+
+              {/* Highlight Picker */}
+              <select
+                value={highlightColor}
+                onChange={(e) => setHighlightColor(e.target.value)}
+                className="p-1 rounded-lg border border-gray-300 text-[11px] font-bold bg-white"
+                title="Màu dạ quang (Highlight)"
+              >
+                <option value="transparent">Không màu</option>
+                <option value="#fef08a">Vàng</option>
+                <option value="#a7f3d0">Xanh Ngọc</option>
+                <option value="#fbcfe8">Hồng</option>
+              </select>
             </div>
 
-            {/* Paragraph Alignment */}
+            {/* Paragraph Alignment & Line Height */}
             <div className="flex items-center gap-1 pr-3 border-r border-gray-200">
               <button
                 onClick={() => setTextAlign('left')}
@@ -412,6 +574,17 @@ export default function MicrosoftWordView({
               >
                 <AlignJustify className="w-3.5 h-3.5" />
               </button>
+
+              <select
+                value={lineHeight}
+                onChange={(e) => setLineHeight(e.target.value)}
+                className="p-1 rounded-lg border border-gray-300 text-[11px] font-bold bg-white ml-1"
+                title="Giãn dòng"
+              >
+                <option value="1.2">1.2 (Sát)</option>
+                <option value="1.4">1.4 (Chuẩn)</option>
+                <option value="1.6">1.6 (Thoáng)</option>
+              </select>
             </div>
 
             {/* Insert Action Tools */}
@@ -421,7 +594,7 @@ export default function MicrosoftWordView({
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl font-bold text-xs transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Thêm Hoạt Động Dạy Học</span>
+                <span>+ Thêm Hoạt Động</span>
               </button>
             </div>
           </div>
@@ -430,9 +603,25 @@ export default function MicrosoftWordView({
         {/* TAB: BỐ TRÍ TRANG (LAYOUT) */}
         {activeRibbonTab === 'layout' && (
           <div className="flex items-center gap-4 flex-wrap w-full text-xs">
-            <span className="font-bold text-gray-700">Khổ Giấy: <b>A4 (210 x 297 mm)</b></span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-gray-700">Khổ Giấy:</span>
+              <span className="font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                A4 (210 x 297 mm)
+              </span>
+            </div>
             <span className="text-gray-300">•</span>
-            <span className="font-bold text-gray-700">Căn lề chuẩn CV 2345: <b>Trên 2cm, Dưới 2cm, Trái 2.5cm, Phải 1.5cm</b></span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-gray-700">Căn lề:</span>
+              <select
+                value={marginPreset}
+                onChange={(e) => setMarginPreset(e.target.value)}
+                className="p-1 rounded-lg border border-gray-300 font-bold bg-white"
+              >
+                <option value="cv2345">Chuẩn CV 2345 (Trên 2cm, Dưới 2cm, Trái 2.5cm, Phải 1.5cm)</option>
+                <option value="narrow">Hẹp (Tiết kiệm trang in)</option>
+                <option value="wide">Rộng (Thoáng)</option>
+              </select>
+            </div>
             <span className="text-gray-300">•</span>
             <span className="font-bold text-gray-700">Hướng giấy: <b>Dọc (Portrait)</b></span>
           </div>
@@ -441,6 +630,13 @@ export default function MicrosoftWordView({
         {/* TAB: CHÈN (INSERT) */}
         {activeRibbonTab === 'insert' && (
           <div className="flex items-center gap-3 flex-wrap w-full">
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-black text-xs transition"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>📷 Chèn Ảnh Minh Họa (Từ Máy Tính)</span>
+            </button>
             <button
               onClick={addObjective}
               className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-xs"
@@ -453,7 +649,7 @@ export default function MicrosoftWordView({
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl font-bold text-xs"
             >
               <Table className="w-3.5 h-3.5" />
-              <span>Chèn Thêm Dòng Hoạt Động Sư Phạm</span>
+              <span>Chèn Thêm Dòng Hoạt Động Dạy Học</span>
             </button>
           </div>
         )}
@@ -462,11 +658,25 @@ export default function MicrosoftWordView({
         {activeRibbonTab === 'file' && (
           <div className="flex items-center gap-3 flex-wrap w-full">
             <button
+              onClick={() => docxInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Mở / Tải Lên Giáo Án (.docx, .txt)</span>
+            </button>
+            <button
               onClick={handleExportWord}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl font-black text-xs shadow"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Xuất Tệp Word (.doc) SMAS Viettel</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-xs border"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>In Giáo Án (Ctrl+P)</span>
             </button>
             <button
               onClick={handleResetPlan}
@@ -503,14 +713,16 @@ export default function MicrosoftWordView({
       <div className="flex-1 p-4 sm:p-8 bg-[#D3D3D3] overflow-y-auto flex justify-center">
         {/* A4 Paper Sheet */}
         <div 
-          className="w-full max-w-[850px] bg-white rounded-sm shadow-2xl p-8 sm:p-14 text-black transition-all"
+          className={`w-full max-w-[850px] bg-white rounded-sm shadow-2xl text-black transition-all ${marginStyles[marginPreset] || marginStyles.cv2345}`}
           style={{
             fontFamily: fontFamily,
             fontSize: `${fontSize}pt`,
             textAlign: textAlign,
+            color: textColor,
+            backgroundColor: highlightColor === 'transparent' ? '#ffffff' : highlightColor,
             transform: `scale(${zoomLevel / 100})`,
             transformOrigin: 'top center',
-            lineHeight: '1.4'
+            lineHeight: lineHeight
           }}
         >
           {/* Header Cơ Quan & Quốc Hiệu */}
@@ -570,8 +782,14 @@ export default function MicrosoftWordView({
 
           {/* I. MỤC TIÊU BÀI DẠY (YÊU CẦU CẦN ĐẠT) */}
           <div className="mb-6">
-            <h3 className="font-black text-[13pt] text-gray-900 uppercase mb-2 border-b border-gray-200 pb-1">
-              I. YÊU CẦU CẦN ĐẠT (MỤC TIÊU BÀI DẠY)
+            <h3 className="font-black text-[13pt] text-gray-900 uppercase mb-2 border-b border-gray-200 pb-1 flex items-center justify-between">
+              <span>I. YÊU CẦU CẦN ĐẠT (MỤC TIÊU BÀI DẠY)</span>
+              <button
+                onClick={addObjective}
+                className="text-[11px] font-bold text-blue-700 hover:underline flex items-center gap-1 normal-case"
+              >
+                <Plus className="w-3.5 h-3.5" /> Thêm Mục Tiêu
+              </button>
             </h3>
             <p className="italic text-[11pt] mb-2">Sau bài học này, học sinh đạt được:</p>
             <div className="space-y-1.5 pl-4">
@@ -622,6 +840,28 @@ export default function MicrosoftWordView({
               </div>
             </div>
           </div>
+
+          {/* HÌNH ẢNH MINH HỌA ĐƯỢC CHÈN THÊM TỪ MÁY TÍNH */}
+          {insertedImages.length > 0 && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <h4 className="font-bold text-xs uppercase text-gray-600 mb-2">Hình ảnh mẫu đính kèm giáo án:</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {insertedImages.map((img) => (
+                  <div key={img.id} className="relative group border rounded-lg overflow-hidden bg-white p-1">
+                    <img src={img.url} alt={img.name} className="w-full h-32 object-contain rounded" />
+                    <button
+                      onClick={() => setInsertedImages(prev => prev.filter(i => i.id !== img.id))}
+                      className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition shadow"
+                      title="Xóa ảnh này"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <p className="text-[10px] text-gray-500 truncate mt-1 text-center">{img.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* III. TIẾN TRÌNH DẠY HỌC CHỦ YẾU (BẢNG 4 CỘT CÔNG VĂN 2345) */}
           <div className="mb-6">
