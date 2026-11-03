@@ -58,7 +58,7 @@ import {
   ListOrdered
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { exportSmasPowerPoint } from '../services/smasExport';
+import { exportPresentationPptx } from '../services/smasExport';
 import { ttsService } from '../services/tts';
 import { parsePptxFile } from '../services/officeParser';
 import { generateAiPresentation } from '../services/gemini';
@@ -198,7 +198,43 @@ function createDefaultSlide(index = 1, layout = 'title-content', title = 'Hoạt
   };
 }
 
+const LEGACY_PRESENTATION_DRAFT_KEY = 'ARTED_AI_PRESENTATION_DRAFT';
+
+function getPresentationDraftKey(grade, unitId) {
+  return `ARTED_AI_PRESENTATION_DRAFT:${Number(grade) || 1}:${encodeURIComponent(unitId || 'general')}`;
+}
+
+function readPresentationDraft(storageKey, grade, unitId) {
+  if (typeof window === 'undefined') return null;
+
+  let candidates;
+  try {
+    candidates = [
+      window.localStorage.getItem(storageKey),
+      window.localStorage.getItem(LEGACY_PRESENTATION_DRAFT_KEY)
+    ];
+  } catch {
+    return null;
+  }
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const draft = JSON.parse(candidate);
+      if (!Array.isArray(draft?.slides) || draft.slides.length === 0) continue;
+      if (draft.grade != null && Number(draft.grade) !== Number(grade)) continue;
+      if (draft.unitId && unitId && draft.unitId !== unitId) continue;
+      return draft;
+    } catch {
+      // Ignore invalid browser storage and keep the normal lesson content.
+    }
+  }
+
+  return null;
+}
+
 export default function MicrosoftPowerPointView({
+  apiKey = '',
   selectedGrade = 1,
   selectedUnit,
   teacher = { name: 'Thầy Cọ Nhí', title: 'Thầy giáo' },
@@ -209,9 +245,16 @@ export default function MicrosoftPowerPointView({
   const teacherName = teacher?.name || 'Thầy Cọ Nhí';
   const pronoun = teacher?.pronoun || 'Thầy';
   const avatarUrl = teacher?.avatarUrl || './teacher.jpg';
+  const presentationStorageKey = getPresentationDraftKey(selectedGrade, selectedUnit?.id);
+  const [initialDraft] = useState(() => readPresentationDraft(
+    presentationStorageKey,
+    selectedGrade,
+    selectedUnit?.id
+  ));
 
   // 1. STATE QUẢN LÝ TÊN BÀI TRÌNH CHIẾU
   const [presentationTitle, setPresentationTitle] = useState(() => {
+    if (initialDraft?.title) return initialDraft.title;
     return selectedUnit?.title 
       ? `Bài Giảng: ${selectedUnit.title} (Lớp ${selectedGrade})`
       : `Bài Giảng Mĩ Thuật GDPT 2018 - Lớp ${selectedGrade}`;
@@ -219,6 +262,8 @@ export default function MicrosoftPowerPointView({
 
   // 2. STATE DANH SÁCH SLIDE VÀ LỊCH SỬ UNDO/REDO
   const [slides, setSlides] = useState(() => {
+    if (initialDraft?.slides?.length) return initialDraft.slides;
+
     // Khôi phục từ bài học hiện tại nếu có
     if (selectedUnit?.powerpointSlides && selectedUnit.powerpointSlides.length > 0) {
       return selectedUnit.powerpointSlides.map((s, idx) => ({
@@ -284,6 +329,7 @@ export default function MicrosoftPowerPointView({
   });
 
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [draggedSlideIndex, setDraggedSlideIndex] = useState(null);
 
   // Lịch sử Undo / Redo
   const [historyStack, setHistoryStack] = useState([slides]);
@@ -316,7 +362,9 @@ export default function MicrosoftPowerPointView({
   }, [historyIndex, historyStack]);
 
   // 3. TRẠNG THÁI TỰ ĐỘNG LƯU VÀO LOCALSTORAGE
-  const [saveStatus, setSaveStatus] = useState('Đã lưu vào bộ nhớ trình duyệt');
+  const [saveStatus, setSaveStatus] = useState(
+    initialDraft ? 'Đã khôi phục bài đã lưu' : 'Đang lưu vào bộ nhớ trình duyệt'
+  );
   const [lastSavedTime, setLastSavedTime] = useState(new Date().toLocaleTimeString('vi-VN'));
   const autoSaveTimerRef = useRef(null);
 
@@ -330,10 +378,11 @@ export default function MicrosoftPowerPointView({
         const payload = {
           title: presentationTitle,
           grade: selectedGrade,
+          unitId: selectedUnit?.id || null,
           slides: slides,
           updatedAt: new Date().toISOString()
         };
-        localStorage.setItem('ARTED_AI_PRESENTATION_DRAFT', JSON.stringify(payload));
+        localStorage.setItem(presentationStorageKey, JSON.stringify(payload));
         const timeStr = new Date().toLocaleTimeString('vi-VN');
         setLastSavedTime(timeStr);
         setSaveStatus(`Đã lưu lúc ${timeStr}`);
@@ -346,7 +395,7 @@ export default function MicrosoftPowerPointView({
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [slides, presentationTitle, selectedGrade]);
+  }, [slides, presentationTitle, selectedGrade, selectedUnit?.id, presentationStorageKey]);
 
   // Nút lưu thủ công
   const handleManualSave = () => {
@@ -354,10 +403,11 @@ export default function MicrosoftPowerPointView({
       const payload = {
         title: presentationTitle,
         grade: selectedGrade,
+        unitId: selectedUnit?.id || null,
         slides: slides,
         updatedAt: new Date().toISOString()
       };
-      localStorage.setItem('ARTED_AI_PRESENTATION_DRAFT', JSON.stringify(payload));
+      localStorage.setItem(presentationStorageKey, JSON.stringify(payload));
       const timeStr = new Date().toLocaleTimeString('vi-VN');
       setLastSavedTime(timeStr);
       setSaveStatus(`Đã lưu lúc ${timeStr}`);
@@ -394,6 +444,7 @@ export default function MicrosoftPowerPointView({
   const [aiStyle, setAiStyle] = useState('cheerful');
   const [aiObjectives, setAiObjectives] = useState('Khám phá hòa sắc và tạo hình sáng tạo theo GDPT 2018');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   // Input tệp ẩn
   const fileInputRef = useRef(null);
@@ -451,7 +502,10 @@ export default function MicrosoftPowerPointView({
       const newSlides = slides.filter((_, i) => i !== index);
       newSlides.forEach((s, i) => { s.slideNumber = i + 1; });
       setSlides(newSlides);
-      setCurrentSlideIndex(Math.max(0, index - 1));
+      setCurrentSlideIndex((currentIndex) => {
+        if (currentIndex === index) return Math.max(0, index - 1);
+        return currentIndex > index ? currentIndex - 1 : currentIndex;
+      });
       pushHistory(newSlides);
     }
   };
@@ -802,6 +856,7 @@ export default function MicrosoftPowerPointView({
   // TÍNH NĂNG TẠO BÀI GIẢNG BẰNG AI (TRUNG THỰC & CHUẨN GDPT 2018)
   // ============================================================================
   const handleRunAiGenerator = async () => {
+    setAiError('');
     setIsAiGenerating(true);
     try {
       const result = await generateAiPresentation({
@@ -810,6 +865,7 @@ export default function MicrosoftPowerPointView({
         numSlides: aiNumSlides,
         objectives: aiObjectives,
         style: aiStyle,
+        apiKey,
         teacher: teacher
       });
 
@@ -822,11 +878,14 @@ export default function MicrosoftPowerPointView({
         confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
         alert(`Đã tạo thành công bài giảng gồm ${result.slides.length} trang chiếu chuẩn GDPT 2018! Bạn có thể tự do chỉnh sửa mọi nội dung.`);
       } else {
-        alert('Không thể tạo bài giảng. Vui lòng thử lại với chủ đề khác!');
+        setAiError(result?.reason === 'missing-gemini-key'
+          ? 'Gợi ý nội dung AI chưa hoạt động vì ứng dụng chưa có khóa Gemini. Trình chỉnh sửa slide vẫn dùng bình thường; hãy cấu hình Gemini bằng nút “Cài Key” hiện có.'
+          : result?.reason === 'invalid-response'
+            ? 'Gemini trả về nội dung không đúng định dạng; chưa có slide nào được thay đổi. Bạn có thể thử lại.'
+            : 'Gemini chưa thể tạo bài. Chưa có slide nào được thay đổi; hãy kiểm tra cấu hình, quyền truy cập hoặc kết nối rồi thử lại.');
       }
-    } catch (err) {
-      console.error('Lỗi khi sinh bài giảng bằng AI:', err);
-      alert('Đã xảy ra lỗi trong quá trình tạo bài giảng. Vui lòng kiểm tra lại kết nối mạng!');
+    } catch {
+      setAiError('Gemini chưa thể tạo bài. Chưa có slide nào được thay đổi; hãy kiểm tra cấu hình, quyền truy cập hoặc kết nối rồi thử lại.');
     } finally {
       setIsAiGenerating(false);
     }
@@ -857,40 +916,36 @@ export default function MicrosoftPowerPointView({
           phase: s.phase || `Trang ${idx + 1}`,
           title: s.title || `Trang chiếu ${idx + 1}`,
           subtitle: s.subtitle || '',
-          bullets: Array.isArray(s.bullets) && s.bullets.length > 0 ? s.bullets : ['Nội dung trang trình chiếu'],
-          speakerNote: s.teacherLecture || `${pronoun} chào các con! Ở trang trình chiếu này chúng ta cùng khám phá nội dung bài học.`,
+          bullets: Array.isArray(s.bullets) ? s.bullets : [],
+          speakerNote: s.speakerNote || s.teacherLecture || '',
           background: { type: 'color', value: '#FFFFFF' },
           transition: 'fade',
           visualArt: {
             title: s.title || 'Hình ảnh trình chiếu',
-            caption: 'Ảnh trích xuất từ tệp bài giảng',
-            imageUrl: s.images?.[0]?.url || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&q=80'
+            caption: s.visualArt?.caption || s.subtitle || '',
+            imageUrl: s.images?.[0]?.url || ''
           },
-          columnLeft: {
-            title: '✨ Yếu tố tạo hình',
-            items: ['Đường nét mềm mại', 'Hình khối cân đối']
-          },
-          columnRight: {
-            title: '💡 Bí quyết của Thầy',
-            items: ['Phác nét lớn trước', 'Phối màu tươi sáng']
-          },
-          goals: {
-            shortTerm: { label: 'NGẮN HẠN', desc: 'Nắm vững kiến thức trọng tâm.', example: 'Hoàn thành bài tập trong tiết.' },
-            longTerm: { label: 'DÀI HẠN', desc: 'Phát triển kĩ năng thẩm mĩ.', example: 'Tự tin sáng tạo.' },
-            quote: 'Có mục tiêu – Có động lực – Có kết quả!'
-          },
-          quiz: {
-            question: 'Em hãy nêu cảm nhận về nội dung bài học vừa tìm hiểu?',
-            options: ['A. Rất bổ ích và lý thú', 'B. Cần tìm hiểu thêm', 'C. Sáng tạo theo ý thích'],
-            correctIndex: 0,
-            explanation: 'Tuyệt vời! Tinh thần hào hứng sẽ giúp các con học vẽ thật giỏi!'
-          },
-          elements: []
+          elements: (s.images || []).slice(1).map((image, imageIndex) => ({
+            id: `imported_img_${Date.now()}_${idx}_${imageIndex}`,
+            type: 'image',
+            x: 62 + (imageIndex % 2) * 18,
+            y: 52 + Math.floor(imageIndex / 2) * 16,
+            width: 16,
+            height: 14,
+            imageUrl: image.url,
+            objectFit: 'contain',
+            borderRadius: 4,
+            borderColor: '#CBD5E1',
+            borderWidth: 1,
+            opacity: 100,
+            zIndex: imageIndex + 1
+          }))
         }));
 
         setSlides(convertedSlides);
         setPresentationTitle(file.name.replace(/\.pptx$/i, ''));
         setCurrentSlideIndex(0);
+        setSlideAspectRatio(parsedData.slideSize === '4:3' ? '4:3' : '16:9');
         pushHistory(convertedSlides);
         confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
         alert(`Đã tải lên và đọc thành công ${convertedSlides.length} trang chiếu từ tệp "${file.name}"!`);
@@ -908,17 +963,24 @@ export default function MicrosoftPowerPointView({
   const handleExportPptx = async () => {
     try {
       setSaveStatus('Đang tạo tệp .pptx...');
-      await exportSmasPowerPoint({
-        unit: selectedUnit,
+      const result = await exportPresentationPptx({
+        title: presentationTitle,
         teacher,
         grade: selectedGrade,
-        slidesData: slides
+        slidesData: slides,
+        slideAspectRatio
       });
+      if (!result?.success) throw new Error('Không nhận được xác nhận hoàn tất từ bộ xuất tệp.');
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-      setSaveStatus('Đã xuất tệp .pptx');
-    } catch (e) {
-      console.error('Lỗi xuất PowerPoint:', e);
-      alert('Không thể xuất tệp PowerPoint. Vui lòng thử lại!');
+      setSaveStatus(result.omittedImages?.length
+        ? 'Đã xuất .pptx (một số ảnh không thể nhúng)'
+        : 'Đã xuất tệp .pptx');
+      if (result.omittedImages?.length) {
+        alert(`Đã xuất tệp "${result.fileName}", nhưng không nhúng được các ảnh sau:\n${result.omittedImages.join('\n')}`);
+      }
+    } catch (error) {
+      setSaveStatus('Xuất .pptx thất bại');
+      alert(error?.message || 'Không thể xuất tệp .pptx. Chưa có thông báo thành công; hãy thử lại.');
     }
   };
 
@@ -1061,7 +1123,10 @@ export default function MicrosoftPowerPointView({
 
           {/* Nút Tạo Bằng AI */}
           <button
-            onClick={() => setShowAiModal(true)}
+            onClick={() => {
+              setAiError('');
+              setShowAiModal(true);
+            }}
             className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs rounded-md shadow transition hover:scale-105"
             title="Tạo toàn bộ bài giảng tự động theo chủ đề bằng AI"
           >
@@ -1538,14 +1603,35 @@ export default function MicrosoftPowerPointView({
               return (
                 <div
                   key={s.id || idx}
+                  draggable
                   onClick={() => {
                     setCurrentSlideIndex(idx);
                     setSelectedElementId(null);
                   }}
-                  className={`group relative p-2 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-1 ${
-                    isSelected
-                      ? 'bg-indigo-50/90 border-indigo-600 shadow-md scale-[1.02]'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                  onDragStart={(e) => {
+                    setDraggedSlideIndex(idx);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(idx));
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const fromIndex = Number(e.dataTransfer.getData('text/plain'));
+                    if (Number.isInteger(fromIndex) && fromIndex !== idx) {
+                      handleMoveSlide(fromIndex, idx);
+                    }
+                    setDraggedSlideIndex(null);
+                  }}
+                  onDragEnd={() => setDraggedSlideIndex(null)}
+                  className={`group relative p-2 rounded-xl border-2 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-1 ${
+                    draggedSlideIndex === idx
+                      ? 'opacity-50 border-indigo-400'
+                      : isSelected
+                        ? 'bg-indigo-50/90 border-indigo-600 shadow-md scale-[1.02]'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
                   }`}
                 >
                   <div className="flex items-center justify-between text-[10px] font-black text-slate-500">
@@ -2461,6 +2547,21 @@ export default function MicrosoftPowerPointView({
             </div>
 
             <div className="space-y-3 text-xs">
+              <div className={`rounded-xl border p-2.5 font-bold ${
+                apiKey?.startsWith('AIza')
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-900'
+              }`}>
+                {apiKey?.startsWith('AIza')
+                  ? 'Gemini đã được cấu hình trong ứng dụng. Nội dung sẽ được tạo bằng dịch vụ này.'
+                  : 'Gợi ý nội dung AI chưa hoạt động vì chưa có khóa Gemini. Bạn vẫn có thể soạn, lưu và trình chiếu bình thường; không tạo nội dung mẫu giả.'}
+              </div>
+              {aiError && (
+                <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-2.5 font-bold text-rose-800">
+                  {aiError}
+                </div>
+              )}
+
               <div>
                 <label className="font-black text-slate-700 block mb-1">Chủ đề bài giảng:</label>
                 <input
@@ -2492,10 +2593,14 @@ export default function MicrosoftPowerPointView({
                   <select
                     value={selectedGrade}
                     disabled
+                    title="Đổi khối lớp trên thanh Khối Lớp của ứng dụng trước khi mở cửa sổ tạo bài."
                     className="w-full p-2 bg-slate-100 border border-slate-300 rounded-xl font-bold text-slate-700"
                   >
                     <option value={selectedGrade}>Lớp {selectedGrade}</option>
                   </select>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                    Đổi lớp ở thanh chính trước khi mở cửa sổ tạo bài.
+                  </p>
                 </div>
 
                 <div>
@@ -2511,6 +2616,17 @@ export default function MicrosoftPowerPointView({
                     <option value={8}>8 Slide (Chuyên sâu)</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="font-black text-slate-700 block mb-1">Mục tiêu bài học:</label>
+                <textarea
+                  rows={3}
+                  value={aiObjectives}
+                  onChange={(e) => setAiObjectives(e.target.value)}
+                  placeholder="Nhập những điều học sinh cần biết, làm được hoặc cảm nhận sau bài học..."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500 resize-y"
+                />
               </div>
 
               <div>

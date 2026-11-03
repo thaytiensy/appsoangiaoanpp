@@ -3,6 +3,15 @@ import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import { SMAS_COMMENT_BANK } from './smasExport.js';
 
+const decodeXmlText = (text) => String(text || '')
+  .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+  .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(parseInt(decimal, 10)))
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>')
+  .replace(/&quot;/g, '"')
+  .replace(/&apos;/g, "'")
+  .replace(/&amp;/g, '&');
+
 /**
  * BỘ PHÂN TÍCH VÀ HIỂN THỊ CHUẨN TẬP TIN MICROSOFT OFFICE (PPTX, DOCX, XLSX)
  * Đảm bảo đọc đúng 100% nội dung thực tế từ máy tính giáo viên hoặc cổng SMAS Viettel.
@@ -81,7 +90,7 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
       const pMatches = slideXml.match(/<a:p[\s\S]*?<\/a:p>/g) || [];
       const paragraphs = pMatches.map(p => {
         const tMatches = p.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
-        return tMatches.map(t => t.replace(/<[^>]+>/g, '')).join('');
+        return tMatches.map(t => decodeXmlText(t.replace(/<[^>]+>/g, ''))).join('');
       }).map(s => s.trim()).filter(s => s.length > 0);
 
       // 2. Trích xuất Font chữ và cỡ chữ thực tế từ OpenXML (<a:rPr typeface=... sz=...>)
@@ -114,13 +123,12 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
 
       if (paragraphs.length === 1) {
         title = paragraphs[0];
-        bullets = [paragraphs[0]];
       } else if (paragraphs.length >= 2) {
         title = paragraphs[0];
         subtitle = paragraphs[1].length < 150 ? paragraphs[1] : 'Nội dung trọng tâm bài học';
-        bullets = paragraphs.slice(1);
+        bullets = paragraphs.slice(2);
       } else {
-        bullets = ['Nội dung trang trình chiếu'];
+        bullets = [];
       }
 
       // 4. Trích xuất TOÀN BỘ hình ảnh & tệp âm thanh minh họa từ tệp quan hệ (.rels)
@@ -143,7 +151,13 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
               if (mediaFile) {
                 const b64 = await mediaFile.async('base64');
                 const ext = filename.split('.').pop().toLowerCase();
-                const mime = ext === 'png' ? 'image/png' : (ext === 'gif' ? 'image/gif' : 'image/jpeg');
+                const mime = ext === 'png'
+                  ? 'image/png'
+                  : ext === 'gif'
+                    ? 'image/gif'
+                    : ext === 'webp'
+                      ? 'image/webp'
+                      : 'image/jpeg';
                 slideImages.push({
                   id: `img_${slideNum}_${slideImages.length + 1}`,
                   name: filename,
@@ -182,8 +196,9 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
             const nXml = await zip.file(np).async('text');
             const nP = nXml.match(/<a:p[\s\S]*?<\/a:p>/g) || [];
             const nTexts = nP.map(p => {
+              if (/<a:fld\b[^>]*type=["']slidenum["']/i.test(p)) return '';
               const tM = p.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
-              return tM.map(t => t.replace(/<[^>]+>/g, '')).join('');
+              return tM.map(t => decodeXmlText(t.replace(/<[^>]+>/g, ''))).join('');
             }).map(s => s.trim()).filter(s => s.length > 0 && !s.includes('Slide '));
             if (nTexts.length > 0) {
               speakerNote = nTexts.join(' ');
@@ -195,42 +210,22 @@ export async function parsePptxFile(file, teacherPronoun = 'Thầy') {
         }
       }
 
-      if (!speakerNote) {
-        const keyPoints = bullets.slice(0, 3).join('. ');
-        speakerNote = `${teacherPronoun} chào các con! Ở trang trình chiếu này, chúng ta cùng tìm hiểu: "${title}". ${keyPoints ? 'Các con lưu ý: ' + keyPoints : ''}`;
-      }
-
-      // Nhận diện loại bố cục thông minh cho từng Slide (Trò chơi, Mục tiêu, Toàn cảnh Slide):
-      const allTextCombined = `${title} ${subtitle} ${bullets.join(' ')}`.toLowerCase();
-      const isGame = allTextCombined.includes('game') || 
-                     allTextCombined.includes('con đường đến thành công') || 
-                     allTextCombined.includes('trò chơi') ||
-                     allTextCombined.includes('khởi động');
-      
-      const isInfographicGoal = allTextCombined.includes('mục tiêu') && 
-                                (allTextCombined.includes('ngắn hạn') || allTextCombined.includes('dài hạn'));
-
-      let detectedLayout = 'standard';
-      if (isGame) {
-        detectedLayout = 'interactive-game';
-      } else if (isInfographicGoal) {
-        detectedLayout = 'infographic-goals';
-      } else if (slideImages.length > 0) {
-        detectedLayout = 'full-slide';
-      }
+      // Chỉ chọn bố cục mà trình sửa có thể hiển thị bằng dữ liệu đã trích xuất.
+      // Không đoán slide trò chơi/mục tiêu vì parser chưa đọc được cấu trúc tương ứng.
+      const detectedLayout = slideImages.length > 0 ? 'image-caption' : 'title-content';
 
       parsedSlides.push({
         phase: `Slide ${i + 1}`,
         title: title,
         subtitle: subtitle,
-        teacherLecture: speakerNote,
-        bullets: bullets.length > 0 ? bullets : ['Nội dung hoạt động mĩ thuật'],
+        speakerNote: speakerNote || '',
+        teacherLecture: speakerNote || '',
+        bullets,
         fontFamily: slideFont || 'Arial',
         titleFontSize: titleSz,
         bodyFontSize: bodySz,
         slideSize: detectedSlideSize,
         layout: detectedLayout,
-        isGame: isGame,
         images: slideImages,
         visualArt: {
           title: title,

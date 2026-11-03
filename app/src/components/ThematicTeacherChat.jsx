@@ -338,6 +338,8 @@ export default function ThematicTeacherChat({
         {/* VIEW 1: MICROSOFT POWERPOINT (TRÌNH CHIẾU & CHỈNH SỬA TÁC VỤ VĂN PHÒNG) */}
         {viewMode === 'powerpoint' && (
           <MicrosoftPowerPointView
+            key={`presentation-${selectedGrade}-${selectedUnit?.id || 'general'}`}
+            apiKey={apiKey}
             selectedGrade={selectedGrade}
             selectedUnit={selectedUnit}
             teacher={teacher}
