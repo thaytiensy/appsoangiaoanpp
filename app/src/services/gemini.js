@@ -379,204 +379,175 @@ YÊU CẦU SƯ PHẠM BẮT BUỘC:
   };
 }
 
-// 4. Sinh Bài Giảng Trình Chiếu Chuẩn GDPT 2018 Bằng AI hoặc Bộ Tổng Hợp Sư Phạm
+// 4. Sinh bài giảng bằng dịch vụ Gemini đã được cấu hình trong ứng dụng.
 export async function generateAiPresentation({
   topic = 'Sắc Màu Quanh Em',
   grade = 1,
   numSlides = 5,
   objectives = '',
   style = 'cheerful',
-  apiKey = null,
+  apiKey = '',
   teacher = { name: 'Thầy Cọ Nhí', pronoun: 'Thầy' }
 }) {
+  const trimmedKey = (apiKey || '').trim();
+  if (!trimmedKey.startsWith('AIza')) {
+    return { success: false, reason: 'missing-gemini-key' };
+  }
+
   const teacherName = teacher?.name || 'Thầy Cọ Nhí';
-  const pronoun = teacher?.pronoun || 'Thầy';
-  const trimmedKey = (apiKey || (typeof localStorage !== 'undefined' ? localStorage.getItem('gemini_api_key') : null))?.trim();
-
-  // Danh mục chủ đề màu nền theo phong cách
-  const themeColors = {
-    cheerful: { bg: '#FFFBEB', accent: '#D97706', card: '#FEF3C7' },
-    nature: { bg: '#F0FDF4', accent: '#059669', card: '#DCFCE7' },
-    ocean: { bg: '#F0F9FF', accent: '#0284C7', card: '#E0F2FE' },
-    artistic: { bg: '#FFF1F2', accent: '#E11D48', card: '#FFE4E6' },
-    chalkboard: { bg: '#0F172A', accent: '#F59E0B', card: '#1E293B', text: '#F8FAFC' }
+  const slideCount = Math.min(Math.max(Number(numSlides) || 5, 3), 8);
+  const gradeNumber = Math.min(Math.max(Number(grade) || 1, 1), 5);
+  const themeBackgrounds = {
+    cheerful: '#FFFBEB',
+    nature: '#F0FDF4',
+    ocean: '#F0F9FF',
+    artistic: '#FFF1F2',
+    chalkboard: '#0F172A'
   };
-  const currentTheme = themeColors[style] || themeColors.cheerful;
+  const background = themeBackgrounds[style] || themeBackgrounds.cheerful;
 
-  // 1. Nếu có Google Gemini Key -> Gửi request sinh cấu trúc bài giảng trực tiếp
-  if (trimmedKey && trimmedKey.startsWith('AIza')) {
-    try {
-      const prompt = `Bạn là ${teacherName}, giáo viên mĩ thuật tiểu học xuất sắc theo chương trình GDPT 2018 (sách Kết Nối Tri Thức).
-Hãy soạn một bài giảng trình chiếu ${numSlides} trang cho học sinh Lớp ${grade} với chủ đề: "${topic}".
-Mục tiêu bài học: ${objectives || 'Khám phá hình khối, hòa sắc cơ bản và sáng tạo tác phẩm theo cảm xúc riêng'}.
-Trả về DUY NHẤT một mảng JSON thuần túy (không kèm markdown \`\`\`json) gồm ${numSlides} slide.
-Mỗi phần tử có cấu trúc:
-{
-  "phase": "Tên tiến trình (1. Khởi động / 2. Khám phá / 3. Luyện tập / 4. Vận dụng / 5. Mục tiêu / 6. Đố vui)",
-  "layout": "title" hoặc "title-content" hoặc "two-column" hoặc "image-caption" hoặc "lesson-goals" hoặc "interactive-quiz",
-  "title": "Tiêu đề slide ngắn gọn, sinh động",
-  "subtitle": "Phụ đề gợi mở",
-  "bullets": ["Gạch đầu dòng 1", "Gạch đầu dòng 2", "Gạch đầu dòng 3"],
-  "speakerNote": "Lời giảng ấm áp, truyền cảm của ${pronoun} giảng cho các con (3-4 câu)",
-  "illustrationPrompt": "Mô tả hình vẽ minh họa phù hợp lứa tuổi tiểu học"
-}`;
+  const prompt = `Bạn là ${teacherName}, giáo viên Mĩ thuật tiểu học theo chương trình GDPT 2018.
+Soạn chính xác ${slideCount} trang chiếu cho học sinh Lớp ${gradeNumber}.
+Chủ đề: "${topic}".
+Mục tiêu bài học: "${objectives || 'Giáo viên chưa cung cấp mục tiêu riêng; hãy đề xuất mục tiêu phù hợp chủ đề và lứa tuổi.'}".
+Trả về duy nhất một mảng JSON, không có markdown. Mỗi phần tử phải có:
+{"phase":"Tên hoạt động","layout":"title|title-content|two-column|lesson-goals|interactive-quiz","title":"Tiêu đề","subtitle":"Phụ đề","bullets":["Ý 1","Ý 2"],"speakerNote":"Lời giảng","illustrationPrompt":"Gợi ý hình ảnh bằng chữ","columnLeft":{"title":"Tiêu đề cột trái","items":["Ý 1"]},"columnRight":{"title":"Tiêu đề cột phải","items":["Ý 2"]},"goals":{"shortTerm":{"desc":"Mục tiêu ngắn hạn","example":"Minh chứng"},"longTerm":{"desc":"Mục tiêu dài hạn","example":"Minh chứng"},"quote":"Lời nhắc"},"quiz":{"question":"Câu hỏi","options":["Đáp án A","Đáp án B"],"correctIndex":0,"explanation":"Giải thích"}}.
+Với layout "two-column", bắt buộc có columnLeft và columnRight, mỗi cột có ít nhất một ý.
+Với layout "lesson-goals", bắt buộc có đủ shortTerm.desc và longTerm.desc.
+Với layout "interactive-quiz", bắt buộc có câu hỏi và ít nhất hai lựa chọn.
+Nếu không thể cung cấp đúng dữ liệu cho một bố cục, hãy dùng "title-content". Không tạo URL ảnh.
+Nội dung bằng tiếng Việt, chính xác về sư phạm và phù hợp học sinh tiểu học.`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${trimmedKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2500
-            }
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const textRes = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textRes) {
-          const cleanJsonStr = textRes.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJsonStr);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const slides = parsed.map((s, idx) => ({
-              id: `ai_slide_${Date.now()}_${idx + 1}`,
-              slideNumber: idx + 1,
-              phase: s.phase || `Trang ${idx + 1}`,
-              layout: s.layout || (idx === 0 ? 'title' : 'title-content'),
-              title: s.title || `Hoạt động ${idx + 1}: ${topic}`,
-              subtitle: s.subtitle || `Môn Mĩ Thuật Lớp ${grade}`,
-              bullets: Array.isArray(s.bullets) ? s.bullets : ['Quan sát và cảm nhận vẻ đẹp mĩ thuật', 'Thực hành tạo hình theo cảm xúc'],
-              speakerNote: s.speakerNote || `${pronoun} chào các con! Ở trang trình chiếu này, chúng ta cùng khám phá chủ đề ${topic}.`,
-              background: { type: 'color', value: currentTheme.bg },
-              transition: 'fade',
-              visualArt: {
-                title: s.title || topic,
-                caption: s.illustrationPrompt || `Minh họa chủ đề ${topic}`,
-                imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&q=80'
-              },
-              elements: []
-            }));
-
-            return {
-              success: true,
-              title: `Bài Giảng: ${topic} - Lớp ${grade}`,
-              topic,
-              grade,
-              slides,
-              source: 'gemini-api'
-            };
-          }
-        }
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${trimmedKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 3500 }
+        })
       }
-    } catch (e) {
-      console.warn('Lỗi gọi Gemini API sinh bài giảng, chuyển sang bộ tổng hợp sư phạm:', e);
-    }
-  }
+    );
 
-  // 2. Bộ Tổng Hợp Sư Phạm Mĩ Thuật GDPT 2018 (Không cần API Key, tạo slide thật 100%)
-  const phases = [
-    { name: '1. Khởi động', icon: '🎯', layout: 'title' },
-    { name: '2. Khám phá', icon: '🔍', layout: 'image-caption' },
-    { name: '3. Mục tiêu học tập', icon: '📖', layout: 'lesson-goals' },
-    { name: '4. Luyện tập & Sáng tạo', icon: '🎨', layout: 'two-column' },
-    { name: '5. Đố vui tương tác', icon: '❓', layout: 'interactive-quiz' },
-    { name: '6. Vận dụng & Trưng bày', icon: '🌟', layout: 'title-content' }
-  ];
-
-  const generatedSlides = [];
-  const targetCount = Math.min(Math.max(numSlides, 3), 8);
-
-  for (let i = 0; i < targetCount; i++) {
-    const pInfo = phases[i % phases.length];
-    let sLayout = pInfo.layout;
-    if (i === 0) sLayout = 'title';
-
-    let sTitle = `${pInfo.name}: ${topic}`;
-    let sSubtitle = `Môn Mĩ Thuật Lớp ${grade} • Bộ sách Kết Nối Tri Thức`;
-    let sBullets = [
-      `Khám phá các yếu tố tạo hình độc đáo của ${topic}`,
-      'Phối hợp đường nét, hình khối và hòa sắc tương phản tươi sáng',
-      'Tự tin thể hiện ý tưởng và cảm xúc cá nhân qua tác phẩm'
-    ];
-    let sLecture = `${pronoun} chào các con học sinh Lớp ${grade}! Hôm nay chúng mình cùng tìm hiểu chủ đề "${topic}". Hãy chuẩn bị sẵn sàng màu vẽ và giấy để cùng sáng tạo nhé!`;
-
-    if (sLayout === 'title') {
-      sTitle = topic.toUpperCase();
-      sSubtitle = `BÀI GIẢNG ĐIỆN TỬ MĨ THUẬT LỚP ${grade} • CHỦ ĐỀ SÁNG TẠO`;
-      sLecture = `${pronoun} chào cả lớp! Tiết Mĩ thuật hôm nay, chúng ta sẽ bước vào chuyến phiêu lưu kì thú cùng chủ đề "${topic}". Cả lớp đã chuẩn bị đầy đủ bút chì, sáp màu và sự tự tin chưa nào?`;
-    } else if (sLayout === 'lesson-goals') {
-      sTitle = `Mục Tiêu Bài Học: ${topic}`;
-      sSubtitle = 'Yêu cầu cần đạt chuẩn Chương trình Giáo dục Phổ thông 2018';
-      sLecture = `Các con thân mến, sau bài học này, chúng mình sẽ nắm vững 2 mục tiêu: Mục tiêu ngắn hạn là vẽ được hình ảnh chính rõ ràng; Mục tiêu dài hạn là nuôi dưỡng tình yêu hội họa và óc thẩm mĩ tinh tế!`;
-    } else if (sLayout === 'interactive-quiz') {
-      sTitle = `Đố Vui Mĩ Thuật: Khám Phá ${topic}`;
-      sSubtitle = 'Thử tài tư duy thẩm mỹ và nhận biết màu sắc';
-      sLecture = `Đố bạn nhỏ nào tinh mắt phát hiện được câu trả lời chính xác cho câu đố vui của ${pronoun} dưới đây nhé!`;
+    if (!response.ok) {
+      return { success: false, reason: 'generation-failed' };
     }
 
-    generatedSlides.push({
-      id: `smart_slide_${Date.now()}_${i + 1}`,
-      slideNumber: i + 1,
-      phase: pInfo.name,
-      phaseIcon: pInfo.icon,
-      layout: sLayout,
-      title: sTitle,
-      subtitle: sSubtitle,
-      bullets: sBullets,
-      speakerNote: sLecture,
-      background: { type: 'color', value: currentTheme.bg },
-      transition: 'fade',
-      visualArt: {
-        title: `Tác phẩm thị phạm: ${topic}`,
-        caption: `Khám phá hòa sắc và bố cục đặc trưng của chủ đề ${topic}`,
-        imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&q=80'
-      },
-      columnLeft: {
-        title: '✨ Yếu tố tạo hình chính',
-        items: ['Đường nét mềm mại, uyển chuyển', 'Hình khối cân đối, trọng tâm nổi bật', 'Màu sắc ấm áp, giàu năng lượng']
-      },
-      columnRight: {
-        title: '💡 Bí quyết của ' + teacherName,
-        items: ['Phác nét lớn bằng bút chì trước', 'Nhấn đậm các chi tiết chính', 'Tô màu nền để tranh thêm sinh động']
-      },
-      goals: {
-        shortTerm: {
-          label: 'NGẮN HẠN',
-          desc: `Hoàn thiện bài vẽ ${topic} với hình ảnh sinh động ngay trong tiết học.`,
-          example: 'Vẽ và phối màu bức tranh đúng thời gian quy định.'
+    const data = await response.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (typeof responseText !== 'string') {
+      return { success: false, reason: 'invalid-response' };
+    }
+
+    const cleanJson = responseText.replace(/```(?:json)?/gi, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(cleanJson);
+    } catch {
+      return { success: false, reason: 'invalid-response' };
+    }
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length !== slideCount ||
+      parsed.some(slide => !slide || typeof slide !== 'object' || typeof slide.title !== 'string' || !slide.title.trim())
+    ) {
+      return { success: false, reason: 'invalid-response' };
+    }
+
+    const stringItems = (items) => Array.isArray(items)
+      ? items.filter(item => typeof item === 'string' && item.trim()).slice(0, 8)
+      : [];
+    const slides = parsed.map((slide, index) => {
+      const leftItems = stringItems(slide.columnLeft?.items);
+      const rightItems = stringItems(slide.columnRight?.items);
+      const hasColumns = leftItems.length > 0 && rightItems.length > 0;
+      const hasGoals = Boolean(
+        typeof slide.goals?.shortTerm?.desc === 'string' &&
+        slide.goals.shortTerm.desc.trim() &&
+        typeof slide.goals?.longTerm?.desc === 'string' &&
+        slide.goals.longTerm.desc.trim()
+      );
+      const quizOptions = stringItems(slide.quiz?.options);
+      const hasQuiz = Boolean(
+        typeof slide.quiz?.question === 'string' &&
+        slide.quiz.question.trim() &&
+        quizOptions.length >= 2
+      );
+      const requestedLayout = slide.layout;
+      const layout = requestedLayout === 'title'
+        ? 'title'
+        : requestedLayout === 'two-column' && hasColumns
+          ? 'two-column'
+          : requestedLayout === 'lesson-goals' && hasGoals
+            ? 'lesson-goals'
+            : requestedLayout === 'interactive-quiz' && hasQuiz
+              ? 'interactive-quiz'
+              : 'title-content';
+
+      return {
+        id: `ai_slide_${Date.now()}_${index + 1}`,
+        slideNumber: index + 1,
+        phase: typeof slide.phase === 'string' ? slide.phase : '',
+        layout,
+        title: slide.title.trim(),
+        subtitle: typeof slide.subtitle === 'string' ? slide.subtitle : '',
+        bullets: stringItems(slide.bullets),
+        speakerNote: typeof slide.speakerNote === 'string' ? slide.speakerNote : '',
+        background: { type: 'color', value: background },
+        transition: 'fade',
+        visualArt: {
+          title: slide.title.trim(),
+          caption: typeof slide.illustrationPrompt === 'string' ? slide.illustrationPrompt : '',
+          imageUrl: null
         },
-        longTerm: {
-          label: 'DÀI HẠN',
-          desc: 'Rèn luyện tư duy thị giác, cảm thụ cái đẹp và tự tin chia sẻ ý tưởng.',
-          example: 'Tích lũy kĩ năng tạo hình vững chắc cho các chủ đề tiếp theo.'
-        },
-        quote: 'Có mục tiêu – Có động lực – Có kết quả!'
-      },
-      quiz: {
-        question: `Khi vẽ bức tranh về "${topic}", bước nào dưới đây giúp tranh rõ ràng và cân đối nhất?`,
-        options: [
-          'A. Phác hình ảnh chính vào giữa trang giấy trước',
-          'B. Tô màu ngay lập tức mà không cần phác chì',
-          'C. Vẽ thật nhiều chi tiết nhỏ xíu kín mép giấy'
-        ],
-        correctIndex: 0,
-        explanation: `Đúng rồi con nhé! Luôn phác hình ảnh chính ở vị trí trọng tâm trang giấy để bức tranh đạt bố cục cân đối và đẹp mắt nhất!`
-      },
-      elements: []
+        columnLeft: hasColumns
+          ? { title: typeof slide.columnLeft.title === 'string' ? slide.columnLeft.title : 'Ý chính', items: leftItems }
+          : undefined,
+        columnRight: hasColumns
+          ? { title: typeof slide.columnRight.title === 'string' ? slide.columnRight.title : 'Gợi ý', items: rightItems }
+          : undefined,
+        goals: hasGoals
+          ? {
+              shortTerm: {
+                label: typeof slide.goals.shortTerm.label === 'string' ? slide.goals.shortTerm.label : 'NGẮN HẠN',
+                desc: slide.goals.shortTerm.desc,
+                example: typeof slide.goals.shortTerm.example === 'string' ? slide.goals.shortTerm.example : ''
+              },
+              longTerm: {
+                label: typeof slide.goals.longTerm.label === 'string' ? slide.goals.longTerm.label : 'DÀI HẠN',
+                desc: slide.goals.longTerm.desc,
+                example: typeof slide.goals.longTerm.example === 'string' ? slide.goals.longTerm.example : ''
+              },
+              quote: typeof slide.goals.quote === 'string' ? slide.goals.quote : ''
+            }
+          : undefined,
+        quiz: hasQuiz
+          ? {
+              question: slide.quiz.question,
+              options: quizOptions,
+              correctIndex: Number.isInteger(slide.quiz.correctIndex) &&
+                slide.quiz.correctIndex >= 0 &&
+                slide.quiz.correctIndex < quizOptions.length
+                ? slide.quiz.correctIndex
+                : 0,
+              explanation: typeof slide.quiz.explanation === 'string' ? slide.quiz.explanation : ''
+            }
+          : undefined,
+        elements: []
+      };
     });
-  }
 
-  return {
-    success: true,
-    title: `Bài Giảng: ${topic} - Lớp ${grade}`,
-    topic,
-    grade,
-    slides: generatedSlides,
-    source: 'pedagogy-engine'
-  };
+    return {
+      success: true,
+      title: `Bài Giảng: ${topic} - Lớp ${gradeNumber}`,
+      topic,
+      grade: gradeNumber,
+      slides,
+      source: 'gemini-api'
+    };
+  } catch {
+    return { success: false, reason: 'generation-failed' };
+  }
 }

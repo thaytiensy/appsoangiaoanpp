@@ -513,6 +513,267 @@ export async function exportSmasPowerPoint({
   return fileName;
 };
 
+const normalizePptxColor = (value, fallback = 'FFFFFF') => {
+  const color = String(value || '').replace(/^#/, '');
+  return /^[0-9A-F]{6}$/i.test(color) ? color.toUpperCase() : fallback;
+};
+
+const imageToDataUrl = async (source) => {
+  if (typeof source !== 'string' || !source) return null;
+  if (/^data:image\/(png|jpeg|jpg|gif);base64,/i.test(source)) return source;
+  if (!/^(https?:|blob:)/i.test(source)) return null;
+
+  const response = await fetch(source, { mode: 'cors' });
+  if (!response.ok) throw new Error('Không tải được ảnh minh họa.');
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+    reader.onerror = () => reject(new Error('Không thể đọc ảnh minh họa.'));
+    reader.readAsDataURL(blob);
+  });
+};
+
+const addPptxText = (slide, text, box, options = {}) => {
+  if (text === undefined || text === null || String(text).length === 0) return;
+  slide.addText(String(text), {
+    ...box,
+    margin: 0,
+    breakLine: false,
+    valign: 'mid',
+    fontFace: 'Arial',
+    color: '1E293B',
+    ...options
+  });
+};
+
+const addPptxImage = async (slide, source, box, omittedImages, slideNumber) => {
+  if (!source) return;
+  try {
+    const data = await imageToDataUrl(source);
+    if (!data) {
+      omittedImages.push(`Trang ${slideNumber}: ảnh không có định dạng nhúng được`);
+      return;
+    }
+    slide.addImage({ data, ...box });
+  } catch {
+    omittedImages.push(`Trang ${slideNumber}: không tải được ảnh minh họa`);
+  }
+};
+
+const addPptxBullets = (slide, items, box, options = {}) => {
+  const lines = (Array.isArray(items) ? items : [])
+    .filter(item => typeof item === 'string' && item.trim())
+    .map(item => `•  ${item.trim()}`);
+  if (lines.length) addPptxText(slide, lines.join('\n'), box, options);
+};
+
+/**
+ * Exports the editor's current slide model 1:1. Unlike the legacy lesson-plan
+ * export above, this does not inject a cover/objectives slide or require a
+ * curriculum unit, and it includes editable elements and speaker notes.
+ */
+export async function exportPresentationPptx({
+  title = 'Bài giảng Mĩ thuật',
+  grade = 1,
+  teacher = { name: 'Thầy Cọ Nhí' },
+  slidesData = [],
+  slideAspectRatio = '16:9',
+  outputType = 'file'
+}) {
+  if (!Array.isArray(slidesData) || slidesData.length === 0) {
+    throw new Error('Bài giảng chưa có trang chiếu để xuất.');
+  }
+
+  const isFourByThree = slideAspectRatio === '4:3';
+  const width = isFourByThree ? 10 : 13.333;
+  const height = 7.5;
+  const pptx = new pptxgen();
+  const layoutName = isFourByThree ? 'ART_4X3' : 'ART_16X9';
+  pptx.defineLayout({ name: layoutName, width, height });
+  pptx.layout = layoutName;
+  pptx.author = teacher?.name || 'ART AI';
+  pptx.subject = `Bài giảng Mĩ thuật lớp ${grade}`;
+  pptx.title = title || 'Bài giảng Mĩ thuật';
+
+  const omittedImages = [];
+  const marginX = width * 0.06;
+  const contentWidth = width - marginX * 2;
+
+  for (let index = 0; index < slidesData.length; index += 1) {
+    const data = slidesData[index] || {};
+    const slide = pptx.addSlide();
+    slide.background = { color: normalizePptxColor(data.background?.value) };
+    if (typeof data.speakerNote === 'string' && data.speakerNote.trim()) {
+      slide.addNotes(data.speakerNote);
+    }
+
+    const titleText = data.title || `Trang chiếu ${index + 1}`;
+    const subtitleText = data.subtitle || '';
+    const layout = data.layout || 'title-content';
+    const titleBox = { x: marginX, y: 0.45, w: contentWidth, h: 0.8 };
+
+    if (layout === 'title') {
+      addPptxText(slide, `MĨ THUẬT LỚP ${grade}`, {
+        x: marginX, y: 1.55, w: contentWidth, h: 0.45
+      }, { align: 'center', fontSize: 14, bold: true, color: 'B45309' });
+      addPptxText(slide, titleText, {
+        x: marginX, y: 2.25, w: contentWidth, h: 1.25
+      }, { align: 'center', fontSize: 30, bold: true });
+      addPptxText(slide, subtitleText, {
+        x: marginX * 1.5, y: 3.65, w: contentWidth - marginX, h: 0.8
+      }, { align: 'center', fontSize: 18, color: '475569' });
+      addPptxText(slide, teacher?.name || '', {
+        x: marginX, y: 5.2, w: contentWidth, h: 0.4
+      }, { align: 'center', fontSize: 13, bold: true, color: '475569' });
+    } else if (layout === 'two-column') {
+      addPptxText(slide, titleText, titleBox, { fontSize: 24, bold: true });
+      const gap = width * 0.035;
+      const columnWidth = (contentWidth - gap) / 2;
+      const columnY = 1.65;
+      const columnHeight = 4.75;
+      const columns = [data.columnLeft || {}, data.columnRight || {}];
+      columns.forEach((column, columnIndex) => {
+        const x = marginX + columnIndex * (columnWidth + gap);
+        const fill = columnIndex === 0 ? 'FFFBEB' : 'EEF2FF';
+        const accent = columnIndex === 0 ? 'D97706' : '4F46E5';
+        slide.addShape(pptx.ShapeType.roundRect, {
+          x, y: columnY, w: columnWidth, h: columnHeight,
+          rectRadius: 0.12, fill: { color: fill }, line: { color: accent, width: 1.5 }
+        });
+        addPptxText(slide, column.title || '', {
+          x: x + 0.25, y: columnY + 0.25, w: columnWidth - 0.5, h: 0.65
+        }, { fontSize: 15, bold: true, color: accent });
+        addPptxBullets(slide, column.items, {
+          x: x + 0.3, y: columnY + 1.05, w: columnWidth - 0.6, h: columnHeight - 1.35
+        }, { fontSize: 13, breakLine: true, valign: 'top', paraSpaceAfterPt: 8 });
+      });
+    } else if (layout === 'image-caption') {
+      addPptxText(slide, titleText, titleBox, { fontSize: 23, bold: true });
+      const imageBox = { x: marginX, y: 1.55, w: width * 0.56, h: 4.75 };
+      const imageSource = data.visualArt?.imageUrl;
+      if (imageSource) {
+        await addPptxImage(slide, imageSource, imageBox, omittedImages, index + 1);
+      } else {
+        slide.addShape(pptx.ShapeType.roundRect, {
+          ...imageBox, fill: { color: 'F1F5F9' }, line: { color: 'CBD5E1', width: 1 }
+        });
+      }
+      addPptxText(slide, data.visualArt?.caption || subtitleText, {
+        x: width * 0.66, y: 1.75, w: width * 0.28, h: 3.8
+      }, { fontSize: 15, bold: true, color: '334155', valign: 'top', breakLine: true });
+    } else if (layout === 'lesson-goals') {
+      addPptxText(slide, titleText, titleBox, { fontSize: 23, bold: true, align: 'center' });
+      const gap = width * 0.035;
+      const cardWidth = (contentWidth - gap) / 2;
+      const cardY = 1.65;
+      const cardHeight = 4.25;
+      const goals = [
+        { label: 'MỤC TIÊU NGẮN HẠN', goal: data.goals?.shortTerm, color: '15803D', fill: 'F0FDF4' },
+        { label: 'MỤC TIÊU DÀI HẠN', goal: data.goals?.longTerm, color: '0369A1', fill: 'F0F9FF' }
+      ];
+      goals.forEach((item, goalIndex) => {
+        const x = marginX + goalIndex * (cardWidth + gap);
+        slide.addShape(pptx.ShapeType.roundRect, {
+          x, y: cardY, w: cardWidth, h: cardHeight,
+          fill: { color: item.fill }, line: { color: item.color, width: 1.5 }
+        });
+        addPptxText(slide, item.label, {
+          x: x + 0.25, y: cardY + 0.25, w: cardWidth - 0.5, h: 0.45
+        }, { fontSize: 14, bold: true, color: item.color });
+        addPptxText(slide, item.goal?.desc || '', {
+          x: x + 0.25, y: cardY + 0.9, w: cardWidth - 0.5, h: 1.65
+        }, { fontSize: 13, color: '1E293B', valign: 'top', breakLine: true });
+        addPptxText(slide, item.goal?.example || '', {
+          x: x + 0.25, y: cardY + 2.75, w: cardWidth - 0.5, h: 1.1
+        }, { fontSize: 12, italic: true, color: '475569', valign: 'top', breakLine: true });
+      });
+      addPptxText(slide, data.goals?.quote || '', {
+        x: marginX, y: 6.2, w: contentWidth, h: 0.4
+      }, { align: 'center', fontSize: 13, bold: true, color: '9F1239' });
+    } else if (layout === 'interactive-quiz') {
+      addPptxText(slide, titleText, titleBox, { fontSize: 23, bold: true });
+      addPptxText(slide, data.quiz?.question || subtitleText, {
+        x: marginX, y: 1.55, w: contentWidth, h: 1.1
+      }, { fontSize: 18, bold: true, color: '581C87', valign: 'top', breakLine: true });
+      addPptxBullets(slide, data.quiz?.options, {
+        x: marginX + 0.2, y: 2.85, w: contentWidth - 0.4, h: 2.5
+      }, { fontSize: 15, color: '334155', valign: 'top', breakLine: true, paraSpaceAfterPt: 10 });
+      addPptxText(slide, data.quiz?.explanation || '', {
+        x: marginX, y: 5.65, w: contentWidth, h: 0.8
+      }, { fontSize: 12, italic: true, color: '475569', valign: 'top', breakLine: true });
+    } else {
+      addPptxText(slide, titleText, titleBox, { fontSize: 23, bold: true });
+      addPptxText(slide, subtitleText, {
+        x: marginX, y: 1.25, w: contentWidth, h: 0.55
+      }, { fontSize: 14, bold: true, color: '64748B' });
+      addPptxBullets(slide, data.bullets, {
+        x: marginX + 0.1, y: 2, w: contentWidth - 0.2, h: 4.4
+      }, { fontSize: 17, color: '1E293B', valign: 'top', breakLine: true, paraSpaceAfterPt: 12 });
+    }
+
+    const elements = Array.isArray(data.elements) ? [...data.elements] : [];
+    elements.sort((a, b) => (Number(a?.zIndex) || 0) - (Number(b?.zIndex) || 0));
+    for (const element of elements) {
+      const x = (Math.max(0, Number(element.x) || 0) / 100) * width;
+      const y = (Math.max(0, Number(element.y) || 0) / 100) * height;
+      const w = (Math.max(1, Number(element.width) || 1) / 100) * width;
+      const h = (Math.max(1, Number(element.height) || 1) / 100) * height;
+      const box = { x, y, w, h };
+
+      if (element.type === 'text') {
+        addPptxText(slide, element.content || '', box, {
+          fontFace: element.fontFamily || 'Arial',
+          fontSize: Math.max(8, (Number(element.fontSize) || 18) * 0.75),
+          bold: /bold|[6-9]00/i.test(String(element.fontWeight || '')),
+          italic: element.fontStyle === 'italic',
+          underline: element.textDecoration === 'underline',
+          align: element.textAlign || 'left',
+          color: normalizePptxColor(element.color, '1E293B'),
+          valign: 'top',
+          breakLine: true
+        });
+      } else if (element.type === 'shape') {
+        const shapeType = element.shapeType === 'circle'
+          ? pptx.ShapeType.ellipse
+          : element.shapeType === 'rounded'
+            ? pptx.ShapeType.roundRect
+            : pptx.ShapeType.rect;
+        slide.addShape(shapeType, {
+          ...box,
+          rectRadius: Math.max(0, (Number(element.borderRadius) || 0) / 72),
+          fill: { color: normalizePptxColor(element.fillColor, 'E0F2FE') },
+          line: {
+            color: normalizePptxColor(element.borderColor, '0284C7'),
+            width: Math.max(0.5, (Number(element.borderWidth) || 1) * 0.75)
+          }
+        });
+        if (element.content) {
+          addPptxText(slide, element.content, box, {
+            fontSize: 12, bold: true, align: 'center'
+          });
+        }
+      } else if (element.type === 'image') {
+        await addPptxImage(slide, element.imageUrl, box, omittedImages, index + 1);
+      }
+    }
+  }
+
+  const safeTitle = String(title || 'Bai_Giang_Mi_Thuat')
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .trim()
+    .replace(/\s+/g, '_')
+    .slice(0, 80) || 'Bai_Giang_Mi_Thuat';
+  const fileName = `${safeTitle}_Lop_${grade}.pptx`;
+
+  if (outputType === 'blob') {
+    const blob = await pptx.write({ outputType: 'blob' });
+    return { success: true, fileName, blob, omittedImages };
+  }
+  await pptx.writeFile({ fileName });
+  return { success: true, fileName, omittedImages };
+}
+
 // 3. XUẤT KẾ HOẠCH BÀI DẠY WORD (.doc / .docx) CHUẨN CÔNG VĂN 2345 & SMAS VIETTEL
 export const exportSmasWord = ({
   unit,
