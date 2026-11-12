@@ -375,6 +375,8 @@ export async function parseDocxFile(file) {
   }
 }
 
+const NON_STUDENT_REGEX = /^(lớp|khối|lop|khoi|trường|truong|phòng|phong|sở|so\b|bảng|bang|năm học|nam hoc|học kỳ|hoc ky|học kì|hoc ki|môn|mon|giáo viên|giao vien|danh sách|danh sach|tổng cộng|tong cong|tổng số|tong so|thống kê|thong ke|người lập|nguoi lap|chữ ký|chu ky|ngày sinh|ngay sinh|stt$|mã|ma\b|họ và tên|ho va ten|họ tên|ho ten|ghi chú|ghi chu)/i;
+
 // ============================================================================
 // 3. PHÂN TÍCH TỆP MICROSOFT EXCEL (.xlsx / .xls / .csv)
 // ============================================================================
@@ -389,10 +391,28 @@ export function parseExcelFile(arrayBuffer, currentGrade = 1) {
     }
 
     const sheetsData = {};
+    const detectedClasses = new Set();
 
     sheetNames.forEach((sheetName) => {
       const worksheet = workbook.Sheets[sheetName];
       const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+      // Trích xuất tên lớp học thông minh từ tên Sheet hoặc tiêu đề hàng đầu
+      let detectedClassInSheet = `${currentGrade}A`;
+      const sheetClassMatch = sheetName.match(/(?:lớp|khối|lop)[:\s_]*([0-9]{1,2}\s*[A-Za-z0-9_-]*)/i);
+      if (sheetClassMatch) {
+        detectedClassInSheet = sheetClassMatch[1].trim();
+      } else {
+        for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
+          const rowText = (rawRows[r] || []).join(' ');
+          const rowClassMatch = rowText.match(/(?:lớp|khối|lop)[:\s_]*([0-9]{1,2}\s*[A-Za-z0-9_-]*)/i);
+          if (rowClassMatch) {
+            detectedClassInSheet = rowClassMatch[1].trim();
+            break;
+          }
+        }
+      }
+      detectedClasses.add(detectedClassInSheet);
 
       // 1. Quét tìm dòng Tiêu đề (Header Row) thông minh trong 20 dòng đầu
       let headerRowIndex = -1;
@@ -518,8 +538,9 @@ export function parseExcelFile(arrayBuffer, currentGrade = 1) {
           }
         }
 
-        // Bỏ qua nếu dòng không có tên học sinh hợp lệ
-        if (!fullName || fullName.length < 2 || fullName.toLowerCase().includes('tổng số') || fullName.toLowerCase().includes('thống kê')) {
+        // Bỏ qua nếu dòng không có tên học sinh hợp lệ hoặc là dòng tiêu đề, biểu ngữ trường/lớp
+        const cleanName = fullName.replace(/^\d+[.\s-]+/, '').trim();
+        if (!cleanName || cleanName.length < 2 || NON_STUDENT_REGEX.test(cleanName)) {
           continue;
         }
 
@@ -534,7 +555,8 @@ export function parseExcelFile(arrayBuffer, currentGrade = 1) {
         parsedStudents.push({
           stt: parsedStudents.length + 1,
           studentCode,
-          fullName,
+          fullName: cleanName,
+          className: detectedClassInSheet,
           birthDate,
           gender,
           level,
@@ -547,14 +569,16 @@ export function parseExcelFile(arrayBuffer, currentGrade = 1) {
 
       sheetsData[sheetName] = {
         rawRows: rawRows,
-        students: parsedStudents
+        students: parsedStudents,
+        className: detectedClassInSheet
       };
     });
 
     return {
       success: true,
       sheetNames: sheetNames,
-      sheetsData: sheetsData
+      sheetsData: sheetsData,
+      detectedClasses: Array.from(detectedClasses)
     };
   } catch (error) {
     console.error('Lỗi phân tích cú pháp Excel:', error);

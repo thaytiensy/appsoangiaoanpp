@@ -49,6 +49,8 @@ Kỹ năng này định nghĩa và vận hành **Kiến trúc Bộ nhớ 4 Tần
   - `Kho Tu Lieu Internet & Chuan Su Pham Mi Thuat`: Các API bảo tàng mở (The Met CC0, Art Institute of Chicago, QuickDraw).
   - `Chuong Trinh Chu De Mi Thuat GDPT 2018`: Toàn bộ 10 chủ đề chuẩn phân theo Lớp 1 đến Lớp 5.
 * **Hành động:** Khi cần tra cứu tài liệu chuyên sâu, bài tập mở rộng hoặc các dẫn chứng mĩ thuật lịch sử, gọi công cụ MCP NotebookLM (`source_read`, `chat_ask`) để trích xuất tri thức chuẩn xác.
+* **Công cụ Mổ Xẻ & Sao Chép Ứng Dụng (REA MCP & reverse-engineer-anything):** Khi người dùng yêu cầu kiểm tra cách hoạt động, dịch ngược (reverse engineering) hoặc nghiên cứu khả năng sao chép (clone) bất kỳ ứng dụng nào, bắt buộc kích hoạt kỹ năng `reverse-engineer-anything` và khai thác bộ 207 công cụ của **MCP REA** (`morluto/rea`) để thu thập chứng cứ kỹ thuật thực tế (ASAR, Electron, PE, Go/Rust binaries, APIs, WebSockets) trước khi đề xuất giải pháp.
+* **Quy Trình Khép Kín Tạo App A-Z (Fullstack Closed-Loop MCP Pipeline):** Khi người dùng yêu cầu xây dựng ứng dụng từ A-Z, kích hoạt chuỗi 7 MCP 100% miễn phí: (1) `rea` + `notebooklm` (Phân tích & PRD), (2) `canva` (Giao diện & Assets), (3) `git` (Quản lý mã nguồn), (4) `sqlite` + `gemini-api` + Firebase (Fullstack & AI Brain), (5) `chrome-devtools-mcp` (Test E2E & Auditing), (6) Vercel/Firebase/Electron (Deploy & Desktop Packaging), (7) `sales-video-mcp` + Google Workspace (Demo video & Tài liệu bàn giao).
 
 ---
 

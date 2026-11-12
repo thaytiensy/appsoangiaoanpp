@@ -230,6 +230,33 @@ export default defineConfig({
       }
     }
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('src/data/ketNoiTriThucCurriculum')) {
+            return 'curriculum-bank';
+          }
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/pptxgenjs') || id.includes('node_modules/jszip')) {
+            return 'vendor-pptx';
+          }
+          if (id.includes('node_modules/xlsx')) {
+            return 'vendor-xlsx';
+          }
+          if (id.includes('node_modules/mammoth')) {
+            return 'vendor-doc';
+          }
+          if (id.includes('node_modules/lucide-react') || id.includes('node_modules/canvas-confetti')) {
+            return 'vendor-ui';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 2500
+  },
   server: {
     port: 3000,
     open: false,

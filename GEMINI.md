@@ -87,3 +87,55 @@
 > 4. **Kiểm Định Biên Dịch Thực Tế (Build Verification):**
 >    - Bắt buộc chạy `npm run build` xác nhận hoàn thành với **0 lỗi (0 errors)**.
 >    - Kiểm tra đường truyền server trả về mã `200 OK`.
+
+---
+
+## 7. QUY TẮC MỔ XẺ & SAO CHÉP ỨNG DỤNG (REVERSE ENGINEERING & APP REPLICATION)
+> [!IMPORTANT]
+> **Bất cứ khi nào người dùng yêu cầu phân tích, mổ xẻ cấu trúc, kiểm tra cách hoạt động hoặc nghiên cứu khả năng sao chép (clone/replicate) bất kỳ ứng dụng nào:**
+> 1. **Bắt buộc sử dụng MCP REA (Reverse Engineer Anything - `rea-agents` / `morluto/rea`):**
+>    - Sử dụng bộ 207 công cụ chuyên sâu của MCP REA (`analyze`, `analyze-javascript-application`, `analyze-web-bundle`, `decompile`, `extract-artifact`, `trace-application-feature`,...) để bóc tách cấu trúc thực tế của ứng dụng (ASAR, Electron, Native Binaries PE/ELF/Mach-O, .NET, APK, Web bundle) dựa trên bằng chứng kỹ thuật xác thực, tuyệt đối không suy đoán suông.
+> 2. **Kích hoạt Kỹ năng (Skill) Chuẩn:**
+>    - Luôn đối chiếu quy trình trong bộ kỹ năng `reverse-engineer-anything` tại `C:\Users\win 10 pro\.gemini\config\skills\reverse-engineer-anything\SKILL.md`.
+> 3. **Quy trình 3 Bước Phân Tích Sao Chép:**
+>    - **Bước 1 (Trích xuất Bằng chứng Thực tế):** Quét manifest, file đóng gói (`app.asar`, DLLs, Go/Rust binaries, socket IPC, API endpoints, WebSocket).
+>    - **Bước 2 (Phân rã Hệ thống):** Phân định ranh giới rõ ràng giữa "Client/Vỏ máy tính" và "Backend/Cloud AI Brain".
+>    - **Bước 3 (Kiến trúc Tái tạo - Clean-room Clone):** Đề xuất giải pháp và công nghệ mã nguồn mở tương đương (Tauri/Electron + Open-source Vision/Agent frameworks + MCP Host) để người dùng có thể hiện thực hóa độc lập.
+
+---
+
+## 8. QUY TRÌNH KHÉP KÍN TẠO ỨNG DỤNG TỪ A-Z BẰNG HỆ THỐNG MCP 100% MIỄN PHÍ (FULLSTACK CLOSED-LOOP PIPELINE)
+> [!IMPORTANT]
+> **Mỗi khi người dùng yêu cầu tạo mới hoặc phát triển hoàn thiện một ứng dụng từ A-Z, tác nhân BẮT BUỘC tuân thủ chuỗi 7 giai đoạn khép kín được liên kết chặt chẽ qua các MCP sau:**
+> 
+> 1. **Giai Đoạn 1 - Nghiên Cứu & Đặc Tả (Research & PRD):**
+>    - **MCP Sử Dụng:** `rea` (Phân tích/dịch ngược cấu trúc app mẫu nếu có) + `notebooklm` (Tra cứu/lưu trữ tài liệu thiết kế, PRD, nghiệp vụ chuyên sâu).
+>    - **Đầu ra:** Bản đặc tả yêu cầu phần mềm và kiến trúc thành phần chi tiết.
+> 
+> 2. **Giai Đoạn 2 - Thiết Kế Giao Diện & Đồ Họa (UI/UX & Assets):**
+>    - **MCP Sử Dụng:** `canva` (Tạo template, banner, icon, mockup giao diện trực quan).
+>    - **Đầu ra:** Toàn bộ visual assets sẵn sàng trong thư mục `/assets` hoặc `/public`.
+> 
+> 3. **Giai Đoạn 3 - Quản Lý Phiên Bản & Cấu Trúc Mã Nguồn (Repo & Scaffolding):**
+>    - **MCP Sử Dụng:** `git` (`mcp-server-git` với `git_status`, `git_add`, `git_commit`, `git_branch`).
+>    - **Đầu ra:** Repository git được khởi tạo chuẩn hóa, phân nhánh rõ ràng, commit có mốc kiểm soát.
+> 
+> 4. **Giai Đoạn 4 - Lập Trình Core Fullstack & Trí Tuệ Nhân Tạo (Fullstack & AI Engine):**
+>    - **MCP/Công nghệ Sử Dụng:**
+>      - CSDL Cục bộ (Local/Offline DB): `sqlite` (`mcp-server-sqlite` với `create_table`, `write_query`, `read_query`) - 100% miễn phí, bảo mật trên máy người dùng.
+>      - Trí Tuệ Nhân Tạo: Google Gemini API (Gemini 2.5/3.8 Flash miễn phí) hỗ trợ suy luận văn bản & thị giác máy tính.
+>      - Cloud/Xác thực (nếu cần): Firebase Spark Free Tier (Auth, Firestore, Storage).
+>    - **Đầu ra:** Ứng dụng hoạt động trơn tru cả frontend lẫn backend.
+> 
+> 5. **Giai Đoạn 5 - Kiểm Thử Tự Động & Đảm Bảo Chất Lượng (QA & Auditing):**
+>    - **MCP Sử Dụng:** `chrome-devtools-mcp` (Tự động mở trang, bắt console errors, đo đạc network, audit hiệu năng LCP và độ khả dụng A11y).
+>    - **Bắt buộc:** Lệnh `npm run build` đạt **0 lỗi (0 errors)** và server nội bộ phản hồi `200 OK`.
+> 
+> 6. **Giai Đoạn 6 - Đóng Gói & Triển Khai Miễn Phí (Packaging & Free Hosting):**
+>    - **Công nghệ:** Vercel Hobby / Firebase Hosting (Web) hoặc Electron / Tauri Desktop Package với Desktop Shortcut.
+>    - **Đầu ra:** Đường link truy cập trực tiếp hoặc file chạy desktop 1-click.
+> 
+> 7. **Giai Đoạn 7 - Video Quảng Bá, Slide Thuyết Trình & Bàn Giao (Showroom & Docs):**
+>    - **MCP Sử Dụng:** `sales-video-mcp` (Tạo kịch bản bán hàng/giới thiệu, thu âm giọng đọc AI tiếng Việt, render video thành phẩm) + Google Workspace (`gdocs`, `gslides`).
+>    - **Đầu ra:** Video demo sản phẩm hoàn chỉnh cùng tài liệu hướng dẫn bàn giao cho người dùng.
+

@@ -17,12 +17,12 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import DrawingCanvas from './components/DrawingCanvas';
-import CritiqueView from './components/CritiqueView';
-import StepByStepView from './components/StepByStepView';
-import InspirationView from './components/InspirationView';
-import ThematicTeacherChat from './components/ThematicTeacherChat';
-import ApiKeyModal from './components/ApiKeyModal';
+const DrawingCanvas = React.lazy(() => import('./components/DrawingCanvas'));
+const CritiqueView = React.lazy(() => import('./components/CritiqueView'));
+const StepByStepView = React.lazy(() => import('./components/StepByStepView'));
+const InspirationView = React.lazy(() => import('./components/InspirationView'));
+const ThematicTeacherChat = React.lazy(() => import('./components/ThematicTeacherChat'));
+const ApiKeyModal = React.lazy(() => import('./components/ApiKeyModal'));
 import TeacherBubble from './components/TeacherBubble';
 import { KET_NOI_TRI_THUC_DATA } from './data/ketNoiTriThucCurriculum';
 import { getContextAwareGuidance, SMART_TV_HOTKEYS, APP_SECTIONS } from './services/aiContextEngine';
@@ -399,57 +399,59 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 py-4 sm:py-6">
-        {activeTab === 'thematicChat' && (
-          <ThematicTeacherChat
-            apiKey={apiKey}
-            teacher={teacher}
-            onStartDrawingOnCanvas={handleSelectToDraw}
-            onGoToCritique={() => setActiveTab('critique')}
-            onUnitChange={(u) => setCurrentUnit(u)}
-            onSlideChange={(idx) => setCurrentSlideIndex(idx)}
-            isTvMode={isTvMode}
-            onToggleTvMode={handleToggleTvMode}
-          />
-        )}
+        <React.Suspense fallback={<div className="p-16 text-center text-gray-500 font-extrabold text-base animate-pulse">Đang nạp bài học Mĩ thuật...</div>}>
+          {activeTab === 'thematicChat' && (
+            <ThematicTeacherChat
+              apiKey={apiKey}
+              teacher={teacher}
+              onStartDrawingOnCanvas={handleSelectToDraw}
+              onGoToCritique={() => setActiveTab('critique')}
+              onUnitChange={(u) => setCurrentUnit(u)}
+              onSlideChange={(idx) => setCurrentSlideIndex(idx)}
+              isTvMode={isTvMode}
+              onToggleTvMode={handleToggleTvMode}
+            />
+          )}
 
-        {activeTab === 'canvas' && (
-          <DrawingCanvas 
-            onAskTeacher={handleAskTeacherFromCanvas} 
-            teacher={teacher}
-            templateImage={canvasTemplate}
-            onClearTemplate={() => setCanvasTemplate(null)}
-            isTvMode={isTvMode}
-          />
-        )}
+          {activeTab === 'canvas' && (
+            <DrawingCanvas 
+              onAskTeacher={handleAskTeacherFromCanvas} 
+              teacher={teacher}
+              templateImage={canvasTemplate}
+              onClearTemplate={() => setCanvasTemplate(null)}
+              isTvMode={isTvMode}
+            />
+          )}
 
-        {activeTab === 'critique' && (
-          <CritiqueView
-            initialImage={critiqueImage}
-            apiKey={apiKey}
-            teacher={teacher}
-            onBackToCanvas={() => setActiveTab('canvas')}
-            isTvMode={isTvMode}
-          />
-        )}
+          {activeTab === 'critique' && (
+            <CritiqueView
+              initialImage={critiqueImage}
+              apiKey={apiKey}
+              teacher={teacher}
+              onBackToCanvas={() => setActiveTab('canvas')}
+              isTvMode={isTvMode}
+            />
+          )}
 
-        {activeTab === 'stepbystep' && (
-          <StepByStepView 
-            teacher={teacher}
-            onSelectToDraw={handleSelectToDraw}
-            isTvMode={isTvMode}
-          />
-        )}
+          {activeTab === 'stepbystep' && (
+            <StepByStepView 
+              teacher={teacher}
+              onSelectToDraw={handleSelectToDraw}
+              isTvMode={isTvMode}
+            />
+          )}
 
-        {activeTab === 'inspiration' && (
-          <InspirationView
-            teacher={teacher}
-            onSendToCanvas={(imgUrl) => {
-              setCanvasTemplate(imgUrl);
-              setActiveTab('canvas');
-            }}
-            isTvMode={isTvMode}
-          />
-        )}
+          {activeTab === 'inspiration' && (
+            <InspirationView
+              teacher={teacher}
+              onSendToCanvas={(imgUrl) => {
+                setCanvasTemplate(imgUrl);
+                setActiveTab('canvas');
+              }}
+              isTvMode={isTvMode}
+            />
+          )}
+        </React.Suspense>
       </main>
 
       {/* Floating Smart TV Quick Remote Bar (Only visible when Smart TV is Active) */}
@@ -545,12 +547,14 @@ export default function App() {
       </footer>
 
       {/* Settings Modal */}
-      <ApiKeyModal
-        isOpen={isKeyModalOpen}
-        onClose={() => setIsKeyModalOpen(false)}
-        currentKey={apiKey}
-        onSaveKey={handleSaveApiKey}
-      />
+      <React.Suspense fallback={null}>
+        <ApiKeyModal
+          isOpen={isKeyModalOpen}
+          onClose={() => setIsKeyModalOpen(false)}
+          currentKey={apiKey}
+          onSaveKey={handleSaveApiKey}
+        />
+      </React.Suspense>
 
       {/* Context Intelligence Assistant Modal */}
       {isAiHelpOpen && (

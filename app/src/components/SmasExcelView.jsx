@@ -94,6 +94,7 @@ export default function SmasExcelView({
           const sheetData = result.sheetsData[firstSheet];
           if (sheetData?.students && sheetData.students.length > 0) {
             setStudents(sheetData.students);
+            if (sheetData.className) setClassName(sheetData.className);
             setExcelViewMode('smas');
             showToast(`Đã nạp thành công ${sheetData.students.length} học sinh từ trang tính "${firstSheet}" (${file.name})!`);
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -117,6 +118,8 @@ export default function SmasExcelView({
     const sheetData = uploadedWorkbook?.sheetsData[sName];
     if (sheetData?.students && sheetData.students.length > 0) {
       setStudents(sheetData.students);
+      if (sheetData.className) setClassName(sheetData.className);
+      showToast(`Đã chuyển sang trang tính "${sName}" (${sheetData.students.length} học sinh)`);
     }
   };
 

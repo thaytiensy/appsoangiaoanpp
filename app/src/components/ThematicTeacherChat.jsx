@@ -17,9 +17,10 @@ import {
 import { KET_NOI_TRI_THUC_DATA } from '../data/ketNoiTriThucCurriculum';
 import { generateTeacherResponse } from '../services/gemini';
 import { ttsService } from '../services/tts';
-import MicrosoftPowerPointView from './MicrosoftPowerPointView';
-import MicrosoftWordView from './MicrosoftWordView';
-import SmasExcelView from './SmasExcelView';
+
+const MicrosoftPowerPointView = React.lazy(() => import('./MicrosoftPowerPointView'));
+const MicrosoftWordView = React.lazy(() => import('./MicrosoftWordView'));
+const SmasExcelView = React.lazy(() => import('./SmasExcelView'));
 
 export default function ThematicTeacherChat({ 
   apiKey, 
@@ -335,36 +336,38 @@ export default function ThematicTeacherChat({
 
       {/* 4. MAIN OFFICE WORKSPACE: POWERPOINT / WORD / EXCEL / CHAT */}
       <div className="w-full">
-        {/* VIEW 1: MICROSOFT POWERPOINT (TRÌNH CHIẾU & CHỈNH SỬA TÁC VỤ VĂN PHÒNG) */}
-        {viewMode === 'powerpoint' && (
-          <MicrosoftPowerPointView
-            selectedGrade={selectedGrade}
-            selectedUnit={selectedUnit}
-            teacher={teacher}
-            isTvMode={isTvMode}
-            onToggleTvMode={onToggleTvMode}
-            onStartDrawingOnCanvas={onStartDrawingOnCanvas}
-          />
-        )}
+        <React.Suspense fallback={<div className="p-12 text-center text-gray-500 font-extrabold text-sm animate-pulse bg-white rounded-3xl border-2 border-blue-100">Đang tải không gian làm việc mĩ thuật...</div>}>
+          {/* VIEW 1: MICROSOFT POWERPOINT (TRÌNH CHIẾU & CHỈNH SỬA TÁC VỤ VĂN PHÒNG) */}
+          {viewMode === 'powerpoint' && (
+            <MicrosoftPowerPointView
+              selectedGrade={selectedGrade}
+              selectedUnit={selectedUnit}
+              teacher={teacher}
+              isTvMode={isTvMode}
+              onToggleTvMode={onToggleTvMode}
+              onStartDrawingOnCanvas={onStartDrawingOnCanvas}
+            />
+          )}
 
-        {/* VIEW 2: MICROSOFT WORD (GIÁO ÁN ĐIỆN TỬ CV 2345 & SMAS VIETTEL) */}
-        {viewMode === 'word' && (
-          <MicrosoftWordView
-            selectedGrade={selectedGrade}
-            selectedUnit={selectedUnit}
-            teacher={teacher}
-          />
-        )}
+          {/* VIEW 2: MICROSOFT WORD (GIÁO ÁN ĐIỆN TỬ CV 2345 & SMAS VIETTEL) */}
+          {viewMode === 'word' && (
+            <MicrosoftWordView
+              selectedGrade={selectedGrade}
+              selectedUnit={selectedUnit}
+              teacher={teacher}
+            />
+          )}
 
-        {/* VIEW 3: MICROSOFT EXCEL (SỔ ĐÁNH GIÁ THÔNG TƯ 27 SMAS VIETTEL) */}
-        {viewMode === 'excel' && (
-          <SmasExcelView
-            selectedGrade={selectedGrade}
-            selectedUnit={selectedUnit}
-            teacher={teacher}
-            isTvMode={isTvMode}
-          />
-        )}
+          {/* VIEW 3: MICROSOFT EXCEL (SỔ ĐÁNH GIÁ THÔNG TƯ 27 SMAS VIETTEL) */}
+          {viewMode === 'excel' && (
+            <SmasExcelView
+              selectedGrade={selectedGrade}
+              selectedUnit={selectedUnit}
+              teacher={teacher}
+              isTvMode={isTvMode}
+            />
+          )}
+        </React.Suspense>
 
         {/* VIEW 4: 2-WAY AI TEACHER CHAT */}
         {viewMode === 'chat' && (
